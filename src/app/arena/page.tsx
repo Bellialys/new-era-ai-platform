@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const mockModels = [
   {
     name: "Model A",
@@ -24,9 +26,9 @@ export default function ArenaPage() {
           <p className="text-sm uppercase tracking-[0.25em] text-violet-200">Prompt Arena</p>
           <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">Сравнение AI-моделей</h1>
         </div>
-        <a className="text-sm text-slate-300 transition hover:text-white" href="/">
+        <Link className="text-sm text-slate-300 transition hover:text-white" href="/">
           Вернуться на главную
-        </a>
+        </Link>
       </header>
 
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
