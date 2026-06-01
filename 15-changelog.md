@@ -14,7 +14,7 @@ Changelog нужен, чтобы быстро понимать:
 - какие ограничения ещё остаются;
 - какая версия проекта сейчас готовится.
 
-Changelog не заменяет Git history. Git показывает технические изменения в файлах, а changelog объясняет смысл этих изменений.
+Changelog не заменяет Git history. Git показывает технические изменения в файлах, а changelog объясняет смысл изменений для проекта.
 
 ---
 
@@ -88,6 +88,18 @@ v0.6 - Voting MVP
 # сохранение голоса через /api/vote и Supabase
 ```
 
+## API-contract и UI-view
+
+Нужно различать:
+
+```text
+ArenaApiResponse
+# контракт /api/compare, источник истины - 09-api-structure.md
+
+ArenaResponseView
+# UI-представление после добавления modelRole на клиенте
+```
+
 ---
 
 # Формат записи
@@ -155,6 +167,8 @@ Active
 - Добавлен `21-stage-3-verification.md`.
 - Добавлен `22-documentation-audit.md`.
 - Добавлен `23-documentation-audit-deep.md`.
+- Добавлен `24-documentation-sync-report.md`.
+- Добавлен `25-code-consistency-audit.md`.
 - Добавлен `AGENTS.md` с правилами работы над проектом.
 - Добавлен `package.json`.
 - Добавлены конфигурации Next.js, TypeScript, ESLint и Tailwind CSS.
@@ -168,14 +182,17 @@ Active
 
 ## Changed
 
-- `README.md` обновлён под состояние `v0.3 - Static UI MVP`.
+- `README.md` обновлён под состояние `v0.3 - Static UI MVP` и текущий аудит перед `v0.4`.
+- `00-readme.md` обновлён: убрано устаревшее указание на обязательную папку `docs/`, закреплена текущая структура документации в корне репозитория.
 - `02-project-plan.md` синхронизирован с `14-roadmap.md`.
 - `04-mvp-scope.md` синхронизирован с текущими лимитами MVP и состоянием `v0.3`.
 - `06-project-modes.md` синхронизирован с единым стилем `modeSlug`, API и TypeScript.
-- `09-api-structure.md` синхронизирован с правилом `API JSON = camelCase`, `Database = snake_case`.
+- `09-api-structure.md` закреплён как источник истины для `/api/compare`.
+- `12-security-and-env.md` обновлён: структура проекта приведена к текущему виду `src/`, добавлены правила для `package-lock.json`, `.env.example`, лимитов prompt/model и server-side ключей.
+- `15-changelog.md` обновлён после глубокого аудита кода и документации.
 - В документации закреплены единые лимиты: `MIN_PROMPT_LENGTH=3`, `MAX_PROMPT_LENGTH=8000`, `MAX_MODELS_PER_COMPARE=3`.
 - В документации уточнено различие между локальным UI-выбором победителя в `v0.3` и сохранённым голосом в `v0.6`.
-- `15-changelog.md` обновлён после появления реального кода `v0.2-v0.3`.
+- В документации уточнено различие между `ArenaApiResponse` и `ArenaResponseView`.
 
 ## Fixed
 
@@ -186,6 +203,8 @@ Active
 - Исправлен лимит количества моделей: максимум `3`, а не `4`.
 - Исправлен лимит prompt: максимум `8000`, а не `4000`.
 - Удалены устаревшие Known Issues о том, что код проекта ещё не создан и Next.js ещё не инициализирован.
+- Зафиксировано, что `text` в текущем коде является временным UI/mock-полем и должно быть заменено на `answerText` по контракту `09-api-structure.md`.
+- Зафиксировано, что `modelRole` не должен дублироваться в API-ответе `/api/compare`, а должен добавляться на клиенте по `modelId`.
 
 ## Security
 
@@ -193,14 +212,20 @@ Active
 - Закреплено правило: OpenRouter key используется только server-side.
 - Закреплено правило: `SUPABASE_SERVICE_ROLE_KEY` используется только server-side.
 - Закреплено правило: `.env.local` не должен попадать в GitHub.
+- Закреплено правило: `.env.example` может быть в GitHub только без реальных секретов.
 - Закреплено правило: backend обязан проверять allowlist моделей.
+- Закреплено правило: backend обязан повторно проверять `MAX_PROMPT_LENGTH` и `MAX_MODELS_PER_COMPARE`.
 - Закреплено правило: Code Arena Runner запрещён до `v1.7`.
 - Закреплено правило: AI Team Mode запрещён до `v2.0`.
 
 ## Known Issues
 
-- `package-lock.json` ещё не создан, потому что нужен локальный `npm install`.
-- Проект ещё не проверен локально командами `npm run typecheck`, `npm run lint`, `npm run build`.
+- `package-lock.json` создан локально после `npm install`, но пока отсутствует в GitHub.
+- `MAX_PROMPT_LENGTH=8000` есть в документации и `.env.example`, но ещё должен быть применён в UI-коде.
+- В коде Prompt Arena текущий тип ответа использует `text`, а канонический API-контракт требует `answerText`.
+- В коде Prompt Arena текущий response содержит `modelRole`, а будущий `/api/compare` не должен дублировать это поле.
+- В коде Prompt Arena нужно добавить `errorCode` и `errorMessage` для отображения ошибок отдельных моделей.
+- При изменении prompt или выбора моделей нужно сбрасывать старые responses, чтобы UI не показывал устаревший результат.
 - OpenRouter ещё не подключён в коде.
 - Supabase ещё не подключён в коде.
 - Vercel deploy ещё не выполнен.
@@ -246,27 +271,20 @@ Done
 ## Статус
 
 ```text
-Structurally done
-# структура создана, но нужна локальная npm-проверка
+Done
+# базовый Next.js проект создан
 ```
 
 ## Added
 
 - Добавлен `package.json`.
-- Добавлен `tsconfig.json`.
-- Добавлен `next.config.ts`.
-- Добавлен `eslint.config.mjs`.
-- Добавлен `postcss.config.mjs`.
-- Добавлен `next-env.d.ts`.
-- Добавлен `src/app/layout.tsx`.
-- Добавлен `src/app/globals.css`.
-- Добавлена главная страница `/`.
-- Добавлена стартовая страница `/arena`.
+- Добавлены конфиги Next.js, TypeScript, ESLint и Tailwind CSS.
+- Добавлена структура `src/app`.
+- Добавлена базовая главная страница.
 
-## Known Issues
+## Fixed
 
-- `package-lock.json` появится только после локального `npm install`.
-- Нужна локальная проверка `npm run typecheck`, `npm run lint`, `npm run build`.
+- Сборка больше не должна переписывать `tsconfig.json` при корректной настройке.
 
 ---
 
@@ -275,58 +293,49 @@ Structurally done
 ## Статус
 
 ```text
-Structurally done
-# UI и mock-логика созданы, но нужна локальная npm-проверка
+In Progress
+# интерфейс Prompt Arena уже работает на mock-данных, но перед v0.4 нужно закрыть найденные расхождения
 ```
 
 ## Added
 
-- Добавлены типы Prompt Arena.
-- Добавлены mock-данные моделей.
-- Добавлен mock-генератор ответов.
-- Добавлен `PromptArena` client component.
-- Добавлена форма prompt.
+- Добавлена страница `/arena`.
 - Добавлен выбор 2-3 моделей.
-- Добавлена валидация prompt.
-- Добавлена валидация количества моделей.
-- Добавлены empty, loading, error и success states.
+- Добавлен ввод prompt.
+- Добавлен mock-генератор ответов.
 - Добавлены карточки ответов.
-- Добавлен локальный UI-выбор победителя.
-- Добавлена кнопка очистки формы.
-
-## Changed
-
-- `/arena` теперь использует интерактивный компонент `PromptArena`.
-- Mock-ответы появляются после действия пользователя.
+- Добавлен локальный UI-выбор победителя без сохранения в базу.
 
 ## Known Issues
 
-- Реального OpenRouter API ещё нет.
-- Сохранения в Supabase ещё нет.
-- Голос победителя пока хранится только в состоянии страницы.
-- Истории сравнений ещё нет.
+- UI должен применять `MAX_PROMPT_LENGTH=8000`.
+- Response type должен быть разделён на API-contract и UI-view.
+- Mock-ответы нужно привести к будущему контракту `/api/compare`.
+- Старые responses нужно сбрасывать при изменении prompt или выбора моделей.
 
 ---
 
-# Следующая версия
+# Следующий целевой этап
+
+Следующий целевой этап после закрытия расхождений `v0.3`:
 
 ```text
 v0.4 - OpenRouter Integration
-# подключить реальные ответы моделей через backend
+# реальные ответы моделей через backend API
 ```
 
-Перед началом `v0.4` нужно:
+Перед началом `v0.4` нужно убедиться:
 
 ```bash
-npm install
-# установить зависимости
-
 npm run typecheck
-# проверить TypeScript
+# TypeScript проходит
 
 npm run lint
-# проверить ESLint
+# ESLint проходит
 
 npm run build
-# проверить production-сборку
+# production-сборка проходит
+
+git status
+# package-lock.json добавлен, .env.local отсутствует в Git
 ```
