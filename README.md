@@ -79,9 +79,13 @@
 | `16-decisions.md` | Архитектурные решения |
 | `17-code-arena-spec.md` | Code Arena |
 | `18-team-mode-spec.md` | AI Team Mode |
+| `19a-nextjs-setup.md` | Базовая настройка Next.js |
 | `19-development-checklist.md` | Чек-лист ближайшей разработки |
 | `20-stage-2-verification.md` | Отчёт проверки этапа v0.2 |
 | `21-stage-3-verification.md` | Отчёт проверки этапа v0.3 |
+| `22-documentation-audit.md` | Аудит документации |
+| `23-documentation-audit-deep.md` | Углублённый аудит документации |
+| `24-documentation-sync-report.md` | Отчёт синхронизации документации |
 | `AGENTS.md` | Правила для работы с кодом и AI-агентами |
 
 ## Текущее состояние
