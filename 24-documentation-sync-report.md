@@ -2,47 +2,48 @@
 
 ## Назначение файла
 
-Этот файл фиксирует результат синхронизации документации после углублённого аудита `23-documentation-audit-deep.md` и дополнительного аудита согласованности кода перед `v0.4`.
+Этот файл фиксирует итог синхронизации документации после аудитов `23-documentation-audit-deep.md`, `25-code-consistency-audit.md` и исправлений из `26-code-fix-report.md`.
 
-Синхронизация выполнена перед переходом к:
+Главный источник порядка версий - `14-roadmap.md`.
+
+Главный источник API-контракта Prompt Arena - `09-api-structure.md`.
+
+---
+
+# 1. Синхронизированные документы
+
+## 1.1 План и roadmap
+
+Синхронизированы:
 
 ```text
-v0.4 - OpenRouter Integration
-# реальные ответы моделей через backend
+02-project-plan.md
+# общий план разработки
+
+14-roadmap.md
+# главный порядок версий
+
+15-changelog.md
+# журнал изменений
+```
+
+Итог:
+
+```text
+v0.1 -> v0.2 -> v0.3 -> v0.4 -> v0.5 -> v0.6 -> v0.7 -> v0.8 -> v0.9 -> v1.0
+# порядок MVP сохранён
 ```
 
 ---
 
-# 1. Что было исправлено ранее
+## 1.2 MVP scope
 
-## 1.1 02-project-plan.md
-
-Исправлено:
-
-- убрана старая нумерация `v0.0`;
-- порядок версий синхронизирован с `14-roadmap.md`;
-- фазы разработки приведены к `v0.1-v1.0`;
-- добавлено разделение между UI MVP и Stable Prompt Arena MVP;
-- уточнено, что `v0.3` даёт локальный UI-выбор победителя, а `v0.6` сохраняет голос через API.
-
-Статус:
+Синхронизирован:
 
 ```text
-Done
-# файл синхронизирован
+04-mvp-scope.md
+# границы MVP
 ```
-
----
-
-## 1.2 04-mvp-scope.md
-
-Исправлено:
-
-- лимит prompt изменён с `4000` на `8000`;
-- закреплены единые MVP-лимиты;
-- добавлено разделение `UI winner selection` и `saved vote`;
-- документ сокращён и убраны лишние дубли;
-- границы `v0.3` и `v1.0` описаны чётче.
 
 Канонические лимиты:
 
@@ -53,276 +54,93 @@ MIN_PROMPT_LENGTH = 3
 MAX_PROMPT_LENGTH = 8000
 # максимальная длина prompt для MVP
 
-MIN_MODELS_PER_COMPARE = 2
-# минимальное количество моделей
-
 MAX_MODELS_PER_COMPARE = 3
-# максимальное количество моделей
-
-MODEL_TIMEOUT_MS = 60000
-# базовый timeout ответа модели
-```
-
-Статус:
-
-```text
-Done
-# файл синхронизирован
+# максимум моделей для одного сравнения
 ```
 
 ---
 
-## 1.3 06-project-modes.md
+## 1.3 API и типы
 
-Исправлено:
-
-- старые slug-и с подчёркиваниями заменены на `kebab-case`;
-- TypeScript-примеры переведены на `camelCase`;
-- база данных оставлена в `snake_case`;
-- добавлено правило единого стиля имён;
-- уточнено различие между `v0.3` UI-выбором и `v0.6` saved vote.
-
-Канонический стиль:
+Синхронизированы:
 
 ```text
-modeSlug = prompt-arena
-# API и TypeScript
+09-api-structure.md
+# контракт API
 
-mode_slug = prompt-arena
-# база данных
+25-code-consistency-audit.md
+# аудит старых расхождений
+
+26-code-fix-report.md
+# отчёт исправлений кода
 ```
 
-Статус:
+Итоговое решение:
 
 ```text
-Done
-# файл синхронизирован
+ArenaApiResponse
+# то, что возвращает будущий /api/compare
+
+ArenaResponseView
+# UI-представление после добавления modelRole на клиенте
+
+answerText
+# поле текста ответа по API-контракту
 ```
 
 ---
 
-## 1.4 09-api-structure.md
+## 1.4 Безопасность и окружение
 
-Исправлено и закреплено:
-
-- API JSON использует `camelCase`;
-- database naming использует `snake_case`;
-- `prompt_arena` заменён на `prompt-arena`;
-- `model_ids` заменено на `modelIds`;
-- `task_id` заменено на `taskId`;
-- `response_id` заменено на `responseId`;
-- `mode` заменено на `modeSlug`;
-- `vote_type: best` удалён из frontend API;
-- для обычного пользовательского голоса backend должен записывать `vote_type = user`;
-- максимум моделей исправлен с `4` на `3`;
-- максимум prompt зафиксирован как `8000`;
-- `/api/compare` использует `answerText`, а не `text`;
-- ошибки отдельных моделей возвращаются через `errorCode` и `errorMessage`.
-
-Канонический запрос `/api/compare`:
-
-```json
-{
-  "prompt": "Сравни React и Vue для небольшого MVP",
-  "modelIds": ["uuid-model-1", "uuid-model-2"],
-  "modeSlug": "prompt-arena"
-}
-```
-
-Канонический ответ `/api/compare`:
-
-```json
-{
-  "success": true,
-  "data": {
-    "task": {
-      "id": "uuid-task",
-      "modeSlug": "prompt-arena",
-      "promptText": "Сравни React и Vue для небольшого MVP"
-    },
-    "responses": [
-      {
-        "id": "uuid-response-1",
-        "modelId": "uuid-model-1",
-        "modelName": "Model A",
-        "status": "success",
-        "answerText": "React лучше подходит...",
-        "latencyMs": 4200
-      },
-      {
-        "id": "uuid-response-2",
-        "modelId": "uuid-model-2",
-        "modelName": "Model B",
-        "status": "error",
-        "answerText": null,
-        "errorCode": "MODEL_TIMEOUT",
-        "errorMessage": "Модель не успела ответить."
-      }
-    ]
-  }
-}
-```
-
-Канонический запрос `/api/vote`:
-
-```json
-{
-  "taskId": "uuid-task",
-  "responseId": "uuid-response"
-}
-```
-
-Статус:
+Синхронизированы:
 
 ```text
-Done
-# файл синхронизирован
+12-security-and-env.md
+# правила окружения и приватных переменных
+
+.env.example
+# безопасный пример переменных
 ```
 
----
-
-## 1.5 16-decisions.md
-
-Исправлено:
-
-- удалено обязательное требование хранить документацию в `docs/`;
-- зафиксировано, что текущая документация лежит в корне репозитория;
-- добавлено решение про единый стиль имён API, TypeScript, базы и slug-ов;
-- уточнено, что `docs/` можно создать позже, если документация станет слишком большой.
-
-Каноническое решение:
+Итог:
 
 ```text
-Документация проекта хранится в корне репозитория.
-# текущая структура проекта
+.env.local не коммитить.
+# приватные значения остаются локально
 
-API JSON и TypeScript = camelCase.
-# modelIds, taskId, responseId, modeSlug
-
-Supabase PostgreSQL = snake_case.
-# model_id, task_id, response_id, mode_slug
-
-Mode slug = kebab-case.
-# prompt-arena, code-arena, multi-model-battle
-```
-
-Статус:
-
-```text
-Done
-# файл синхронизирован
+.env.example можно хранить в GitHub.
+# только пустые значения и безопасные примеры
 ```
 
 ---
 
 # 2. Что исправлено после аудита кода
 
-## 2.1 README.md
-
-Исправлено:
-
-- добавлен `25-code-consistency-audit.md` в список документации;
-- обновлено текущее состояние проекта;
-- добавлено напоминание, что `package-lock.json` создан локально, но ещё не закоммичен;
-- закреплён канонический контракт `/api/compare`;
-- уточнено, что `answerText` является API-полем, а `text` - временным старым UI/mock-полем;
-- уточнено, что `modelRole` относится к UI-представлению и не должен дублироваться в API-ответе.
-
-Статус:
+После `25-code-consistency-audit.md` исправлено:
 
 ```text
-Done
-# GitHub README обновлён
+ArenaApiResponse и ArenaResponseView разделены.
+# API и UI больше не смешиваются
+
+Mock-ответы используют answerText.
+# mock ближе к будущему backend-контракту
+
+modelRole добавляется на клиенте по modelId.
+# роль модели не дублируется в API-like response
+
+MAX_PROMPT_LENGTH=8000 применён в UI.
+# textarea ограничивает ввод, validateForm проверяет верхнюю границу
+
+Старые responses сбрасываются при изменении prompt или моделей.
+# UI не показывает устаревший результат
+
+ResponseCard показывает answerText или errorMessage.
+# success/error отображаются корректно
 ```
 
 ---
 
-## 2.2 00-readme.md
-
-Исправлено:
-
-- убрано устаревшее указание, что документация хранится в папке `docs/`;
-- закреплена текущая структура документации в корне репозитория;
-- структура проекта приведена к текущему виду `src/app`, `src/components`, `src/lib`, `src/types`;
-- добавлен раздел с каноническим контрактом `/api/compare`;
-- добавлен раздел текущего состояния `v0.3 - Static UI MVP`;
-- добавлены ограничения перед `v0.4`.
-
-Статус:
-
-```text
-Done
-# главный файл документации обновлён
-```
-
----
-
-## 2.3 12-security-and-env.md
-
-Исправлено:
-
-- файл приведён к русскоязычному стилю проекта;
-- убрана старая структура `docs/`;
-- добавлена текущая структура `new-era-ai-platform/`, `.env.local`, `.env.example`, `package.json`, `package-lock.json`, `src/`;
-- добавлены правила для `package-lock.json`;
-- добавлены правила для `.env.example`;
-- добавлены лимиты `MIN_PROMPT_LENGTH`, `MAX_PROMPT_LENGTH`, `MAX_MODELS_PER_COMPARE`;
-- уточнены server-side правила для OpenRouter и Supabase;
-- добавлены проверки перед commit и push.
-
-Статус:
-
-```text
-Done
-# security/env документация обновлена
-```
-
----
-
-## 2.4 15-changelog.md
-
-Исправлено:
-
-- добавлен `25-code-consistency-audit.md`;
-- обновлены изменения после аудита кода;
-- добавлены Known Issues по `package-lock.json`, `answerText`, `modelRole`, `errorCode`, `errorMessage`, `MAX_PROMPT_LENGTH` и устаревшим responses;
-- уточнено различие между `ArenaApiResponse` и `ArenaResponseView`.
-
-Статус:
-
-```text
-Done
-# changelog обновлён
-```
-
----
-
-## 2.5 25-code-consistency-audit.md
-
-Добавлен новый файл аудита.
-
-Он фиксирует:
-
-- текущее зелёное состояние проверок;
-- отсутствие `package-lock.json` в GitHub;
-- расхождение `text` против `answerText`;
-- проблему `modelRole` в API-response;
-- отсутствие `errorCode` и `errorMessage` в текущем response-типе;
-- необходимость `MAX_PROMPT_LENGTH=8000` в UI;
-- необходимость единого текста ошибки для выбора моделей;
-- необходимость сброса старых responses при изменении prompt или выбранных моделей;
-- рекомендуемый порядок исправления кода перед `v0.4`.
-
-Статус:
-
-```text
-Done
-# новый аудит добавлен
-```
-
----
-
-# 3. Текущее состояние после синхронизации
+# 3. Актуальное состояние
 
 Проект находится на этапе:
 
@@ -331,75 +149,36 @@ v0.3 - Static UI MVP
 # интерфейс Prompt Arena работает на mock-данных
 ```
 
-По проверке:
+Статус после удалённых правок:
 
 ```text
-npm run typecheck
-# 0 ошибок
-
-npm run lint
-# чисто
-
-npm run build
-# сборка проходит
+Needs Local Verification
+# нужно подтвердить сборку локально после pull
 ```
 
-Но перед `v0.4` нужно закрыть технические долги:
+Осталось:
 
 ```text
 package-lock.json отсутствует в GitHub.
-# нужно закоммитить lock-файл
+# нужно создать через npm install и закоммитить
 
-ArenaResponse использует text.
-# нужно перейти на answerText
+Нужно прогнать typecheck, lint и build.
+# подтвердить, что проект остался зелёным
 
-ArenaResponse содержит modelRole.
-# API не должен дублировать роль модели
-
-Нет errorCode и errorMessage.
-# ошибки моделей нужно отображать явно
-
-MAX_PROMPT_LENGTH=8000 не применён в UI.
-# нужно добавить верхний лимит в textarea и validateForm
-
-Старые responses не сбрасываются при изменении prompt или моделей.
-# нужно убрать рассинхрон UI-состояния
+Backend routes ещё не подключены.
+# это следующий этап v0.4
 ```
 
 ---
 
-# 4. Что осталось перед v0.4
+# 4. Следующий практический шаг
 
-Документация по главным блокирующим пунктам синхронизирована.
-
-Перед началом OpenRouter Integration нужно выполнить кодовые исправления:
-
-```text
-1. Добавить package-lock.json в GitHub.
-# зафиксировать версии зависимостей
-
-2. Разделить ArenaApiResponse и ArenaResponseView.
-# привести код к контракту 09-api-structure.md
-
-3. Перевести mock-responses.ts на answerText.
-# mock должен имитировать будущий backend
-
-4. Обновить response-card.tsx для success/error.
-# карточка должна показывать answerText или errorMessage
-
-5. Добавить MAX_PROMPT_LENGTH=8000 в UI.
-# документация и код должны совпадать
-
-6. Сбрасывать старые responses при изменении prompt или моделей.
-# UI не должен показывать устаревший результат
-
-7. Прогнать проверки.
-# typecheck, lint, build должны остаться зелёными
-```
-
-Команды проверки:
+В локальном репозитории выполнить:
 
 ```bash
+npm install
+# установить зависимости и создать package-lock.json
+
 npm run typecheck
 # проверить TypeScript
 
@@ -408,26 +187,31 @@ npm run lint
 
 npm run build
 # проверить production-сборку
+
+git add package-lock.json
+# добавить lock-файл зависимостей
+
+git commit -m "chore: add package lock"
+# зафиксировать точные версии зависимостей
 ```
 
 ---
 
 # 5. Итог
 
-Блокирующие противоречия документации устранены.
+Документация синхронизирована с последними кодовыми исправлениями.
 
-Главное архитектурное решение перед `v0.4`:
+Старые пункты про `answerText`, `modelRole`, `MAX_PROMPT_LENGTH` и stale responses больше не считаются нерешёнными проблемами.
+
+Открыты только реальные следующие шаги:
 
 ```text
-09-api-structure.md остаётся источником истины для API.
-# код нужно привести к документации
+package-lock.json
+# создать локально и закоммитить
 
-/api/compare возвращает answerText, errorCode, errorMessage.
-# это будущий backend-контракт
+local verification
+# typecheck, lint, build
 
-modelRole добавляется на клиенте по modelId.
-# роль модели не дублируется в API-ответе
-
-package-lock.json нужно закоммитить.
-# версии зависимостей должны быть зафиксированы
+v0.4 backend integration
+# следующий этап roadmap
 ```
