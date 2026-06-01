@@ -17,7 +17,8 @@
 - какие технологии используются;
 - какие файлы документации читать дальше;
 - какой порядок разработки считается основным;
-- какие функции нельзя делать раньше времени.
+- какие функции нельзя делать раньше времени;
+- какие текущие ограничения нужно исправить перед переходом к `v0.4`.
 
 Главный источник порядка версий - файл `14-roadmap.md`.
 
@@ -136,24 +137,24 @@ Visual Studio Code
 
 | Версия | Название | Главный результат |
 |---|---|---|
-| v0.1 | Project Documentation | Документация проекта готова |
-| v0.2 | Next.js Base | Проект запускается локально |
-| v0.3 | UI MVP | Есть интерфейс Prompt Arena без реального AI |
-| v0.4 | OpenRouter Integration | Получаем реальные ответы моделей |
-| v0.5 | Supabase Integration | Сохраняем задачи и ответы в базу |
-| v0.6 | Voting MVP | Пользователь выбирает лучший ответ |
-| v0.7 | History MVP | Есть история сравнений |
-| v0.8 | First Deploy | Проект опубликован на Vercel |
-| v0.9 | MVP Stabilization | Стабильность, лимиты, ошибки, UX |
-| v1.0 | Stable Prompt Arena | Первая стабильная версия проекта |
-| v1.1 | Code Arena Lite | Сравнение моделей по коду без запуска кода |
-| v1.2 | Multi Model Battle | Формальные бои моделей |
-| v1.3 | Judge Mode | Модель-судья оценивает ответы |
-| v1.4 | Leaderboard | Рейтинг моделей |
-| v1.5 | Accounts and Profiles | Авторизация, профили и личная история |
-| v1.6 | Admin Panel and Limits | Управление моделями, режимами и лимитами |
-| v1.7 | Code Arena Runner | Безопасный запуск кода в sandbox |
-| v2.0 | AI Team Mode | Командная работа нескольких AI-моделей |
+| `v0.1` | Project Documentation | Документация проекта готова |
+| `v0.2` | Next.js Base | Проект запускается локально |
+| `v0.3` | UI MVP | Есть интерфейс Prompt Arena без реального AI |
+| `v0.4` | OpenRouter Integration | Получаем реальные ответы моделей через backend |
+| `v0.5` | Supabase Integration | Сохраняем задачи и ответы в базу |
+| `v0.6` | Voting MVP | Пользователь выбирает лучший ответ |
+| `v0.7` | History MVP | Есть история сравнений |
+| `v0.8` | First Deploy | Проект опубликован на Vercel |
+| `v0.9` | MVP Stabilization | Стабильность, лимиты, ошибки, UX |
+| `v1.0` | Stable Prompt Arena | Первая стабильная версия проекта |
+| `v1.1` | Code Arena Lite | Сравнение моделей по коду без запуска кода |
+| `v1.2` | Multi Model Battle | Формальные бои моделей |
+| `v1.3` | Judge Mode | Модель-судья оценивает ответы |
+| `v1.4` | Leaderboard | Рейтинг моделей |
+| `v1.5` | Accounts and Profiles | Авторизация, профили и личная история |
+| `v1.6` | Admin Panel and Limits | Управление моделями, режимами и лимитами |
+| `v1.7` | Code Arena Runner | Безопасный запуск кода в sandbox |
+| `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей |
 
 ---
 
@@ -392,6 +393,45 @@ Frontend не должен напрямую обращаться к OpenRouter.
 
 ---
 
+## Канонический контракт `/api/compare`
+
+Документ `09-api-structure.md` является источником истины для будущего backend API.
+
+API-ответ модели должен использовать:
+
+```text
+answerText
+# текст успешного ответа модели
+
+errorCode
+# технический код ошибки модели, если status = error
+
+errorMessage
+# понятное сообщение об ошибке модели, если status = error
+```
+
+Не использовать как API-контракт:
+
+```text
+text
+# временное поле старого UI/mock-типа
+
+modelRole
+# роль модели не должна дублироваться в API-ответе /api/compare
+```
+
+Правильное разделение:
+
+```text
+ArenaApiResponse
+# то, что приходит от /api/compare
+
+ArenaResponseView
+# UI-представление, куда frontend добавляет modelRole по modelId
+```
+
+---
+
 ## Правила безопасности
 
 Главные правила безопасности:
@@ -420,65 +460,73 @@ Code Arena Runner нельзя делать до v1.7.
 
 ## Структура документации
 
-Документация проекта хранится в папке `docs`.
+Документация проекта сейчас хранится в корне репозитория.
+
+Папка `docs/` не используется как обязательная структура на текущем этапе.
 
 ```text
-docs/00-readme.md
+00-readme.md
 # главный входной файл документации
 
-docs/01-idea.md
+01-idea.md
 # идея проекта
 
-docs/02-project-plan.md
+02-project-plan.md
 # общий план проекта
 
-docs/03-tools-and-sites.md
+03-tools-and-sites.md
 # инструменты и сайты
 
-docs/04-mvp-scope.md
+04-mvp-scope.md
 # границы MVP
 
-docs/05-user-roles.md
+05-user-roles.md
 # роли пользователей
 
-docs/06-project-modes.md
+06-project-modes.md
 # режимы проекта
 
-docs/07-architecture.md
+07-architecture.md
 # архитектура проекта
 
-docs/08-database.md
+08-database.md
 # база данных
 
-docs/09-api-structure.md
-# структура API
+09-api-structure.md
+# структура API и контракт /api/compare
 
-docs/10-ui-pages.md
+10-ui-pages.md
 # страницы и интерфейс
 
-docs/11-ai-models.md
+11-ai-models.md
 # стратегия AI-моделей
 
-docs/12-security-and-env.md
+12-security-and-env.md
 # безопасность и переменные окружения
 
-docs/13-deployment.md
+13-deployment.md
 # деплой
 
-docs/14-roadmap.md
+14-roadmap.md
 # главный порядок версий
 
-docs/15-changelog.md
+15-changelog.md
 # журнал изменений
 
-docs/16-decisions.md
+16-decisions.md
 # зафиксированные архитектурные решения
 
-docs/17-code-arena-spec.md
+17-code-arena-spec.md
 # спецификация Code Arena
 
-docs/18-team-mode-spec.md
+18-team-mode-spec.md
 # спецификация AI Team Mode
+
+19a-nextjs-setup.md
+# базовая настройка Next.js
+
+25-code-consistency-audit.md
+# аудит согласованности кода и документации перед v0.4
 ```
 
 ---
@@ -488,23 +536,20 @@ docs/18-team-mode-spec.md
 Базовая структура Next.js проекта:
 
 ```text
-app/
+src/app/
 # страницы и маршруты приложения
 
-app/api/
+src/app/api/
 # backend API routes
 
-components/
+src/components/
 # переиспользуемые UI-компоненты
 
-lib/
+src/lib/
 # server-side клиенты, сервисы и утилиты
 
-types/
+src/types/
 # TypeScript-типы
-
-docs/
-# документация проекта
 
 .env.local
 # локальные секреты, не коммитить
@@ -515,27 +560,76 @@ docs/
 
 ---
 
+## Текущее состояние
+
+Сейчас проект находится на этапе:
+
+```text
+v0.3 - Static UI MVP
+# интерфейс Prompt Arena работает на mock-данных
+```
+
+По отчёту проверки:
+
+```text
+npm run typecheck
+# 0 ошибок
+
+npm run lint
+# чисто
+
+npm run build
+# сборка проходит без предупреждения про tsconfig
+```
+
+Ограничения перед `v0.4`:
+
+```text
+package-lock.json создан локально, но не закоммичен.
+# нужно добавить lock-файл в GitHub
+
+MAX_PROMPT_LENGTH=8000 есть в документации и .env.example, но не применён в UI.
+# нужно добавить maxLength и проверку верхней границы
+
+Есть рассинхрон API-типа и UI-типа ответа.
+# нужно заменить старый ArenaResponse на ArenaApiResponse + ArenaResponseView
+
+При изменении prompt или выбора моделей старые responses могут остаться на экране.
+# нужно сбрасывать устаревшие ответы
+```
+
+---
+
 ## Локальный запуск проекта
 
 Команды для базового запуска:
 
 ```bash
 npm install
-# установить зависимости проекта
+# установить зависимости проекта и создать package-lock.json
 
 npm run dev
 # запустить проект локально в режиме разработки
 
-npm run build
-# проверить, что проект собирается без ошибок
+npm run typecheck
+# проверить TypeScript без production-сборки
 
 npm run lint
-# проверить код линтером, если lint настроен
+# проверить код линтером
+
+npm run build
+# проверить, что проект собирается без ошибок
 ```
 
 Перед каждым важным commit желательно выполнять:
 
 ```bash
+npm run typecheck
+# убедиться, что TypeScript проходит
+
+npm run lint
+# убедиться, что ESLint проходит
+
 npm run build
 # убедиться, что проект собирается
 
@@ -651,24 +745,21 @@ Code Arena Runner.
 
 ## Следующий практический шаг
 
-После подготовки документации нужно переходить к `v0.2 - Next.js Base`.
-
-Минимальная цель следующего этапа:
+Перед переходом к `v0.4 - OpenRouter Integration` нужно закрыть технические расхождения `v0.3`:
 
 ```text
-Создать Next.js проект.
-# базовый сайт должен открываться локально
+Добавить package-lock.json в Git.
+# зафиксировать точные версии зависимостей
 
-Добавить TypeScript.
-# проект должен быть удобен для дальнейшей разработки
+Привести типы Prompt Arena к контракту 09-api-structure.md.
+# разделить API response и UI view response
 
-Добавить папку docs.
-# документация должна лежать внутри проекта
+Добавить MAX_PROMPT_LENGTH=8000 в UI-валидацию.
+# документация и код должны совпадать
 
-Проверить npm run dev.
-# локальный запуск должен работать
+Сбрасывать старые responses при изменении prompt или выбора моделей.
+# пользователь не должен видеть устаревший результат
 
-Сделать первый Git commit.
-# зафиксировать стабильную базу
+Проверить npm run typecheck, npm run lint и npm run build.
+# после правок проект должен остаться зелёным
 ```
-
