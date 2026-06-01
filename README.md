@@ -48,9 +48,9 @@
 1. Сначала создаём простой рабочий MVP.
 2. Не добавляем сложные режимы раньше времени.
 3. Все AI-запросы идут только через backend.
-4. Секретные ключи не хранятся в GitHub.
+4. Секретные значения не хранятся в GitHub.
 5. `.env.local` используется только локально.
-6. Production-секреты хранятся только в Vercel Environment Variables.
+6. Production-переменные хранятся только в Vercel Environment Variables.
 7. Перед новой функцией проверяем, что старая часть не сломалась.
 8. Каждый важный этап фиксируем через Git commit.
 
@@ -87,6 +87,7 @@
 | `23-documentation-audit-deep.md` | Углублённый аудит документации |
 | `24-documentation-sync-report.md` | Отчёт синхронизации документации |
 | `25-code-consistency-audit.md` | Аудит согласованности кода и документации перед v0.4 |
+| `26-code-fix-report.md` | Отчёт исправлений кода после аудита |
 | `AGENTS.md` | Правила для работы с кодом и AI-агентами |
 
 ## Текущее состояние
@@ -112,22 +113,25 @@
 - главная страница `/`;
 - интерактивная страница `/arena`;
 - mock-данные моделей;
-- mock-генератор ответов;
+- mock-генератор ответов с `answerText`;
+- разделение `ArenaApiResponse` и `ArenaResponseView`;
+- добавление `modelRole` на клиенте по `modelId`;
 - client-side состояние Prompt Arena;
 - валидация prompt и выбора моделей;
+- ограничение prompt до `MAX_PROMPT_LENGTH=8000`;
+- сброс старых responses при изменении prompt или выбора моделей;
 - loading, empty, error и success-состояния;
-- UI-выбор победителя;
-- `AGENTS.md` с правилами работы над проектом;
-- локальная проверка `npm run typecheck`, `npm run lint`, `npm run build` проходит по отчёту проверки.
+- UI-выбор победителя для успешных ответов;
+- `AGENTS.md` с правилами работы над проектом.
 
 Ещё не готово:
 
-- `package-lock.json` создан локально после `npm install`, но пока не закоммичен в GitHub;
+- `package-lock.json` нужно создать локально через `npm install` и закоммитить в GitHub;
+- после последних удалённых правок нужно локально прогнать `npm run typecheck`, `npm run lint`, `npm run build`;
 - backend API routes;
 - OpenRouter integration;
 - Supabase integration;
-- Vercel deploy;
-- приведение TypeScript-типа ответа Prompt Arena к контракту `09-api-structure.md`.
+- Vercel deploy.
 
 ## Канонический контракт `/api/compare`
 
@@ -144,10 +148,10 @@ answerText
 
 ```text
 text
-# временное поле старого UI/mock-типа
+# старое поле, не должно использоваться в API-контракте
 ```
 
-Поле `modelRole` относится к UI-представлению и должно подмешиваться на клиенте по `modelId`, а не дублироваться в ответе `/api/compare`.
+Поле `modelRole` относится к UI-представлению и подмешивается на клиенте по `modelId`, а не дублируется в ответе `/api/compare`.
 
 ## Локальная разработка
 
@@ -185,8 +189,7 @@ git commit -m "chore: add package lock"
 Нельзя добавлять в GitHub:
 
 - `.env.local`;
-- реальные OpenRouter API keys;
-- реальные Supabase service role keys;
+- реальные приватные значения окружения;
 - любые production-секреты.
 
 Для примера переменных используется только `.env.example`.
