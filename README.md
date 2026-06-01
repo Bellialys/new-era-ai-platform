@@ -69,10 +69,10 @@
 | `06-project-modes.md` | Режимы проекта |
 | `07-architecture.md` | Архитектура |
 | `08-database.md` | База данных |
-| `09-api-structure.md` | API-структура |
+| `09-api-structure.md` | API-структура и контракт `/api/compare` |
 | `10-ui-pages.md` | Страницы интерфейса |
 | `11-ai-models.md` | AI-модели |
-| `12-security-and-env.md` | Безопасность и env |
+| `12-security-and-env.md` | Безопасность и переменные окружения |
 | `13-deployment.md` | Деплой |
 | `14-roadmap.md` | Главный roadmap |
 | `15-changelog.md` | Журнал изменений |
@@ -86,6 +86,7 @@
 | `22-documentation-audit.md` | Аудит документации |
 | `23-documentation-audit-deep.md` | Углублённый аудит документации |
 | `24-documentation-sync-report.md` | Отчёт синхронизации документации |
+| `25-code-consistency-audit.md` | Аудит согласованности кода и документации перед v0.4 |
 | `AGENTS.md` | Правила для работы с кодом и AI-агентами |
 
 ## Текущее состояние
@@ -116,15 +117,37 @@
 - валидация prompt и выбора моделей;
 - loading, empty, error и success-состояния;
 - UI-выбор победителя;
-- `AGENTS.md` с правилами работы над проектом.
+- `AGENTS.md` с правилами работы над проектом;
+- локальная проверка `npm run typecheck`, `npm run lint`, `npm run build` проходит по отчёту проверки.
 
 Ещё не готово:
 
-- `package-lock.json`, потому что зависимости нужно установить локально через `npm install`;
+- `package-lock.json` создан локально после `npm install`, но пока не закоммичен в GitHub;
 - backend API routes;
 - OpenRouter integration;
 - Supabase integration;
-- Vercel deploy.
+- Vercel deploy;
+- приведение TypeScript-типа ответа Prompt Arena к контракту `09-api-structure.md`.
+
+## Канонический контракт `/api/compare`
+
+Документ `09-api-structure.md` является источником истины для будущего backend API.
+
+Для ответа модели используется поле:
+
+```text
+answerText
+# текст успешного ответа модели
+```
+
+Не использовать как API-контракт:
+
+```text
+text
+# временное поле старого UI/mock-типа
+```
+
+Поле `modelRole` относится к UI-представлению и должно подмешиваться на клиенте по `modelId`, а не дублироваться в ответе `/api/compare`.
 
 ## Локальная разработка
 
@@ -145,6 +168,16 @@ npm run lint
 
 npm run build
 # проверяет production-сборку
+```
+
+После локального `npm install` нужно добавить `package-lock.json` в Git:
+
+```bash
+git add package-lock.json
+# добавить lock-файл зависимостей
+
+git commit -m "chore: add package lock"
+# зафиксировать точные версии зависимостей
 ```
 
 ## Безопасность
