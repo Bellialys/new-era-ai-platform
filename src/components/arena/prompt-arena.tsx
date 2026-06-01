@@ -1,35 +1,78 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { arenaModels } from "@/data/mock-arena";
-import { buildMockResponses } from "@/lib/arena/mock-responses";
-import type { ArenaApiResponse, ArenaResponseView } from "@/types/arena";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  PROMPT_MIN_LENGTH,
+  PROMPT_MAX_LENGTH,
+  MODEL_MIN_SELECT,
+  MODEL_MAX_SELECT,
+} from "@/lib/arena/constants";
+import type {
+  ArenaApiResponse,
+  ArenaResponseView,
+  ArenaModel,
+} from "@/types/arena";
 import { ArenaForm } from "./arena-form";
 import { ArenaResults } from "./arena-results";
 
-const MIN_PROMPT_LENGTH = 3;
-const MAX_PROMPT_LENGTH = 8000;
-const MIN_SELECTED_MODELS = 2;
-const MAX_SELECTED_MODELS = 3;
 const MAX_MODELS_ERROR_MESSAGE = "В MVP можно выбрать максимум три модели.";
 
 export function PromptArena() {
+  const [availableModels, setAvailableModels] = useState<ArenaModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+
   const [prompt, setPrompt] = useState("");
-  const [selectedModelIds, setSelectedModelIds] = useState<string[]>([arenaModels[0].id, arenaModels[1].id]);
+  const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
   const [responses, setResponses] = useState<ArenaResponseView[]>([]);
   const [winnerResponseId, setWinnerResponseId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
 
+  // Load available models on mount
+  useEffect(() => {
+    async function loadModels() {
+      try {
+        const response = await fetch("/api/models");
+        if (!response.ok) {
+          throw new Error("Failed to load models");
+        }
+        const data = (await response.json()) as {
+          status: string;
+          models: ArenaModel[];
+        };
+        setAvailableModels(data.models);
+        // Select first two models by default
+        if (data.models.length >= 2) {
+          setSelectedModelIds([data.models[0].id, data.models[1].id]);
+        }
+      } catch (error) {
+        console.error("Error loading models:", error);
+        setModelsError(
+          "Failed to load available models. Please refresh the page."
+        );
+      } finally {
+        setModelsLoading(false);
+      }
+    }
+
+    loadModels();
+  }, []);
+
   const selectedModels = useMemo(
-    () => arenaModels.filter((model) => selectedModelIds.includes(model.id)),
-    [selectedModelIds],
+    () =>
+      availableModels.filter((model) =>
+        selectedModelIds.includes(model.id)
+      ),
+    [selectedModelIds, availableModels]
   );
 
   function buildResponseViews(apiResponses: ArenaApiResponse[]): ArenaResponseView[] {
     return apiResponses.map((response) => {
-      const matchedModel = arenaModels.find((model) => model.id === response.modelId);
+      const matchedModel = availableModels.find(
+        (model) => model.id === response.modelId
+      );
 
       return {
         ...response,
@@ -48,19 +91,19 @@ export function PromptArena() {
   function validateForm() {
     const cleanPrompt = prompt.trim();
 
-    if (cleanPrompt.length < MIN_PROMPT_LENGTH) {
+    if (cleanPrompt.length < PROMPT_MIN_LENGTH) {
       return "Введите задачу минимум из 3 символов.";
     }
 
-    if (cleanPrompt.length > MAX_PROMPT_LENGTH) {
-      return `Введите задачу не длиннее ${MAX_PROMPT_LENGTH} символов.`;
+    if (cleanPrompt.length > PROMPT_MAX_LENGTH) {
+      return `Введите задачу не длиннее ${PROMPT_MAX_LENGTH} символов.`;
     }
 
-    if (selectedModelIds.length < MIN_SELECTED_MODELS) {
+    if (selectedModelIds.length < MODEL_MIN_SELECT) {
       return "Для сравнения нужно выбрать минимум две модели.";
     }
 
-    if (selectedModelIds.length > MAX_SELECTED_MODELS) {
+    if (selectedModelIds.length > MODEL_MAX_SELECT) {
       return MAX_MODELS_ERROR_MESSAGE;
     }
 
@@ -82,7 +125,7 @@ export function PromptArena() {
         return currentIds.filter((id) => id !== modelId);
       }
 
-      if (currentIds.length >= MAX_SELECTED_MODELS) {
+      if (currentIds.length >= MODEL_MAX_SELECT) {
         setErrorMessage(MAX_MODELS_ERROR_MESSAGE);
         return currentIds;
       }
@@ -108,25 +151,72 @@ export function PromptArena() {
     setResponses([]);
     setWinnerResponseId(null);
 
-    window.setTimeout(() => {
-      if (requestIdRef.current !== requestId) {
-        return;
+    // Call the real API
+    (async () => {
+      try {
+        const response = await fetch("/api/compare", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: prompt.trim(),
+            modelIds: selectedModelIds,
+          }),
+        });
+
+        // Check if this response is still relevant
+        if (requestIdRef.current !== requestId) {
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = (await response.json()) as {
+            message?: string;
+            errorCode?: string;
+          };
+          throw new Error(
+            errorData.message || `API error: ${response.status}`
+          );
+        }
+
+        const data = (await response.json()) as {
+          status: string;
+          responses: ArenaApiResponse[];
+        };
+
+        if (data.status !== "success" || !data.responses) {
+          throw new Error("Invalid API response format");
+        }
+
+        setResponses(buildResponseViews(data.responses));
+      } catch (error) {
+        console.error("Error fetching responses:", error);
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Failed to get responses. Please try again."
+        );
+      } finally {
+        if (requestIdRef.current === requestId) {
+          setIsLoading(false);
+        }
       }
-
-      const mockResponses = buildMockResponses({
-        prompt,
-        selectedModels,
-      });
-
-      setResponses(buildResponseViews(mockResponses));
-      setIsLoading(false);
-    }, 700);
+    })();
   }
 
   function handleReset() {
     requestIdRef.current += 1;
     setPrompt("");
-    setSelectedModelIds([arenaModels[0].id, arenaModels[1].id]);
+    // Reset to first two models (or default)
+    if (availableModels.length >= 2) {
+      setSelectedModelIds([
+        availableModels[0].id,
+        availableModels[1].id,
+      ]);
+    } else {
+      setSelectedModelIds([]);
+    }
     setResponses([]);
     setWinnerResponseId(null);
     setErrorMessage(null);
@@ -137,11 +227,11 @@ export function PromptArena() {
     <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
       <ArenaForm
         prompt={prompt}
-        maxPromptLength={MAX_PROMPT_LENGTH}
+        maxPromptLength={PROMPT_MAX_LENGTH}
         selectedModelIds={selectedModelIds}
-        models={arenaModels}
+        models={availableModels}
         isLoading={isLoading}
-        errorMessage={errorMessage}
+        errorMessage={errorMessage || modelsError}
         onPromptChange={handlePromptChange}
         onToggleModel={handleToggleModel}
         onSubmit={handleSubmit}
