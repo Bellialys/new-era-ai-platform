@@ -65,7 +65,7 @@ changelog
 
 Code Arena Runner должен быть только на `v1.7`.
 
-Нельзя указывать Code Arena Runner как `v1.5`, потому что до безопасного запуска кода проекту нужны:
+Нельзя переносить Code Arena Runner на ранние версии, потому что до безопасного запуска кода проекту нужны:
 
 - аккаунты;
 - лимиты;
@@ -102,52 +102,6 @@ ArenaResponseView
 
 ---
 
-# Формат записи
-
-Для каждой версии используется такой формат:
-
-```text
-# v0.4 - OpenRouter Integration
-
-## Статус
-
-Planned
-# запланировано
-
-## Дата
-
-Не выпущено
-# дата будет добавлена после release
-
-## Added
-
-- Добавлено ...
-
-## Changed
-
-- Изменено ...
-
-## Fixed
-
-- Исправлено ...
-
-## Removed
-
-- Удалено ...
-
-## Security
-
-- Улучшена безопасность ...
-
-## Known Issues
-
-- Известное ограничение ...
-```
-
-Не каждый раздел обязателен.
-
----
-
 # [Unreleased]
 
 ## Статус
@@ -169,6 +123,7 @@ Active
 - Добавлен `23-documentation-audit-deep.md`.
 - Добавлен `24-documentation-sync-report.md`.
 - Добавлен `25-code-consistency-audit.md`.
+- Добавлен `26-code-fix-report.md`.
 - Добавлен `AGENTS.md` с правилами работы над проектом.
 - Добавлен `package.json`.
 - Добавлены конфигурации Next.js, TypeScript, ESLint и Tailwind CSS.
@@ -182,15 +137,14 @@ Active
 
 ## Changed
 
-- `README.md` обновлён под состояние `v0.3 - Static UI MVP` и текущий аудит перед `v0.4`.
-- `00-readme.md` обновлён: убрано устаревшее указание на обязательную папку `docs/`, закреплена текущая структура документации в корне репозитория.
+- `README.md` обновлён под актуальное состояние `v0.3 - Static UI MVP` после исправлений кода.
+- `00-readme.md` обновлён под актуальное состояние после `26-code-fix-report.md`.
 - `02-project-plan.md` синхронизирован с `14-roadmap.md`.
 - `04-mvp-scope.md` синхронизирован с текущими лимитами MVP и состоянием `v0.3`.
 - `06-project-modes.md` синхронизирован с единым стилем `modeSlug`, API и TypeScript.
 - `09-api-structure.md` закреплён как источник истины для `/api/compare`.
-- `12-security-and-env.md` обновлён: структура проекта приведена к текущему виду `src/`, добавлены правила для `package-lock.json`, `.env.example`, лимитов prompt/model и server-side ключей.
-- `15-changelog.md` обновлён после глубокого аудита кода и документации.
-- В документации закреплены единые лимиты: `MIN_PROMPT_LENGTH=3`, `MAX_PROMPT_LENGTH=8000`, `MAX_MODELS_PER_COMPARE=3`.
+- `12-security-and-env.md` обновлён: структура проекта приведена к текущему виду `src/`, добавлены правила для `package-lock.json`, `.env.example`, лимитов prompt/model и server-side переменных.
+- `.env.example` синхронизирован с MVP-лимитами: `MIN_PROMPT_LENGTH=3`, `MAX_PROMPT_LENGTH=8000`, `MAX_MODELS_PER_COMPARE=3`.
 - В документации уточнено различие между локальным UI-выбором победителя в `v0.3` и сохранённым голосом в `v0.6`.
 - В документации уточнено различие между `ArenaApiResponse` и `ArenaResponseView`.
 
@@ -203,14 +157,20 @@ Active
 - Исправлен лимит количества моделей: максимум `3`, а не `4`.
 - Исправлен лимит prompt: максимум `8000`, а не `4000`.
 - Удалены устаревшие Known Issues о том, что код проекта ещё не создан и Next.js ещё не инициализирован.
-- Зафиксировано, что `text` в текущем коде является временным UI/mock-полем и должно быть заменено на `answerText` по контракту `09-api-structure.md`.
-- Зафиксировано, что `modelRole` не должен дублироваться в API-ответе `/api/compare`, а должен добавляться на клиенте по `modelId`.
+- В коде разделены `ArenaApiResponse` и `ArenaResponseView`.
+- Mock-генератор ответов переведён с `text` на `answerText`.
+- `modelRole` больше не дублируется в API-like mock response и добавляется на клиенте по `modelId`.
+- `ResponseCard` показывает `answerText` для успешного ответа и `errorMessage` для ошибки модели.
+- `ResponseCard` отображает `errorCode` и не даёт выбрать ошибочный ответ победителем.
+- `MAX_PROMPT_LENGTH=8000` применён в UI: textarea ограничивает ввод, `validateForm` проверяет верхнюю границу.
+- Старые responses сбрасываются при изменении prompt или выбора моделей.
+- Добавлен `26-code-fix-report.md` с фиксацией исправлений кода.
 
 ## Security
 
-- Закреплено правило: секретные ключи нельзя хранить в коде.
-- Закреплено правило: OpenRouter key используется только server-side.
-- Закреплено правило: `SUPABASE_SERVICE_ROLE_KEY` используется только server-side.
+- Закреплено правило: секретные значения нельзя хранить в коде.
+- Закреплено правило: внешний AI API вызывается только server-side.
+- Закреплено правило: server-side ключи не используются на клиенте.
 - Закреплено правило: `.env.local` не должен попадать в GitHub.
 - Закреплено правило: `.env.example` может быть в GitHub только без реальных секретов.
 - Закреплено правило: backend обязан проверять allowlist моделей.
@@ -220,13 +180,10 @@ Active
 
 ## Known Issues
 
-- `package-lock.json` создан локально после `npm install`, но пока отсутствует в GitHub.
-- `MAX_PROMPT_LENGTH=8000` есть в документации и `.env.example`, но ещё должен быть применён в UI-коде.
-- В коде Prompt Arena текущий тип ответа использует `text`, а канонический API-контракт требует `answerText`.
-- В коде Prompt Arena текущий response содержит `modelRole`, а будущий `/api/compare` не должен дублировать это поле.
-- В коде Prompt Arena нужно добавить `errorCode` и `errorMessage` для отображения ошибок отдельных моделей.
-- При изменении prompt или выбора моделей нужно сбрасывать старые responses, чтобы UI не показывал устаревший результат.
-- OpenRouter ещё не подключён в коде.
+- `package-lock.json` нужно создать локально через `npm install` и закоммитить в GitHub.
+- После последних удалённых правок нужно локально прогнать `npm run typecheck`, `npm run lint`, `npm run build`.
+- Backend API routes ещё не подключены.
+- OpenRouter integration ещё не подключён в коде.
 - Supabase ещё не подключён в коде.
 - Vercel deploy ещё не выполнен.
 - Точные OpenRouter model ID нужно проверить перед production через OpenRouter Models API.
@@ -262,7 +219,7 @@ Done
 
 - Закреплено правило: API-ключи не вставлять в код.
 - Закреплено правило: `.env.local` не коммитить.
-- Закреплено правило: OpenRouter API key использовать только через backend.
+- Закреплено правило: внешний AI API использовать только через backend.
 
 ---
 
@@ -293,8 +250,8 @@ Done
 ## Статус
 
 ```text
-In Progress
-# интерфейс Prompt Arena уже работает на mock-данных, но перед v0.4 нужно закрыть найденные расхождения
+Needs Local Verification
+# основные кодовые расхождения закрыты, но нужны локальные проверки после pull
 ```
 
 ## Added
@@ -306,18 +263,23 @@ In Progress
 - Добавлены карточки ответов.
 - Добавлен локальный UI-выбор победителя без сохранения в базу.
 
-## Known Issues
+## Fixed
 
-- UI должен применять `MAX_PROMPT_LENGTH=8000`.
-- Response type должен быть разделён на API-contract и UI-view.
-- Mock-ответы нужно привести к будущему контракту `/api/compare`.
-- Старые responses нужно сбрасывать при изменении prompt или выбора моделей.
+- UI применяет `MAX_PROMPT_LENGTH=8000`.
+- Response type разделён на API-contract и UI-view.
+- Mock-ответы приведены к будущему контракту `/api/compare`.
+- Старые responses сбрасываются при изменении prompt или выбора моделей.
+
+## Remaining
+
+- Создать и закоммитить `package-lock.json`.
+- Локально проверить `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 
 # Следующий целевой этап
 
-Следующий целевой этап после закрытия расхождений `v0.3`:
+Следующий целевой этап после локальной проверки `v0.3`:
 
 ```text
 v0.4 - OpenRouter Integration
@@ -327,6 +289,9 @@ v0.4 - OpenRouter Integration
 Перед началом `v0.4` нужно убедиться:
 
 ```bash
+npm install
+# установить зависимости и создать package-lock.json
+
 npm run typecheck
 # TypeScript проходит
 
