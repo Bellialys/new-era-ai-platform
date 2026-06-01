@@ -47,12 +47,12 @@ export default function HomePage() {
             >
               Открыть Prompt Arena
             </Link>
-            <Link
-              href="/README.md"
+            <a
+              href="https://github.com/Bellialys/new-era-ai-platform/blob/main/README.md"
               className="rounded-full border border-white/15 px-6 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
             >
               Читать документацию
-            </Link>
+            </a>
           </div>
         </div>
 
