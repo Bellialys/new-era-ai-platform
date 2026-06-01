@@ -3,6 +3,9 @@
   "version": "0.2.0",
   "private": true,
   "description": "AI platform for comparing, evaluating and collaborating with multiple AI models.",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "16.2.2",
+    "next": "latest",
     "react": "latest",
     "react-dom": "latest"
   },
@@ -23,7 +26,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint": "latest",
-    "eslint-config-next": "16.2.2",
+    "eslint-config-next": "latest",
     "tailwindcss": "latest",
     "typescript": "latest"
   }
