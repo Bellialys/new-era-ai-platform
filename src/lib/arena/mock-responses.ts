@@ -1,4 +1,4 @@
-import type { ArenaModel, ArenaResponse } from "@/types/arena";
+import type { ArenaApiResponse, ArenaModel } from "@/types/arena";
 
 type BuildMockResponsesParams = {
   prompt: string;
@@ -29,14 +29,13 @@ function buildResponseText(prompt: string, model: ArenaModel, index: number): st
   ].join("\n\n");
 }
 
-export function buildMockResponses({ prompt, selectedModels }: BuildMockResponsesParams): ArenaResponse[] {
+export function buildMockResponses({ prompt, selectedModels }: BuildMockResponsesParams): ArenaApiResponse[] {
   return selectedModels.map((model, index) => ({
     id: `${model.id}-response-${Date.now()}-${index}`,
     modelId: model.id,
     modelName: model.name,
-    modelRole: model.role,
     status: "success",
-    text: buildResponseText(prompt, model, index),
+    answerText: buildResponseText(prompt, model, index),
     latencyMs: 1200 + index * 430,
   }));
 }
