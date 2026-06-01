@@ -4,9 +4,13 @@
 
 Этот файл описывает, как правильно добавить реальный Next.js проект в уже созданный GitHub репозиторий `new-era-ai-platform`.
 
-Документация проекта уже хранится в файлах `00-readme.md` - `18-team-mode-spec.md`. Перед созданием Next.js проекта эти файлы лучше перенести в папку `docs`, чтобы корень репозитория был чистым для кода.
+Документация проекта хранится в корне репозитория в файлах `00-readme.md` - `28-documentation-audit-fresh.md`.
 
-Главный источник порядка разработки: `docs/14-roadmap.md`.
+Папка `docs/` не используется как обязательная структура проекта. Документацию не нужно переносить в `docs/`, потому что по принятому решению проекта markdown-файлы остаются в корне.
+
+Главный источник порядка разработки: `14-roadmap.md`.
+
+Статус файла: историческая инструкция для этапа `v0.2 - Next.js Project Base`. Если этот файл конфликтует с более поздними решениями, правильными считаются `14-roadmap.md`, `16-decisions.md` и свежие audit-файлы.
 
 Текущий этап:
 
@@ -48,26 +52,25 @@ v0.2 - Next.js Project Base
 
 ```text
 new-era-ai-platform/
-├─ docs/
-│  ├─ 00-readme.md
-│  ├─ 01-idea.md
-│  ├─ 02-project-plan.md
-│  ├─ 03-tools-and-sites.md
-│  ├─ 04-mvp-scope.md
-│  ├─ 05-user-roles.md
-│  ├─ 06-project-modes.md
-│  ├─ 07-architecture.md
-│  ├─ 08-database.md
-│  ├─ 09-api-structure.md
-│  ├─ 10-ui-pages.md
-│  ├─ 11-ai-models.md
-│  ├─ 12-security-and-env.md
-│  ├─ 13-deployment.md
-│  ├─ 14-roadmap.md
-│  ├─ 15-changelog.md
-│  ├─ 16-decisions.md
-│  ├─ 17-code-arena-spec.md
-│  └─ 18-team-mode-spec.md
+├─ 00-readme.md
+├─ 01-idea.md
+├─ 02-project-plan.md
+├─ 03-tools-and-sites.md
+├─ 04-mvp-scope.md
+├─ 05-user-roles.md
+├─ 06-project-modes.md
+├─ 07-architecture.md
+├─ 08-database.md
+├─ 09-api-structure.md
+├─ 10-ui-pages.md
+├─ 11-ai-models.md
+├─ 12-security-and-env.md
+├─ 13-deployment.md
+├─ 14-roadmap.md
+├─ 15-changelog.md
+├─ 16-decisions.md
+├─ 17-code-arena-spec.md
+├─ 18-team-mode-spec.md
 └─ README.md
 ```
 
@@ -75,7 +78,10 @@ new-era-ai-platform/
 
 ```text
 new-era-ai-platform/
-├─ docs/
+├─ 00-readme.md
+├─ 01-idea.md
+├─ ...
+├─ 28-documentation-audit-fresh.md
 ├─ public/
 ├─ src/
 │  └─ app/
@@ -129,20 +135,18 @@ Ctrl + `
 
 ---
 
-## Шаг 3 - перенести документацию в папку docs
+## Шаг 3 - проверить документацию в корне
 
-Выполнить в терминале PowerShell:
+Документацию переносить не нужно. Она должна оставаться в корне репозитория.
+
+Проверка через PowerShell:
 
 ```powershell
-mkdir docs
-# Создаёт папку docs для документации проекта
-
-Move-Item -Path ".\??-*.md" -Destination ".\docs"
-# Переносит файлы 00-readme.md ... 19a-nextjs-setup.md в папку docs
-
-Get-ChildItem
-# Показывает содержимое корня проекта после переноса
+Get-ChildItem *.md
+# Показывает markdown-файлы документации в корне проекта
 ```
+
+Команду `Move-Item` для переноса документации в `docs/` не использовать.
 
 Важно: файл `README.md` можно оставить в корне. Это стандартный файл GitHub. Позже его можно заменить нормальным кратким README проекта.
 
@@ -157,7 +161,7 @@ npx create-next-app@latest .
 # Создаёт Next.js проект прямо в текущей папке репозитория
 ```
 
-Если появится предупреждение, что папка не пустая, это нормально. Главное, чтобы в корне не было конфликтующих файлов, кроме `README.md` и папки `docs`.
+Если появится предупреждение, что папка не пустая, это нормально. Главное, чтобы в корне не было конфликтующих файлов, кроме `README.md` и markdown-документации проекта.
 
 ---
 
@@ -228,7 +232,7 @@ src/
 public/
 ```
 
-Также будет изменение из-за переноса документации в `docs`.
+Также документационные markdown-файлы должны остаться в корне репозитория.
 
 ---
 
@@ -254,7 +258,7 @@ git push
 Этап `v0.2 - Next.js Project Base` считается готовым, если:
 
 - репозиторий открыт в VS Code;
-- документация лежит в папке `docs`;
+- документация лежит в корне репозитория;
 - Next.js создан в корне проекта;
 - используется TypeScript;
 - используется Tailwind CSS;
@@ -281,7 +285,7 @@ git push
 - платёжные функции;
 - сложные лимиты пользователей.
 
-Эти функции добавляются позже по `docs/14-roadmap.md`.
+Эти функции добавляются позже по `14-roadmap.md`.
 
 ---
 
