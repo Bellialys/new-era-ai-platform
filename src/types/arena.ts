@@ -23,3 +23,5 @@ export type ArenaApiResponse = {
 export type ArenaResponseView = ArenaApiResponse & {
   modelRole: string;
 };
+
+export type ArenaResponse = ArenaResponseView;
