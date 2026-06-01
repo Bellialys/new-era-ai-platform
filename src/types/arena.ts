@@ -9,12 +9,17 @@ export type ArenaModel = {
 
 export type ArenaResponseStatus = "success" | "error";
 
-export type ArenaResponse = {
+export type ArenaApiResponse = {
   id: string;
   modelId: string;
   modelName: string;
-  modelRole: string;
   status: ArenaResponseStatus;
-  text: string;
-  latencyMs: number;
+  answerText: string | null;
+  latencyMs?: number;
+  errorCode?: string;
+  errorMessage?: string;
+};
+
+export type ArenaResponseView = ArenaApiResponse & {
+  modelRole: string;
 };
