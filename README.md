@@ -83,11 +83,12 @@
 | `19-development-checklist.md` | Чек-лист ближайшей разработки |
 | `20-stage-2-verification.md` | Отчёт проверки этапа v0.2 |
 | `21-stage-3-verification.md` | Отчёт проверки этапа v0.3 |
-| `22-documentation-audit.md` | Аудит документации |
-| `23-documentation-audit-deep.md` | Углублённый аудит документации |
+| `22-documentation-audit.md` | Исторический аудит документации |
+| `23-documentation-audit-deep.md` | Исторический углублённый аудит документации |
 | `24-documentation-sync-report.md` | Отчёт синхронизации документации |
-| `25-code-consistency-audit.md` | Аудит согласованности кода и документации перед v0.4 |
+| `25-code-consistency-audit.md` | Исторический аудит согласованности кода и документации перед v0.4 |
 | `26-code-fix-report.md` | Отчёт исправлений кода после аудита |
+| `27-final-documentation-review.md` | Финальная перепроверка документации |
 | `AGENTS.md` | Правила для работы с кодом и AI-агентами |
 
 ## Текущее состояние
