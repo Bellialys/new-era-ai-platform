@@ -1,12 +1,15 @@
-import type { ArenaResponse } from "@/types/arena";
+import type { ArenaResponseView } from "@/types/arena";
 
 type ResponseCardProps = {
-  response: ArenaResponse;
+  response: ArenaResponseView;
   isWinner: boolean;
   onSelectWinner: (responseId: string) => void;
 };
 
 export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCardProps) {
+  const responseText = response.answerText ?? response.errorMessage ?? "Модель не вернула ответ.";
+  const canSelectWinner = response.status === "success";
+
   return (
     <article
       className={
@@ -24,9 +27,16 @@ export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCar
           <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100">
             {response.status}
           </span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
-            {response.latencyMs} ms
-          </span>
+          {response.latencyMs ? (
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
+              {response.latencyMs} ms
+            </span>
+          ) : null}
+          {response.errorCode ? (
+            <span className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-100">
+              {response.errorCode}
+            </span>
+          ) : null}
           {isWinner ? (
             <span className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-emerald-950">
               Winner
@@ -36,12 +46,13 @@ export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCar
       </div>
 
       <div className="mt-5 whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
-        {response.text}
+        {responseText}
       </div>
 
       <button
+        disabled={!canSelectWinner}
         onClick={() => onSelectWinner(response.id)}
-        className="mt-5 rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+        className="mt-5 rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
       >
         {isWinner ? "Выбрано лучшим" : "Выбрать лучшим"}
