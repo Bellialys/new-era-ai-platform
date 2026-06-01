@@ -80,11 +80,13 @@
 | `17-code-arena-spec.md` | Code Arena |
 | `18-team-mode-spec.md` | AI Team Mode |
 | `19-development-checklist.md` | Чек-лист ближайшей разработки |
+| `20-stage-2-verification.md` | Отчёт проверки этапа v0.2 |
+| `21-stage-3-verification.md` | Отчёт проверки этапа v0.3 |
 | `AGENTS.md` | Правила для работы с кодом и AI-агентами |
 
 ## Текущее состояние
 
-Сейчас репозиторий находится на этапе **v0.2 - Next.js Base**.
+Сейчас репозиторий находится на этапе **v0.3 - Static UI MVP**.
 
 Готово:
 
@@ -103,7 +105,13 @@
 - базовая конфигурация Tailwind CSS;
 - корневой `src/app/layout.tsx`;
 - главная страница `/`;
-- стартовая страница `/arena`;
+- интерактивная страница `/arena`;
+- mock-данные моделей;
+- mock-генератор ответов;
+- client-side состояние Prompt Arena;
+- валидация prompt и выбора моделей;
+- loading, empty, error и success-состояния;
+- UI-выбор победителя;
 - `AGENTS.md` с правилами работы над проектом.
 
 Ещё не готово:
