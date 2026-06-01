@@ -1,24 +1,24 @@
-# 12 - Security and Environment Variables
+# 12 - Безопасность и переменные окружения
 
-## Purpose
+## Назначение
 
-This document defines the security rules for the **New Era AI** project.
+Этот документ определяет правила безопасности для проекта **New Era AI**.
 
-The goal is to protect:
+Цель - защитить:
 
 - OpenRouter API keys;
 - Supabase project keys;
 - Vercel environment variables;
-- local `.env.local` files;
-- GitHub repository history;
-- user data;
-- AI request history;
-- votes and leaderboard data;
-- future paid limits;
-- future Code Arena Runner sandbox;
-- future admin panel.
+- локальные файлы `.env.local`;
+- историю GitHub репозитория;
+- пользовательские данные;
+- историю AI-запросов;
+- голоса и данные Leaderboard;
+- будущие платные лимиты;
+- будущий Code Arena Runner sandbox;
+- будущую admin panel.
 
-This file must be aligned with:
+Этот файл должен быть согласован с:
 
 - `02-project-plan.md`;
 - `04-mvp-scope.md`;
@@ -31,132 +31,132 @@ This file must be aligned with:
 - `17-code-arena-spec.md`;
 - `18-team-mode-spec.md`.
 
-`14-roadmap.md` is the main source for version order.
+`14-roadmap.md` является главным источником порядка версий.
 
 ---
 
-# 1. Main Security Principle
+# 1. Главный принцип безопасности
 
-Secrets must never be visible in frontend code, browser requests, public logs, GitHub commits, screenshots, documentation examples, or API responses.
+Секреты никогда не должны быть видны во frontend-коде, browser requests, публичных логах, GitHub commits, screenshots, примерах документации или API responses.
 
-Correct flow:
+Правильный поток:
 
 ```text
 Browser
-# user interface only
+# только пользовательский интерфейс
 
 Next.js API route
-# secure backend layer
+# защищённый backend layer
 
 OpenRouter API
-# called only from backend
+# вызывается только из backend
 
 Supabase
-# database protected by RLS and server rules
+# база данных защищена через RLS и server rules
 ```
 
-Incorrect flow:
+Неправильный поток:
 
 ```text
 Browser -> OpenRouter directly
-# forbidden because the OpenRouter API key would be exposed
+# запрещено, потому что OpenRouter API key будет раскрыт
 
 Browser -> Supabase service role key
-# forbidden because service role bypasses RLS
+# запрещено, потому что service role обходит RLS
 
 GitHub -> real .env.local
-# forbidden because secrets would be leaked
+# запрещено, потому что секреты будут раскрыты
 ```
 
-If a secret key was committed, posted, shared, logged, or shown in a screenshot, it must be considered compromised.
+Если secret key был закоммичен, опубликован, отправлен, записан в лог или показан на screenshot, его нужно считать скомпрометированным.
 
-Required action after leak:
+Обязательное действие после утечки:
 
 ```text
 Revoke old key.
-# leaked key must not be reused
+# старый утёкший ключ больше нельзя использовать
 
 Create new key.
-# rotate credentials immediately
+# сразу выполнить ротацию credentials
 
 Update .env.local and Vercel variables.
-# replace compromised value everywhere
+# заменить скомпрометированное значение везде
 
 Check Git history.
-# make sure the secret is not still visible
+# убедиться, что секрет больше не виден в истории
 ```
 
 ---
 
-# 2. What Counts as a Secret
+# 2. Что считается секретом
 
-A secret is any value that can spend money, access private data, modify the database, deploy the app, or control infrastructure.
+Секрет - это любое значение, которое может тратить деньги, открывать доступ к приватным данным, изменять базу данных, выполнять deploy приложения или управлять infrastructure.
 
-## 2.1 Critical Secrets
+## 2.1 Критические секреты
 
 ```env
 OPENROUTER_API_KEY=
-# private key for AI model requests, can spend money
+# приватный ключ для AI model requests, может тратить деньги
 
 SUPABASE_SERVICE_ROLE_KEY=
-# private Supabase key, bypasses Row Level Security, server only
+# приватный Supabase key, обходит Row Level Security, только server-side
 
 DATABASE_URL=
-# direct database connection string, server only
+# прямой database connection string, только server-side
 
 VERCEL_TOKEN=
-# token for Vercel automation, private
+# token для Vercel automation, приватный
 
 GITHUB_TOKEN=
-# token for GitHub automation, private
+# token для GitHub automation, приватный
 
 JWT_SECRET=
-# future token signing secret, private
+# будущий секрет для подписи token, приватный
 
 STRIPE_SECRET_KEY=
-# future payment secret, private
+# будущий payment secret, приватный
 
 ADMIN_SECRET=
-# optional internal admin secret, private
+# необязательный внутренний admin secret, приватный
 ```
 
-These values must never be exposed to the client.
+Эти значения никогда нельзя раскрывать client-side.
 
-## 2.2 Public Environment Values
+## 2.2 Публичные значения окружения
 
-Some values can be public because they do not grant full access by themselves.
+Некоторые значения могут быть публичными, потому что сами по себе не дают полного доступа.
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
-# public Supabase project URL
+# публичный Supabase project URL
 
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# public Supabase anon key, safe only when RLS is enabled
+# публичный Supabase anon key, безопасен только при включённом RLS
 
 NEXT_PUBLIC_SITE_URL=
-# public site URL
+# публичный site URL
 
 NEXT_PUBLIC_ENABLE_CODE_ARENA=
-# public UI flag for Code Arena visibility
+# публичный UI flag для видимости Code Arena
 
 NEXT_PUBLIC_ENABLE_TEAM_MODE=
-# public UI flag for Team Mode visibility
+# публичный UI flag для видимости Team Mode
 ```
 
-Important rule:
+Важное правило:
 
 ```text
 NEXT_PUBLIC_ means visible in browser.
-# never put secrets into NEXT_PUBLIC variables
+# никогда не помещать секреты в NEXT_PUBLIC variables
 ```
 
 ---
 
-# 3. Local Environment File
+# 3. Локальный файл окружения
 
-Local development uses `.env.local` in the project root.
+Локальная разработка использует `.env.local` в корне проекта.
 
-Example structure:
+Пример структуры:
 
 ```text
 new-era-ai/
@@ -167,7 +167,7 @@ new-era-ai/
   docs/
 ```
 
-## 3.1 Recommended `.env.local`
+## 3.1 Рекомендуемый `.env.local`
 
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
@@ -189,52 +189,52 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 # local public site URL
 
 APP_ENV=development
-# development, preview, or production
+# development, preview или production
 
 NEXT_PUBLIC_ENABLE_CODE_ARENA=false
-# shows or hides Code Arena in UI
+# показывает или скрывает Code Arena в UI
 
 ENABLE_CODE_RUNNER=false
-# server-side flag for Code Arena Runner, must remain false before v1.7
+# server-side flag для Code Arena Runner, должен оставаться false до v1.7
 
 NEXT_PUBLIC_ENABLE_TEAM_MODE=false
-# shows or hides AI Team Mode in UI
+# показывает или скрывает AI Team Mode в UI
 
 ENABLE_TEAM_MODE=false
-# server-side flag for AI Team Mode, must remain false before v2.0
+# server-side flag для AI Team Mode, должен оставаться false до v2.0
 ```
 
-## 3.2 What Must Not Be Done
+## 3.2 Что нельзя делать
 
 ```text
 Do not commit .env.local.
-# real secrets must not enter Git history
+# реальные секреты не должны попасть в Git history
 
 Do not send .env.local in chat.
-# real secrets must not be shared
+# реальные секреты нельзя отправлять в чат
 
 Do not paste real keys into Markdown documentation.
-# documentation can become public
+# документация может стать публичной
 
 Do not place real keys in frontend files.
-# frontend code is visible to the browser
+# frontend code виден браузеру
 
 Do not use NEXT_PUBLIC_ for private keys.
-# NEXT_PUBLIC variables are bundled into client code
+# NEXT_PUBLIC variables попадают в client bundle
 
 Do not screenshot pages with visible keys.
-# screenshots can leak secrets
+# screenshots могут раскрыть секреты
 ```
 
 ---
 
 # 4. `.env.example`
 
-The repository should contain `.env.example`, but not `.env.local`.
+В репозитории должен быть `.env.example`, но не `.env.local`.
 
-`.env.example` shows required variable names without real secrets.
+`.env.example` показывает необходимые имена переменных без реальных секретов.
 
-Recommended `.env.example`:
+Рекомендуемый `.env.example`:
 
 ```env
 OPENROUTER_API_KEY=
@@ -256,266 +256,266 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 # local public site URL
 
 APP_ENV=development
-# development, preview, or production
+# development, preview или production
 
 NEXT_PUBLIC_ENABLE_CODE_ARENA=false
-# UI flag for Code Arena
+# UI flag для Code Arena
 
 ENABLE_CODE_RUNNER=false
-# server flag for Code Arena Runner
+# server flag для Code Arena Runner
 
 NEXT_PUBLIC_ENABLE_TEAM_MODE=false
-# UI flag for Team Mode
+# UI flag для Team Mode
 
 ENABLE_TEAM_MODE=false
-# server flag for Team Mode
+# server flag для Team Mode
 ```
 
 ---
 
-# 5. `.gitignore` Rules
+# 5. Правила `.gitignore`
 
-The repository must ignore local secrets and temporary files.
+Репозиторий должен игнорировать локальные секреты и временные файлы.
 
-Recommended `.gitignore` entries:
+Рекомендуемые записи `.gitignore`:
 
 ```gitignore
 .env
-# ignore generic env file
+# игнорировать общий env file
 
 .env.local
-# ignore local secrets
+# игнорировать локальные секреты
 
 .env.development.local
-# ignore development secrets
+# игнорировать development secrets
 
 .env.test.local
-# ignore test secrets
+# игнорировать test secrets
 
 .env.production.local
-# ignore production secrets
+# игнорировать production secrets
 
 .vercel
-# ignore local Vercel configuration
+# игнорировать локальную Vercel configuration
 
 .next
-# ignore Next.js build output
+# игнорировать Next.js build output
 
 node_modules
-# ignore installed dependencies
+# игнорировать установленные dependencies
 
 coverage
-# ignore test coverage output
+# игнорировать test coverage output
 
 *.log
-# ignore logs that may contain sensitive data
+# игнорировать logs, которые могут содержать sensitive data
 ```
 
-Check Git before commit:
+Проверка Git перед commit:
 
 ```bash
 git status
-# show changed files before commit
+# показывает изменённые файлы перед commit
 
 git diff --cached
-# inspect staged changes before commit
+# позволяет проверить staged changes перед commit
 ```
 
 ---
 
 # 6. Vercel Environment Variables
 
-Vercel must contain the same required environment variables as local development, but values can differ by environment.
+Vercel должен содержать те же обязательные environment variables, что и локальная разработка, но значения могут отличаться по environment.
 
-Recommended Vercel groups:
+Рекомендуемые группы Vercel:
 
 ```text
 Development
-# local and development testing
+# локальное и development testing
 
 Preview
-# pull request and branch deployments
+# pull request и branch deployments
 
 Production
-# real public project
+# реальный публичный проект
 ```
 
-Rules:
+Правила:
 
 ```text
 Use separate variables for Production.
-# production must not depend on local test values
+# production не должен зависеть от локальных тестовых значений
 
 Do not expose service role key to frontend.
-# only API routes can use it
+# только API routes могут его использовать
 
 Do not use expensive models by default in Preview.
-# preview builds should not waste budget
+# preview builds не должны тратить бюджет
 
 Keep ENABLE_CODE_RUNNER=false before v1.7.
-# Runner is unsafe before sandbox implementation
+# Runner небезопасен до реализации sandbox
 
 Keep ENABLE_TEAM_MODE=false before v2.0.
-# Team Mode is not part of MVP
+# Team Mode не входит в MVP
 ```
 
-After changing Vercel variables:
+После изменения Vercel variables:
 
 ```bash
 vercel env pull .env.local
-# pull Vercel variables locally if needed
+# при необходимости подтягивает Vercel variables локально
 
 npm run build
-# verify that the project builds with current environment variables
+# проверяет, что проект собирается с текущими environment variables
 ```
 
 ---
 
-# 7. OpenRouter Security Rules
+# 7. Правила безопасности OpenRouter
 
-OpenRouter must be called only from server-side code.
+OpenRouter должен вызываться только из server-side code.
 
-Allowed locations:
+Разрешённые места:
 
 ```text
 src/app/api/arena/route.ts
-# server API route for Prompt Arena
+# server API route для Prompt Arena
 
 src/app/api/models/route.ts
-# server API route for allowed models
+# server API route для разрешённых моделей
 
 src/lib/server/openrouter.ts
 # server-only OpenRouter helper
 ```
 
-Forbidden locations:
+Запрещённые места:
 
 ```text
 React components
-# client code must not contain API keys
+# client code не должен содержать API keys
 
 Browser fetch directly to OpenRouter
-# exposes usage control and can leak request structure
+# раскрывает usage control и может раскрыть request structure
 
 NEXT_PUBLIC_OPENROUTER_API_KEY
-# forbidden variable name, never create it
+# запрещённое имя переменной, никогда его не создавать
 ```
 
 ## 7.1 Server-only OpenRouter Helper
 
-Recommended file:
+Рекомендуемый файл:
 
 ```text
 src/lib/server/openrouter.ts
-# helper used only by backend routes
+# helper, который используется только backend routes
 ```
 
-Security rules:
+Правила безопасности:
 
 ```text
 Read OPENROUTER_API_KEY only on server.
-# never pass the key to the client
+# никогда не передавать ключ client-side
 
 Use allowlisted model IDs.
-# users must not submit arbitrary paid model IDs
+# пользователи не должны отправлять произвольные платные model IDs
 
 Validate prompt length.
-# prevent excessive cost and abuse
+# предотвращает чрезмерную стоимость и abuse
 
 Set max_tokens.
-# prevent uncontrolled output cost
+# предотвращает неконтролируемую стоимость output
 
 Set timeout.
-# avoid hanging requests
+# не даёт requests зависать
 
 Handle provider errors.
-# avoid leaking raw internal errors
+# не раскрывает raw internal errors
 ```
 
 ## 7.2 Model Allowlist
 
-Users must not be allowed to send any model ID they want.
+Пользователям нельзя разрешать отправлять любой model ID по своему выбору.
 
-Correct approach:
+Правильный подход:
 
 ```text
 User selects model from UI.
-# user sees only allowed options
+# пользователь видит только разрешённые варианты
 
 Backend receives model ID.
-# backend does not trust it blindly
+# backend не доверяет ему вслепую
 
 Backend checks model ID in database or allowlist.
-# only active models are allowed
+# разрешены только активные models
 
 Backend sends request to OpenRouter.
-# safe server-side call
+# безопасный server-side call
 ```
 
-Required model fields are defined in `08-database.md` and `11-ai-models.md`.
+Обязательные поля models определены в `08-database.md` и `11-ai-models.md`.
 
-For MVP, the backend should check:
+Для MVP backend должен проверять:
 
 ```text
 is_active = true
-# model is enabled
+# model включена
 
 is_public = true
-# model is visible to normal users
+# model видна обычным пользователям
 
 role_tags contains prompt
-# model can be used in Prompt Arena
+# model можно использовать в Prompt Arena
 
 max_output_tokens is controlled
-# model cannot produce unlimited output
+# model не может генерировать безлимитный output
 ```
 
 ---
 
-# 8. Supabase Security Rules
+# 8. Правила безопасности Supabase
 
-Supabase security depends on correct key usage and Row Level Security.
+Безопасность Supabase зависит от правильного использования ключей и Row Level Security.
 
 ## 8.1 Supabase Keys
 
 ```text
 Anon key
-# public, used by frontend, protected by RLS
+# публичный, используется frontend, защищён RLS
 
 Service role key
-# private, server only, bypasses RLS
+# приватный, только server-side, обходит RLS
 ```
 
-Critical rule:
+Критическое правило:
 
 ```text
 SUPABASE_SERVICE_ROLE_KEY must never be used in frontend code.
-# it can bypass database protection
+# он может обойти защиту базы данных
 ```
 
 ## 8.2 Row Level Security
 
-RLS must be enabled before real users or private data are stored.
+RLS должен быть включён до хранения реальных пользователей или приватных данных.
 
-For MVP tables:
+Для MVP tables:
 
 ```sql
 alter table public.models enable row level security;
--- protect model table
+-- защитить model table
 
 alter table public.tasks enable row level security;
--- protect submitted tasks
+-- защитить submitted tasks
 
 alter table public.model_responses enable row level security;
--- protect AI responses
+-- защитить AI responses
 
 alter table public.votes enable row level security;
--- protect voting data
+-- защитить voting data
 ```
 
-For public MVP mode, reading may be open while writing stays controlled through API routes.
+Для публичного MVP чтение может быть открытым, но запись должна контролироваться через API routes.
 
-Example read policy for active public models:
+Пример read policy для active public models:
 
 ```sql
 create policy "Read active public models"
@@ -525,120 +525,120 @@ using (
   is_active = true
   and is_public = true
 );
--- users can read only active public models
+-- пользователи могут читать только активные публичные models
 ```
 
-Example principle for writes:
+Принцип для записи:
 
 ```text
 Do not allow direct public insert into sensitive tables unless it is intentionally designed.
-# prefer API routes for task creation, AI responses, and votes
+# лучше использовать API routes для создания tasks, AI responses и votes
 ```
 
-## 8.3 Service Role Usage
+## 8.3 Использование Service Role
 
-Service role may be used only in server-side API routes or trusted backend scripts.
+Service role можно использовать только в server-side API routes или доверенных backend scripts.
 
-Allowed:
+Разрешено:
 
 ```text
 Server API route creates task.
-# backend validates input first
+# backend сначала валидирует input
 
 Server API route saves AI response.
-# backend controls model and output
+# backend контролирует model и output
 
 Server API route calculates aggregate stats.
-# backend controls query logic
+# backend контролирует query logic
 ```
 
-Forbidden:
+Запрещено:
 
 ```text
 Client component imports service role key.
-# critical leak
+# критическая утечка
 
 Browser request contains service role key.
-# critical leak
+# критическая утечка
 
 Public API returns service role key.
-# critical leak
+# критическая утечка
 ```
 
 ---
 
-# 9. API Route Security
+# 9. Безопасность API routes
 
-Every API route must validate input, enforce limits, and return safe errors.
+Каждый API route должен валидировать input, применять limits и возвращать безопасные errors.
 
-## 9.1 Required API Checks
+## 9.1 Обязательные проверки API
 
-For `/api/arena`:
+Для `/api/arena`:
 
 ```text
 Check prompt exists.
-# empty prompt must be rejected
+# пустой prompt должен отклоняться
 
 Check prompt length.
-# long prompts can create high cost
+# длинные prompts могут создать высокую стоимость
 
 Check selected models.
-# only allowed model IDs can be used
+# можно использовать только разрешённые model IDs
 
 Check model count.
-# too many models can create high cost
+# слишком много models создаёт высокую стоимость
 
 Check request method.
-# only POST should create arena requests
+# только POST должен создавать arena requests
 
 Check timeout.
-# long-running requests must be controlled
+# long-running requests должны контролироваться
 
 Check response size.
-# avoid huge database rows
+# избегать огромных database rows
 ```
 
-For `/api/vote`:
+Для `/api/vote`:
 
 ```text
 Check task exists.
-# vote must belong to real task
+# vote должен относиться к реальной task
 
 Check response exists.
-# vote must target real model response
+# vote должен указывать на реальный model response
 
 Check duplicate vote rules.
-# prevent simple vote spam
+# предотвращает простой vote spam
 
 Check IP or user identity later.
-# stronger protection after accounts
+# более сильная защита после accounts
 ```
 
-For `/api/history`:
+Для `/api/history`:
 
 ```text
 Limit page size.
-# prevent heavy database reads
+# предотвращает тяжёлые database reads
 
 Order by creation date.
-# predictable result order
+# предсказуемый порядок результата
 
 Do not expose private metadata.
-# avoid leaking internal data
+# не раскрывать internal data
 ```
 
-## 9.2 Safe Error Responses
+## 9.2 Безопасные error responses
 
-Do not return raw internal errors to the browser.
+Нельзя возвращать raw internal errors в browser.
 
-Bad example:
+Плохой пример:
 
 ```text
 Database connection failed with full connection string...
-# exposes sensitive infrastructure data
+# раскрывает sensitive infrastructure data
 ```
 
-Good example:
+Хороший пример:
 
 ```json
 {
@@ -646,169 +646,169 @@ Good example:
 }
 ```
 
-Server logs may contain more detail, but must not contain secrets.
+Server logs могут содержать больше деталей, но не должны содержать secrets.
 
 ---
 
-# 10. Cost Protection
+# 10. Защита от лишних расходов
 
-AI requests can spend money. The project must control usage before public launch.
+AI requests могут тратить деньги. Проект должен контролировать usage до публичного запуска.
 
-Minimum MVP controls:
+Минимальные MVP controls:
 
 ```text
 Limit prompt length.
-# reduce abuse and cost
+# уменьшает abuse и cost
 
 Limit number of selected models.
-# prevent expensive multi-model requests
+# предотвращает дорогие multi-model requests
 
 Use cheap or free models in development.
-# protect budget during testing
+# защищает budget во время testing
 
 Set max output tokens.
-# prevent expensive long answers
+# предотвращает дорогие длинные answers
 
 Disable very expensive models by default.
-# use them only in special modes later
+# использовать их только в специальных modes позже
 
 Log model usage.
-# needed for future limits and debugging
+# нужно для будущих limits и debugging
 ```
 
-Recommended MVP values:
+Рекомендуемые MVP values:
 
 ```text
 Max prompt length: 4000 characters
-# enough for MVP tasks without uncontrolled cost
+# достаточно для MVP tasks без неконтролируемой стоимости
 
 Max selected models: 2 or 3
-# enough for comparison mode
+# достаточно для comparison mode
 
 Max output tokens per model: 800 to 1500
-# enough for readable answers
+# достаточно для readable answers
 
 Request timeout: 45 to 60 seconds
-# prevents hanging requests
+# предотвращает зависание requests
 ```
 
-Production values can be adjusted later after real testing.
+Production values можно корректировать позже после реального testing.
 
 ---
 
-# 11. Rate Limit Strategy
+# 11. Стратегия Rate Limit
 
-Rate limiting should be introduced in stages.
+Rate limiting нужно вводить поэтапно.
 
 ## 11.1 MVP Soft Limits
 
-Before accounts, use simple controls:
+До accounts использовать простые controls:
 
 ```text
 Limit prompt size.
-# prevents huge requests
+# предотвращает огромные requests
 
 Limit model count.
-# prevents expensive requests
+# предотвращает дорогие requests
 
 Limit repeated vote attempts.
-# reduces simple abuse
+# уменьшает простой abuse
 
 Limit history page size.
-# protects database reads
+# защищает database reads
 ```
 
-## 11.2 Stronger Limits After Accounts
+## 11.2 Более строгие лимиты после Accounts
 
-After `v1.5 - Accounts and Profiles`, add user-based limits:
+После `v1.5 - Accounts and Profiles` добавить user-based limits:
 
 ```text
 Daily request limit per user.
-# controls cost
+# контролирует cost
 
 Daily vote limit per user.
-# protects Leaderboard
+# защищает Leaderboard
 
 Model access by user role.
-# separates free, trusted, and admin usage
+# разделяет free, trusted и admin usage
 
 Usage logs.
-# tracks cost and abuse
+# отслеживает cost и abuse
 ```
 
-## 11.3 Admin Panel Limits
+## 11.3 Лимиты Admin Panel
 
-After `v1.6 - Admin Panel and Limits`, add admin controls:
+После `v1.6 - Admin Panel and Limits` добавить admin controls:
 
 ```text
 Enable or disable model.
-# control model availability
+# контролировать доступность model
 
 Set per-model request limit.
-# control expensive models
+# контролировать дорогие models
 
 Set global daily budget.
-# protect project finances
+# защищать финансы проекта
 
 Review suspicious usage.
-# detect abuse
+# выявлять abuse
 ```
 
 ---
 
-# 12. Prompt Injection Protection
+# 12. Защита от Prompt Injection
 
-Prompt injection cannot be fully eliminated, but the project must reduce damage.
+Prompt injection нельзя полностью устранить, но проект должен уменьшить возможный ущерб.
 
-Main rules:
+Главные правила:
 
 ```text
 Do not put secrets into prompts.
-# AI model must never receive API keys
+# AI model никогда не должна получать API keys
 
 Do not send service role key to AI models.
-# critical secret leak
+# критическая утечка секрета
 
 Do not send internal database URLs to AI models.
 # infrastructure leak
 
 Do not trust AI output as code execution permission.
-# AI output is text, not authority
+# AI output - это текст, не authority
 
 Separate user prompt from system rules.
-# backend controls instruction structure
+# backend контролирует instruction structure
 ```
 
-For future Judge Mode:
+Для будущего Judge Mode:
 
 ```text
 Judge models must receive only necessary evaluation data.
-# avoid leaking extra user data
+# не раскрывать лишние user data
 
 Judge output must be validated.
-# model can produce malformed JSON
+# model может вернуть malformed JSON
 
 Judge must not decide billing or permissions alone.
-# backend remains source of truth
+# backend остаётся source of truth
 ```
 
 ---
 
-# 13. Logging Rules
+# 13. Правила логирования
 
-Logs are useful, but logs can leak sensitive data.
+Logs полезны, но могут раскрывать sensitive data.
 
-Allowed logs:
+Разрешённые logs:
 
 ```text
 request_id
-# useful for debugging
+# полезно для debugging
 
 model_id
-# useful for cost tracking
+# полезно для cost tracking
 
 status
-# success or failed
+# success или failed
 
 duration_ms
 # performance monitoring
@@ -817,116 +817,116 @@ created_at
 # timeline debugging
 
 error_type
-# safe category of error
+# безопасная категория error
 ```
 
-Dangerous logs:
+Опасные logs:
 
 ```text
 OPENROUTER_API_KEY
-# never log
+# никогда не логировать
 
 SUPABASE_SERVICE_ROLE_KEY
-# never log
+# никогда не логировать
 
 full DATABASE_URL
-# never log
+# никогда не логировать
 
 full raw headers
-# can contain secrets
+# могут содержать secrets
 
 full cookies
-# can contain session data
+# могут содержать session data
 
 private user data
-# avoid unless necessary and protected
+# избегать, если это не необходимо и не защищено
 ```
 
-For MVP, it is acceptable to log limited prompt metadata, but avoid storing sensitive user text in public logs.
+Для MVP допустимо логировать ограниченную prompt metadata, но нужно избегать хранения sensitive user text в публичных logs.
 
 ---
 
-# 14. GitHub Security Rules
+# 14. Правила безопасности GitHub
 
-GitHub repository must never contain real secrets.
+GitHub repository никогда не должен содержать реальные secrets.
 
-Before every important commit:
+Перед каждым важным commit:
 
 ```bash
 git status
-# check changed files
+# проверить изменённые файлы
 
 git diff
-# review unstaged changes
+# проверить unstaged changes
 
 git diff --cached
-# review staged changes
+# проверить staged changes
 ```
 
-If `.env.local` appears in Git status:
+Если `.env.local` появился в Git status:
 
 ```bash
 git restore --staged .env.local
-# remove .env.local from staged files if it was staged by mistake
+# убрать .env.local из staged files, если он был добавлен по ошибке
 ```
 
-Add `.env.local` to `.gitignore`:
+Добавить `.env.local` в `.gitignore`:
 
 ```bash
 echo ".env.local" >> .gitignore
-# make sure local env file is ignored
+# убедиться, что локальный env file игнорируется
 ```
 
-Do not rely only on `.gitignore` if the file was already committed once. If a secret was committed, rotate the key.
+Нельзя полагаться только на `.gitignore`, если файл уже однажды был закоммичен. Если secret был закоммичен, нужно выполнить ротацию ключа.
 
 ---
 
-# 15. Code Arena Security
+# 15. Безопасность Code Arena
 
-Code Arena must be split into two separate stages.
+Code Arena должна быть разделена на два отдельных этапа.
 
 ## 15.1 `v1.1 - Code Arena Lite`
 
-Code Arena Lite is allowed before Runner because it does not execute code.
+Code Arena Lite разрешена до Runner, потому что она не выполняет код.
 
-Allowed:
+Разрешено:
 
 ```text
 User submits coding task.
-# text task only
+# только текстовая task
 
 Models generate code answers.
-# AI responses are text
+# AI responses являются текстом
 
 User compares code answers.
-# no execution
+# только сравнение, без выполнения
 
 User votes for best answer.
-# comparison only
+# только comparison
 ```
 
-Forbidden in Lite:
+Запрещено в Lite:
 
 ```text
 Run user code.
-# not allowed before Runner
+# нельзя до Runner
 
 Run AI-generated code.
-# not allowed before Runner
+# нельзя до Runner
 
 Execute tests.
-# not allowed before Runner
+# нельзя до Runner
 
 Use Docker sandbox.
-# belongs to Runner stage
+# относится к Runner stage
 
 Store execution logs.
-# belongs to Runner stage
+# относится к Runner stage
 ```
 
 ## 15.2 `v1.7 - Code Arena Runner`
 
-Runner can only be added after:
+Runner можно добавлять только после:
 
 ```text
 v1.5 - Accounts and Profiles
@@ -936,310 +936,310 @@ v1.6 - Admin Panel and Limits
 # administrative control and usage limits
 
 Security review
-# separate review before executing code
+# отдельная проверка перед выполнением кода
 
 Sandbox design
-# isolated execution environment
+# изолированная execution environment
 ```
 
-Runner must not run on the same simple serverless API route without sandbox control.
+Runner не должен запускаться на той же простой serverless API route без sandbox control.
 
-Minimum Runner requirements:
+Минимальные требования Runner:
 
 ```text
 Isolated sandbox.
-# user code cannot access project secrets
+# user code не может получить доступ к project secrets
 
 Execution timeout.
-# prevents infinite loops
+# предотвращает infinite loops
 
 Memory limit.
-# prevents resource abuse
+# предотвращает resource abuse
 
 CPU limit.
-# prevents heavy abuse
+# предотвращает heavy abuse
 
 Network disabled by default.
-# prevents exfiltration and abuse
+# предотвращает exfiltration и abuse
 
 File system isolation.
-# prevents reading server files
+# предотвращает чтение server files
 
 Language allowlist.
-# only supported languages run
+# выполняются только supported languages
 
 Test case validation.
-# tests must be controlled
+# tests должны контролироваться
 
 Execution logs sanitized.
-# logs must not leak secrets
+# logs не должны раскрывать secrets
 ```
 
-Important rule:
+Важное правило:
 
 ```text
 ENABLE_CODE_RUNNER=false before v1.7.
-# do not enable code execution during MVP
+# не включать code execution во время MVP
 ```
 
 ---
 
-# 16. AI Team Mode Security
+# 16. Безопасность AI Team Mode
 
-AI Team Mode belongs to `v2.0`, not MVP.
+AI Team Mode относится к `v2.0`, а не к MVP.
 
-Before enabling Team Mode, the project must already have:
+Перед включением Team Mode в проекте уже должны быть:
 
 ```text
 Stable Prompt Arena.
-# core comparison works
+# core comparison работает
 
 Accounts.
-# user identity exists
+# user identity существует
 
 Limits.
-# usage is controlled
+# usage контролируется
 
 Admin panel.
-# models can be managed
+# models можно управлять
 
 Cost tracking.
-# multi-step mode can be expensive
+# multi-step mode может быть дорогим
 ```
 
-Team Mode risks:
+Риски Team Mode:
 
 ```text
 Many model calls per task.
-# high cost risk
+# высокий cost risk
 
 Long context chains.
 # token cost risk
 
 Role confusion.
-# model may ignore assigned role
+# model может игнорировать назначенную role
 
 Prompt injection.
-# one step can poison later steps
+# один шаг может испортить следующие steps
 
 Large stored outputs.
 # database growth risk
 ```
 
-Required controls:
+Обязательные controls:
 
 ```text
 Limit number of rounds.
-# control cost
+# контролировать cost
 
 Limit number of roles.
-# control complexity
+# контролировать complexity
 
 Limit context passed between steps.
-# control token usage
+# контролировать token usage
 
 Validate final response.
-# avoid broken or unsafe output
+# избегать broken или unsafe output
 
 Keep ENABLE_TEAM_MODE=false before v2.0.
-# do not enable early
+# не включать раньше времени
 ```
 
 ---
 
-# 17. Leaderboard Protection
+# 17. Защита Leaderboard
 
-Leaderboard must not be easy to manipulate.
+Leaderboard не должен быть простым для манипуляции.
 
-Minimum protection before public Leaderboard:
+Минимальная защита перед public Leaderboard:
 
 ```text
 Prevent duplicate votes.
-# reduce basic abuse
+# уменьшает basic abuse
 
 Store vote metadata.
-# detect suspicious patterns
+# помогает выявлять suspicious patterns
 
 Use accounts before serious ranking.
-# anonymous votes are weaker
+# anonymous votes слабее
 
 Separate public score from internal score.
-# allow moderation and recalculation
+# позволяет moderation и recalculation
 
 Do not let models vote for themselves.
-# avoid artificial scoring
+# избегать искусственного scoring
 ```
 
-Advanced protection after accounts:
+Продвинутая защита после accounts:
 
 ```text
 One vote per user per task.
-# fair voting
+# честное voting
 
 Suspicious activity detection.
-# identify abuse patterns
+# выявлять abuse patterns
 
 Admin moderation.
-# remove bad tasks or manipulated votes
+# удалять bad tasks или manipulated votes
 
 Weighted judge evaluations.
-# combine user votes and judge results later
+# позже объединять user votes и judge results
 ```
 
 ---
 
-# 18. Admin Panel Security
+# 18. Безопасность Admin Panel
 
-Admin panel belongs to `v1.6`.
+Admin panel относится к `v1.6`.
 
-Admin panel must not be public by default.
+Admin panel не должна быть публичной по умолчанию.
 
-Required controls:
+Обязательные controls:
 
 ```text
 Authentication required.
-# only logged-in admin can access
+# доступ только для logged-in admin
 
 Admin role required.
-# normal users cannot access
+# normal users не могут получить доступ
 
 Server-side permission check.
-# UI hiding is not enough
+# скрыть UI недостаточно
 
 Audit important changes.
-# record model and limit changes
+# записывать model и limit changes
 
 Do not expose secrets in admin UI.
-# admins can manage without seeing keys
+# admins могут управлять без просмотра keys
 ```
 
-Forbidden:
+Запрещено:
 
 ```text
 Admin access controlled only by frontend.
-# browser checks can be bypassed
+# browser checks можно обойти
 
 Admin secret stored in NEXT_PUBLIC variable.
-# public variable leaks secret
+# public variable раскрывает secret
 
 Service role key shown in UI.
-# critical leak
+# критическая утечка
 ```
 
 ---
 
 # 19. Deployment Security Checklist
 
-Before local development:
+Перед local development:
 
 ```bash
 cp .env.example .env.local
-# create local env file from safe example
+# создать local env file из безопасного example
 
 npm install
-# install dependencies
+# установить dependencies
 
 npm run dev
-# start local development server
+# запустить local development server
 ```
 
-Before commit:
+Перед commit:
 
 ```bash
 git status
-# check changed files
+# проверить изменённые файлы
 
 git diff
-# review local changes
+# проверить local changes
 
 npm run lint
-# check code quality
+# проверить code quality
 
 npm run build
-# verify production build
+# проверить production build
 ```
 
-Before Vercel deployment:
+Перед Vercel deployment:
 
 ```text
 Check Vercel environment variables.
-# required variables must exist
+# required variables должны существовать
 
 Check .env.local is not committed.
-# secrets must stay local
+# secrets должны оставаться локальными
 
 Check OpenRouter key is server-only.
-# no frontend exposure
+# без frontend exposure
 
 Check Supabase RLS.
-# database must be protected
+# database должна быть защищена
 
 Check expensive models are disabled by default.
-# budget protection
+# защита budget
 
 Check Runner is disabled before v1.7.
-# no unsafe execution
+# без unsafe execution
 
 Check Team Mode is disabled before v2.0.
-# no uncontrolled multi-step cost
+# без неконтролируемой multi-step cost
 ```
 
 ---
 
-# 20. Security by Version
+# 20. Безопасность по версиям
 
 ## `v0.1 - Documentation`
 
-Required:
+Обязательно:
 
 ```text
 Security rules documented.
-# this file exists
+# этот файл существует
 
 Secrets policy defined.
-# keys are not committed
+# keys не коммитятся
 
 Runner forbidden before v1.7.
-# safe roadmap
+# безопасный roadmap
 ```
 
 ## `v0.2 - Next.js Base`
 
-Required:
+Обязательно:
 
 ```text
 .env.example added.
-# safe environment template
+# безопасный environment template
 
 .env.local ignored.
-# real secrets protected
+# реальные secrets защищены
 
 API route structure prepared.
-# backend layer exists
+# backend layer существует
 ```
 
 ## `v0.3 - UI MVP`
 
-Required:
+Обязательно:
 
 ```text
 No real API keys in frontend.
-# UI works without exposing secrets
+# UI работает без раскрытия secrets
 
 Mock data does not include secrets.
-# safe local testing
+# безопасное local testing
 ```
 
 ## `v0.4 - OpenRouter Integration`
 
-Required:
+Обязательно:
 
 ```text
 OpenRouter called from backend only.
-# key remains secret
+# key остаётся secret
 
 Model allowlist exists.
-# user cannot select arbitrary models
+# пользователь не может выбрать произвольные models
 
 Prompt and model count are limited.
 # cost protection
@@ -1247,26 +1247,26 @@ Prompt and model count are limited.
 
 ## `v0.5 - Supabase Integration`
 
-Required:
+Обязательно:
 
 ```text
 RLS enabled.
 # database protection
 
 Service role used only server-side.
-# no frontend leak
+# без frontend leak
 
 Public reads are intentional.
-# no accidental data exposure
+# без accidental data exposure
 ```
 
 ## `v0.6 - Voting`
 
-Required:
+Обязательно:
 
 ```text
 Votes validated.
-# vote must target real response
+# vote должен указывать на real response
 
 Duplicate voting considered.
 # basic anti-abuse
@@ -1274,38 +1274,38 @@ Duplicate voting considered.
 
 ## `v0.7 - History`
 
-Required:
+Обязательно:
 
 ```text
 History page is paginated.
-# no heavy database reads
+# без тяжёлых database reads
 
 Private data is not exposed.
-# safe public display
+# безопасный public display
 ```
 
 ## `v0.8 - Deployment`
 
-Required:
+Обязательно:
 
 ```text
 Vercel variables configured.
-# production can run safely
+# production может безопасно работать
 
 Production secrets separate from local secrets.
-# safer operations
+# более безопасные operations
 ```
 
 ## `v0.9 - Stabilization`
 
-Required:
+Обязательно:
 
 ```text
 Safe errors.
-# no raw internal leaks
+# без raw internal leaks
 
 Basic logs.
-# debugging without secrets
+# debugging без secrets
 
 Basic usage limits.
 # cost protection
@@ -1313,14 +1313,14 @@ Basic usage limits.
 
 ## `v1.0 - Stable Prompt Arena`
 
-Required:
+Обязательно:
 
 ```text
 Prompt Arena works safely.
-# MVP is usable
+# MVP usable
 
 Secrets are protected.
-# no exposed keys
+# без exposed keys
 
 Database writes are controlled.
 # stable MVP data flow
@@ -1328,91 +1328,91 @@ Database writes are controlled.
 
 ## `v1.1 - Code Arena Lite`
 
-Required:
+Обязательно:
 
 ```text
 No code execution.
-# Lite means text-only comparison
+# Lite означает text-only comparison
 
 Code answers are stored as text.
-# no sandbox needed yet
+# sandbox пока не нужен
 ```
 
 ## `v1.5 - Accounts and Profiles`
 
-Required:
+Обязательно:
 
 ```text
 User ownership added.
-# tasks and votes can be tied to user
+# tasks и votes можно связать с user
 
 Per-user limits become possible.
-# better cost control
+# лучший cost control
 ```
 
 ## `v1.6 - Admin Panel and Limits`
 
-Required:
+Обязательно:
 
 ```text
 Admin role check server-side.
 # protected admin actions
 
 Model limits configurable.
-# budget and access control
+# budget и access control
 ```
 
 ## `v1.7 - Code Arena Runner`
 
-Required:
+Обязательно:
 
 ```text
 Sandbox ready.
-# code execution isolated
+# code execution изолирован
 
 Timeouts ready.
-# no infinite execution
+# без infinite execution
 
 Resource limits ready.
-# no resource abuse
+# без resource abuse
 
 Security review complete.
-# final check before code execution
+# финальная проверка перед code execution
 ```
 
 ## `v2.0 - AI Team Mode`
 
-Required:
+Обязательно:
 
 ```text
 Multi-step cost controls.
-# Team Mode can be expensive
+# Team Mode может быть дорогим
 
 Role limits.
-# prevent uncontrolled chains
+# предотвращает uncontrolled chains
 
 Context limits.
-# prevent huge token usage
+# предотвращает huge token usage
 ```
 
 ---
 
-# 21. Final Rules
+# 21. Финальные правила
 
-The project must follow these final rules:
+Проект должен соблюдать эти финальные правила:
 
 ```text
 No secrets in frontend.
-# browser must never see private keys
+# browser никогда не должен видеть private keys
 
 No secrets in GitHub.
-# repository must stay safe
+# repository должен оставаться безопасным
 
 No service role in client code.
-# Supabase protection depends on this
+# Supabase protection зависит от этого
 
 No arbitrary model IDs from users.
-# backend must enforce allowlist
+# backend должен enforced allowlist
 
 No unlimited prompts.
 # cost protection
@@ -1421,38 +1421,38 @@ No unlimited model count.
 # cost protection
 
 No Code Arena Runner before v1.7.
-# unsafe without sandbox
+# небезопасно без sandbox
 
 No AI Team Mode before v2.0.
-# too complex and expensive for MVP
+# слишком сложно и дорого для MVP
 
 No raw internal errors in API responses.
-# avoid leaking system details
+# не раскрывать system details
 
 No public release without checking environment variables.
-# deployment must be safe
+# deployment должен быть безопасным
 ```
 
 ---
 
-# 22. Commit Recommendation
+# 22. Рекомендация по commit
 
-After replacing this file, make a commit:
+После замены этого файла сделать commit:
 
 ```bash
 git add docs/12-security-and-env.md
-# stage updated security and environment documentation
+# добавить обновлённую security and environment documentation в staged files
 
 git commit -m "docs: update security and environment rules"
-# save the corrected security documentation
+# сохранить исправленную security documentation
 ```
 
-If the file is located in the project root instead of `docs/`, use:
+Если файл находится в корне проекта вместо `docs/`, использовать:
 
 ```bash
 git add 12-security-and-env.md
-# stage updated security and environment documentation
+# добавить обновлённую security and environment documentation в staged files
 
 git commit -m "docs: update security and environment rules"
-# save the corrected security documentation
+# сохранить исправленную security documentation
 ```
