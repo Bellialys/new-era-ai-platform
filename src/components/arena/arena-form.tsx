@@ -1,0 +1,112 @@
+import type { ArenaModel } from "@/types/arena";
+
+type ArenaFormProps = {
+  prompt: string;
+  selectedModelIds: string[];
+  models: ArenaModel[];
+  isLoading: boolean;
+  errorMessage: string | null;
+  onPromptChange: (value: string) => void;
+  onToggleModel: (modelId: string) => void;
+  onSubmit: () => void;
+  onReset: () => void;
+};
+
+export function ArenaForm({
+  prompt,
+  selectedModelIds,
+  models,
+  isLoading,
+  errorMessage,
+  onPromptChange,
+  onToggleModel,
+  onSubmit,
+  onReset,
+}: ArenaFormProps) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-white">Задача</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Введите prompt, выберите минимум две модели и запустите mock-сравнение.
+          </p>
+        </div>
+        <span className="rounded-full bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-100">
+          v0.3 mock
+        </span>
+      </div>
+
+      <label className="mt-5 block text-sm font-medium text-slate-200" htmlFor="prompt">
+        Prompt
+      </label>
+      <textarea
+        id="prompt"
+        value={prompt}
+        onChange={(event) => onPromptChange(event.target.value)}
+        className="mt-2 min-h-40 w-full rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-sm text-white outline-none ring-0 transition placeholder:text-slate-500 focus:border-violet-300/60"
+        placeholder="Например: сравни Next.js и Nuxt для MVP AI-платформы"
+      />
+
+      <div className="mt-6">
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="text-sm font-semibold text-slate-200">Выбор моделей</h3>
+          <span className="text-xs text-slate-400">Выбрано: {selectedModelIds.length}</span>
+        </div>
+        <div className="mt-3 grid gap-3">
+          {models.map((model) => {
+            const isSelected = selectedModelIds.includes(model.id);
+
+            return (
+              <label
+                key={model.id}
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/45 p-4 transition hover:border-violet-300/40"
+              >
+                <span>
+                  <span className="flex flex-wrap items-center gap-2 font-semibold text-white">
+                    {model.name}
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300">
+                      {model.badge}
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-sm text-slate-400">{model.description}</span>
+                </span>
+                <input
+                  checked={isSelected}
+                  onChange={() => onToggleModel(model.id)}
+                  type="checkbox"
+                  className="h-5 w-5 shrink-0 accent-violet-500"
+                />
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {errorMessage ? (
+        <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm leading-6 text-red-100">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <button
+          disabled={isLoading}
+          onClick={onSubmit}
+          className="rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+          type="button"
+        >
+          {isLoading ? "Генерация mock-ответов..." : "Запустить сравнение"}
+        </button>
+        <button
+          disabled={isLoading}
+          onClick={onReset}
+          className="rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          type="button"
+        >
+          Очистить
+        </button>
+      </div>
+    </section>
+  );
+}
