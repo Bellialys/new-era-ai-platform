@@ -1,8 +1,8 @@
-import type { ArenaResponse } from "@/types/arena";
+import type { ArenaResponseView } from "@/types/arena";
 import { ResponseCard } from "./response-card";
 
 type ArenaResultsProps = {
-  responses: ArenaResponse[];
+  responses: ArenaResponseView[];
   isLoading: boolean;
   winnerResponseId: string | null;
   onSelectWinner: (responseId: string) => void;
@@ -26,13 +26,10 @@ export function ArenaResults({ responses, isLoading, winnerResponseId, onSelectW
     return (
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 text-center backdrop-blur">
         <div className="mx-auto flex min-h-80 max-w-xl flex-col items-center justify-center">
-          <span className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-slate-200">
-            Empty state
-          </span>
-          <h2 className="mt-5 text-2xl font-black text-white">Ответов пока нет</h2>
+          <h2 className="text-2xl font-black text-white">Ответов пока нет</h2>
           <p className="mt-3 text-sm leading-6 text-slate-400">
             Введите задачу, выберите минимум две модели и нажмите кнопку запуска сравнения.
-            После этого здесь появятся mock-ответы моделей.
+            После этого здесь появятся ответы моделей.
           </p>
         </div>
       </section>

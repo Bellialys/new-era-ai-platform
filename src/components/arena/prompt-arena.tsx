@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   PROMPT_MIN_LENGTH,
   PROMPT_MAX_LENGTH,
@@ -50,7 +50,7 @@ export function PromptArena() {
       } catch (error) {
         console.error("Error loading models:", error);
         setModelsError(
-          "Failed to load available models. Please refresh the page."
+          "Не удалось загрузить список моделей. Обновите страницу."
         );
       } finally {
         setModelsLoading(false);
@@ -59,14 +59,6 @@ export function PromptArena() {
 
     loadModels();
   }, []);
-
-  const selectedModels = useMemo(
-    () =>
-      availableModels.filter((model) =>
-        selectedModelIds.includes(model.id)
-      ),
-    [selectedModelIds, availableModels]
-  );
 
   function buildResponseViews(apiResponses: ArenaApiResponse[]): ArenaResponseView[] {
     return apiResponses.map((response) => {
@@ -162,6 +154,7 @@ export function PromptArena() {
           body: JSON.stringify({
             prompt: prompt.trim(),
             modelIds: selectedModelIds,
+            modeSlug: "prompt-arena",
           }),
         });
 
@@ -185,7 +178,7 @@ export function PromptArena() {
           responses: ArenaApiResponse[];
         };
 
-        if (data.status !== "success" || !data.responses) {
+        if (!data.responses) {
           throw new Error("Invalid API response format");
         }
 
@@ -195,7 +188,7 @@ export function PromptArena() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Failed to get responses. Please try again."
+            : "Не удалось получить ответы. Попробуйте ещё раз."
         );
       } finally {
         if (requestIdRef.current === requestId) {
@@ -230,6 +223,7 @@ export function PromptArena() {
         maxPromptLength={PROMPT_MAX_LENGTH}
         selectedModelIds={selectedModelIds}
         models={availableModels}
+        modelsLoading={modelsLoading}
         isLoading={isLoading}
         errorMessage={errorMessage || modelsError}
         onPromptChange={handlePromptChange}

@@ -24,8 +24,14 @@ export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCar
           <p className="text-sm text-violet-200">{response.modelRole}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100">
-            {response.status}
+          <span
+            className={
+              response.status === "success"
+                ? "rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100"
+                : "rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-100"
+            }
+          >
+            {response.status === "success" ? "Успех" : "Ошибка"}
           </span>
           {response.latencyMs ? (
             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
@@ -39,7 +45,7 @@ export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCar
           ) : null}
           {isWinner ? (
             <span className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-emerald-950">
-              Winner
+              Победитель
             </span>
           ) : null}
         </div>
@@ -55,7 +61,7 @@ export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCar
         className="mt-5 rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
       >
-        {isWinner ? "Выбрано лучшим" : "Выбрать лучшим"}
+        {isWinner ? "Выбрано победителем" : "Выбрать победителем"}
       </button>
     </article>
   );

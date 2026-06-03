@@ -2,6 +2,9 @@
  * Available models configuration
  * This will be moved to database (Supabase) in v0.5
  * For now, we use a hardcoded allowlist for security
+ *
+ * IMPORTANT: Verify model IDs against OpenRouter before deploying:
+ * curl https://openrouter.ai/api/v1/models -H "Authorization: Bearer $OPENROUTER_API_KEY"
  */
 
 export interface ArenaModel {
@@ -9,52 +12,48 @@ export interface ArenaModel {
   name: string;
   role: string;
   provider: "openrouter";
+  badge?: string;
+  description?: string;
 }
 
-/**
- * Allowed models list (server-side only)
- * These are the only models that can be used in /api/compare
- * 
- * WARNING: If you add a model here, make sure it's available in OpenRouter
- * and you've tested the API call
- */
 export const ALLOWED_MODELS: ArenaModel[] = [
   {
-    id: "meta-llama/llama-2-70b-chat",
-    name: "Llama 2 70B",
-    role: "Balanced answer",
+    id: "google/gemini-flash-1.5",
+    name: "Gemini Flash 1.5",
+    role: "Быстрый и точный",
     provider: "openrouter",
+    badge: "Быстрый",
+    description: "Скоростная модель Google для быстрых и чётких ответов.",
   },
   {
-    id: "mistralai/mistral-7b-instruct",
-    name: "Mistral 7B",
-    role: "Quick and concise",
+    id: "mistralai/mistral-small-3.1-24b-instruct",
+    name: "Mistral Small 3.1",
+    role: "Сбалансированный анализ",
     provider: "openrouter",
+    badge: "Сбалансированный",
+    description: "Сильная модель Mistral для глубокого анализа и рассуждений.",
   },
   {
-    id: "openai/gpt-3.5-turbo",
-    name: "GPT-3.5 Turbo",
-    role: "Creative and detailed",
+    id: "meta-llama/llama-3.1-8b-instruct",
+    name: "Llama 3.1 8B",
+    role: "Открытая модель",
     provider: "openrouter",
+    badge: "Open Source",
+    description: "Открытая модель Meta — хороший баланс скорости и качества.",
   },
 ];
 
-/**
- * Get all available models (public endpoint response)
- */
 export function getAvailableModels(): ArenaModel[] {
   return ALLOWED_MODELS.map((model) => ({
     id: model.id,
     name: model.name,
     role: model.role,
     provider: model.provider,
+    badge: model.badge,
+    description: model.description,
   }));
 }
 
-/**
- * Validate that all requested model IDs are in the allowlist
- * @throws Error if any model is not allowed
- */
 export function validateModelAllowlist(modelIds: string[]): void {
   const allowedIds = new Set(ALLOWED_MODELS.map((m) => m.id));
 
@@ -67,9 +66,6 @@ export function validateModelAllowlist(modelIds: string[]): void {
   }
 }
 
-/**
- * Get model by ID
- */
 export function getModelById(modelId: string): ArenaModel | undefined {
   return ALLOWED_MODELS.find((m) => m.id === modelId);
 }

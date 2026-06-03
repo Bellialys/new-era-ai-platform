@@ -3,14 +3,14 @@
  * Returns list of available models that can be used for comparison
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   getAvailableModels,
   createErrorResponse,
   logApiRequest,
 } from "@/lib/server";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const startTime = Date.now();
 
   try {

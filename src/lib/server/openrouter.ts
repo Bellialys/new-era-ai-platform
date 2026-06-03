@@ -61,32 +61,26 @@ function getApiKey(): string {
   return apiKey;
 }
 
-/**
- * Fetch a single response from OpenRouter
- * @param prompt - User prompt
- * @param modelId - OpenRouter model ID
- * @returns The model's response text
- */
+export type ModelResult =
+  | { success: true; text: string; latencyMs: number }
+  | { success: false; errorCode: string; errorMessage: string };
+
 export async function fetchOpenRouterResponse(
   prompt: string,
   modelId: string
-): Promise<string> {
+): Promise<{ text: string; latencyMs: number }> {
   const apiKey = getApiKey();
 
   const request: OpenRouterRequest = {
     model: modelId,
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
+    messages: [{ role: "user", content: prompt }],
     temperature: 0.7,
     max_tokens: 1000,
   };
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
+  const startTime = Date.now();
 
   try {
     const response = await fetch(OPENROUTER_API_URL, {
@@ -94,14 +88,13 @@ export async function fetchOpenRouterResponse(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://new-era-platform.vercel.app", // Required by OpenRouter
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
         "X-Title": "New Era AI Platform",
       },
       body: JSON.stringify(request),
       signal: controller.signal,
     });
 
-    // Parse response regardless of status to get error details
     const data = (await response.json()) as
       | OpenRouterResponse
       | OpenRouterErrorResponse;
@@ -113,91 +106,52 @@ export async function fetchOpenRouterResponse(
       const errorCode = errorData.error?.code || "OPENROUTER_ERROR";
 
       if (response.status === 401 || response.status === 403) {
-        throw new ApiError(
-          403,
-          "AUTH_ERROR",
-          `OpenRouter authentication failed: ${errorMessage}`
-        );
+        throw new ApiError(403, "AUTH_ERROR", `OpenRouter authentication failed: ${errorMessage}`);
       }
-
       if (response.status === 429) {
-        throw new ApiError(
-          429,
-          "RATE_LIMIT",
-          "OpenRouter rate limit exceeded. Please try again later."
-        );
+        throw new ApiError(429, "RATE_LIMIT", "OpenRouter rate limit exceeded. Please try again later.");
       }
-
       if (response.status >= 500) {
-        throw new ApiError(
-          502,
-          errorCode,
-          `OpenRouter service error: ${errorMessage}`
-        );
+        throw new ApiError(502, errorCode, `OpenRouter service error: ${errorMessage}`);
       }
-
       throw new ApiError(response.status, errorCode, errorMessage);
     }
 
-    // Extract answer from response
     const responseData = data as OpenRouterResponse;
     const content = responseData.choices?.[0]?.message?.content;
     if (!content) {
-      throw new ApiError(
-        502,
-        "INVALID_RESPONSE",
-        "OpenRouter returned empty response"
-      );
+      throw new ApiError(502, "INVALID_RESPONSE", "OpenRouter returned empty response");
     }
 
-    return content;
+    return { text: content, latencyMs: Date.now() - startTime };
   } catch (error) {
-    // Handle timeout
     if (error instanceof Error && error.name === "AbortError") {
-      throw new ApiError(
-        504,
-        "TIMEOUT",
-        `OpenRouter request timed out after ${OPENROUTER_TIMEOUT_MS}ms`
-      );
+      throw new ApiError(504, "TIMEOUT", `OpenRouter request timed out after ${OPENROUTER_TIMEOUT_MS}ms`);
     }
-
-    // Re-throw ApiError as-is
     if (error instanceof ApiError) {
       throw error;
     }
-
-    // Network or other errors
     console.error("OpenRouter fetch error:", error);
-    throw new ApiError(
-      502,
-      "NETWORK_ERROR",
-      "Failed to connect to OpenRouter. Please try again."
-    );
+    throw new ApiError(502, "NETWORK_ERROR", "Failed to connect to OpenRouter. Please try again.");
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
-/**
- * Fetch responses from multiple models in parallel
- * @param prompt - User prompt
- * @param modelIds - Array of OpenRouter model IDs
- * @returns Array of responses in the same order as modelIds
- */
 export async function fetchMultipleResponses(
   prompt: string,
   modelIds: string[]
-): Promise<(string | { error: string })[]> {
-  const promises = modelIds.map(async (modelId) => {
+): Promise<ModelResult[]> {
+  const promises = modelIds.map(async (modelId): Promise<ModelResult> => {
     try {
-      const response = await fetchOpenRouterResponse(prompt, modelId);
-      return response;
+      const { text, latencyMs } = await fetchOpenRouterResponse(prompt, modelId);
+      return { success: true, text, latencyMs };
     } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : "Failed to get response from this model";
-      return { error: message };
+      const errorCode = error instanceof ApiError ? error.errorCode : "UNKNOWN_ERROR";
+      const errorMessage = error instanceof ApiError
+        ? error.message
+        : "Failed to get response from this model";
+      return { success: false, errorCode, errorMessage };
     }
   });
 

@@ -9,7 +9,7 @@ export default function ArenaPage() {
           <p className="text-sm uppercase tracking-[0.25em] text-violet-200">Prompt Arena</p>
           <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">Сравнение AI-моделей</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            Static UI MVP: форма уже реагирует на действия пользователя, проверяет ввод и показывает mock-ответы.
+            Введите задачу, выберите модели и получайте реальные ответы от AI через OpenRouter.
           </p>
         </div>
         <Link className="text-sm text-slate-300 transition hover:text-white" href="/">

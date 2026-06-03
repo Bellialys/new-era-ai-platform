@@ -5,6 +5,7 @@ type ArenaFormProps = {
   maxPromptLength: number;
   selectedModelIds: string[];
   models: ArenaModel[];
+  modelsLoading: boolean;
   isLoading: boolean;
   errorMessage: string | null;
   onPromptChange: (value: string) => void;
@@ -18,6 +19,7 @@ export function ArenaForm({
   maxPromptLength,
   selectedModelIds,
   models,
+  modelsLoading,
   isLoading,
   errorMessage,
   onPromptChange,
@@ -31,11 +33,11 @@ export function ArenaForm({
         <div>
           <h2 className="text-xl font-bold text-white">Задача</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            Введите prompt, выберите минимум две модели и запустите mock-сравнение.
+            Введите prompt, выберите минимум две модели и запустите сравнение.
           </p>
         </div>
         <span className="rounded-full bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-100">
-          v0.3 mock
+          v0.4
         </span>
       </div>
 
@@ -54,35 +56,49 @@ export function ArenaForm({
       <div className="mt-6">
         <div className="flex items-center justify-between gap-4">
           <h3 className="text-sm font-semibold text-slate-200">Выбор моделей</h3>
-          <span className="text-xs text-slate-400">Выбрано: {selectedModelIds.length}</span>
+          <span className="text-xs text-slate-400">
+            {modelsLoading ? "Загрузка..." : `Выбрано: ${selectedModelIds.length}`}
+          </span>
         </div>
         <div className="mt-3 grid gap-3">
-          {models.map((model) => {
-            const isSelected = selectedModelIds.includes(model.id);
+          {modelsLoading ? (
+            <>
+              <div className="h-16 animate-pulse rounded-2xl bg-white/10" />
+              <div className="h-16 animate-pulse rounded-2xl bg-white/10" />
+              <div className="h-16 animate-pulse rounded-2xl bg-white/10" />
+            </>
+          ) : (
+            models.map((model) => {
+              const isSelected = selectedModelIds.includes(model.id);
 
-            return (
-              <label
-                key={model.id}
-                className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/45 p-4 transition hover:border-violet-300/40"
-              >
-                <span>
-                  <span className="flex flex-wrap items-center gap-2 font-semibold text-white">
-                    {model.name}
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300">
-                      {model.badge}
+              return (
+                <label
+                  key={model.id}
+                  className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/45 p-4 transition hover:border-violet-300/40"
+                >
+                  <span>
+                    <span className="flex flex-wrap items-center gap-2 font-semibold text-white">
+                      {model.name}
+                      {model.badge ? (
+                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300">
+                          {model.badge}
+                        </span>
+                      ) : null}
                     </span>
+                    {model.description ? (
+                      <span className="mt-1 block text-sm text-slate-400">{model.description}</span>
+                    ) : null}
                   </span>
-                  <span className="mt-1 block text-sm text-slate-400">{model.description}</span>
-                </span>
-                <input
-                  checked={isSelected}
-                  onChange={() => onToggleModel(model.id)}
-                  type="checkbox"
-                  className="h-5 w-5 shrink-0 accent-violet-500"
-                />
-              </label>
-            );
-          })}
+                  <input
+                    checked={isSelected}
+                    onChange={() => onToggleModel(model.id)}
+                    type="checkbox"
+                    className="h-5 w-5 shrink-0 accent-violet-500"
+                  />
+                </label>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -94,15 +110,15 @@ export function ArenaForm({
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <button
-          disabled={isLoading}
+          disabled={isLoading || modelsLoading}
           onClick={onSubmit}
           className="rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
         >
-          {isLoading ? "Генерация mock-ответов..." : "Запустить сравнение"}
+          {isLoading ? "Получаем ответы..." : "Запустить сравнение"}
         </button>
         <button
-          disabled={isLoading}
+          disabled={isLoading || modelsLoading}
           onClick={onReset}
           className="rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
