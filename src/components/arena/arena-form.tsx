@@ -41,9 +41,22 @@ export function ArenaForm({
         </span>
       </div>
 
-      <label className="mt-5 block text-sm font-medium text-slate-200" htmlFor="prompt">
-        Prompt
-      </label>
+      <div className="mt-5 flex items-baseline justify-between gap-4">
+        <label className="block text-sm font-medium text-slate-200" htmlFor="prompt">
+          Prompt
+        </label>
+        <span
+          className={`text-xs tabular-nums transition-colors ${
+            prompt.length >= maxPromptLength
+              ? "text-red-400"
+              : prompt.length >= maxPromptLength * 0.85
+              ? "text-amber-400"
+              : "text-slate-500"
+          }`}
+        >
+          {prompt.length} / {maxPromptLength.toLocaleString()}
+        </span>
+      </div>
       <textarea
         id="prompt"
         value={prompt}

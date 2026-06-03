@@ -235,6 +235,9 @@ export function PromptArena() {
       <ArenaResults
         responses={responses}
         isLoading={isLoading}
+        loadingModelNames={availableModels
+          .filter((m) => selectedModelIds.includes(m.id))
+          .map((m) => m.name)}
         winnerResponseId={winnerResponseId}
         onSelectWinner={setWinnerResponseId}
       />
