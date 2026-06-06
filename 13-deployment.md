@@ -1221,3 +1221,32 @@ Build проходит без ошибок.
 Главное правило проекта:
 
 **сначала стабильный Prompt Arena MVP, потом расширение платформы.**
+
+---
+
+# Актуализация деплоя v0.4.1
+
+Перед деплоем на Vercel нужно убедиться, что локально проходят проверки:
+
+```bash
+npm run typecheck
+# проверяет TypeScript
+
+npm run lint
+# проверяет ESLint
+
+npm run build
+# проверяет production-сборку
+```
+
+Минимальные переменные Vercel для v0.4.1:
+
+```text
+OPENROUTER_API_KEY
+# секретный ключ OpenRouter, только server-side
+
+NEXT_PUBLIC_SITE_URL
+# публичный URL сайта после деплоя
+```
+
+Переменные Supabase добавлять на этапе `v0.5`.

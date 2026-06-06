@@ -649,3 +649,109 @@ AI Team Mode требует многошаговой работы моделей
 ## Когда пересмотреть
 
 После `v1.7` и стабилизации Code Arena Runner.
+
+---
+
+# DEC-010 - Разделить текущие OpenRouter model keys и будущие Supabase model UUID
+
+## Статус
+
+```text
+Accepted
+# решение принято для v0.4.1 и v0.5
+```
+
+## Решение
+
+В версии `v0.4.1` поле `modelIds` временно содержит OpenRouter model keys из server-side allowlist.
+
+Пример:
+
+```json
+{
+  "modelIds": [
+    "google/gemini-flash-1.5",
+    "mistralai/mistral-small-3.1-24b-instruct"
+  ]
+}
+```
+
+Начиная с `v0.5`, после подключения Supabase, frontend должен отправлять UUID из таблицы `models`.
+
+```text
+models.id
+# публичный UUID, который можно отправлять с frontend
+
+models.model_key
+# технический OpenRouter ID, который должен оставаться на backend
+```
+
+## Контекст
+
+В текущем MVP ещё нет Supabase. Поэтому hardcoded allowlist на backend является допустимым временным решением.
+
+Но для production-архитектуры нельзя позволять frontend напрямую управлять OpenRouter model key.
+
+## Причина
+
+Такой переход нужен для:
+
+- контроля расходов;
+- безопасного отключения моделей;
+- будущей админ-панели;
+- нормальной связи ответов с таблицей `models`;
+- защиты от произвольной подстановки модели.
+
+## Последствия
+
+В `v0.4.1` код остаётся простым и рабочим.
+
+В `v0.5` нужно изменить контракт `/api/compare`:
+
+```text
+v0.4.1 modelIds = OpenRouter model keys
+# временно
+
+v0.5+ modelIds = Supabase models.id UUID
+# правильно для базы и production
+```
+
+## Когда пересмотреть
+
+После реализации `v0.5 Supabase Integration` проверить, что OpenRouter `model_key` больше не приходит с frontend.
+
+---
+
+# DEC-011 - Проверять modeSlug уже в v0.4.1
+
+## Статус
+
+```text
+Accepted
+# решение принято
+```
+
+## Решение
+
+Backend route `/api/compare` должен валидировать `modeSlug`.
+
+В текущей версии разрешён только:
+
+```text
+prompt-arena
+# единственный активный режим в MVP
+```
+
+Если `modeSlug` отсутствует, backend использует `prompt-arena` по умолчанию.
+
+Если передан другой `modeSlug`, backend возвращает ошибку `INVALID_MODE_SLUG`.
+
+## Причина
+
+Проект будет иметь несколько режимов. Лучше сразу контролировать режим на backend, чтобы позже не смешать Prompt Arena, Code Arena и Team Mode.
+
+## Последствия
+
+Сейчас API становится строже, но безопаснее.
+
+Будущие режимы нужно будет добавлять явно в `ALLOWED_MODE_SLUGS`.

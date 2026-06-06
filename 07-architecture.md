@@ -1222,3 +1222,55 @@ AI Team Mode не начинается до v2.0.
 Не строить большой сложный проект сразу.
 # каждый этап должен давать рабочий результат
 ```
+
+---
+
+# Актуализация архитектуры v0.4.1
+
+Текущий backend слой находится здесь:
+
+```text
+src/app/api/models/route.ts
+# отдаёт список разрешённых моделей
+
+src/app/api/compare/route.ts
+# принимает prompt, modelIds и modeSlug
+
+src/lib/server/models.ts
+# server-side allowlist моделей
+
+src/lib/server/openrouter.ts
+# вызовы OpenRouter API
+
+src/lib/server/utils.ts
+# ApiError, validation, safe logging
+```
+
+Текущий поток данных:
+
+```text
+Browser /arena
+# пользователь вводит prompt и выбирает модели
+
+GET /api/models
+# frontend получает разрешённые модели
+
+POST /api/compare
+# frontend отправляет prompt, modelIds, modeSlug
+
+Backend validation
+# проверка prompt, modelIds, modeSlug и allowlist
+
+OpenRouter API
+# backend получает ответы моделей
+
+Browser /arena
+# frontend показывает карточки ответов
+```
+
+Следующее архитектурное изменение для `v0.5`:
+
+```text
+Supabase должен стать источником models, tasks и model_responses.
+# hardcoded allowlist заменить чтением из базы
+```
