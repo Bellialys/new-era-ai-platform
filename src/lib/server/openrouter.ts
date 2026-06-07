@@ -53,12 +53,26 @@ function getApiKey(): string {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new ApiError(
-      500,
-      "API_KEY_MISSING",
-      "OpenRouter API key is not configured. Please set OPENROUTER_API_KEY in environment variables."
+      503,
+      "AI_SERVICE_NOT_CONFIGURED",
+      "AI service is not configured. Please contact the project owner."
     );
   }
   return apiKey;
+}
+
+function getOpenRouterTimeoutMs(): number {
+  const timeoutFromEnv = process.env.MODEL_TIMEOUT_MS;
+  if (!timeoutFromEnv) {
+    return OPENROUTER_TIMEOUT_MS;
+  }
+
+  const parsedTimeout = Number(timeoutFromEnv);
+  if (!Number.isFinite(parsedTimeout) || parsedTimeout <= 0) {
+    return OPENROUTER_TIMEOUT_MS;
+  }
+
+  return parsedTimeout;
 }
 
 export type ModelResult =
@@ -79,7 +93,8 @@ export async function fetchOpenRouterResponse(
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
+  const timeoutMs = getOpenRouterTimeoutMs();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const startTime = Date.now();
 
   try {
@@ -106,13 +121,13 @@ export async function fetchOpenRouterResponse(
       const errorCode = errorData.error?.code || "OPENROUTER_ERROR";
 
       if (response.status === 401 || response.status === 403) {
-        throw new ApiError(403, "AUTH_ERROR", `OpenRouter authentication failed: ${errorMessage}`);
+        throw new ApiError(403, "AUTH_ERROR", "AI provider authentication failed.");
       }
       if (response.status === 429) {
         throw new ApiError(429, "RATE_LIMIT", "OpenRouter rate limit exceeded. Please try again later.");
       }
       if (response.status >= 500) {
-        throw new ApiError(502, errorCode, `OpenRouter service error: ${errorMessage}`);
+        throw new ApiError(502, errorCode, "AI provider service error. Please try again.");
       }
       throw new ApiError(response.status, errorCode, errorMessage);
     }
@@ -126,7 +141,7 @@ export async function fetchOpenRouterResponse(
     return { text: content, latencyMs: Date.now() - startTime };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new ApiError(504, "TIMEOUT", `OpenRouter request timed out after ${OPENROUTER_TIMEOUT_MS}ms`);
+      throw new ApiError(504, "TIMEOUT", `AI provider request timed out after ${timeoutMs}ms.`);
     }
     if (error instanceof ApiError) {
       throw error;

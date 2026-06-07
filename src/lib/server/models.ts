@@ -18,12 +18,12 @@ export interface ArenaModel {
 
 export const ALLOWED_MODELS: ArenaModel[] = [
   {
-    id: "google/gemini-flash-1.5",
-    name: "Gemini Flash 1.5",
+    id: "google/gemini-3.5-flash",
+    name: "Gemini 3.5 Flash",
     role: "Быстрый и точный",
     provider: "openrouter",
     badge: "Быстрый",
-    description: "Скоростная модель Google для быстрых и чётких ответов.",
+    description: "Актуальная скоростная модель Google для быстрых и чётких ответов.",
   },
   {
     id: "mistralai/mistral-small-3.1-24b-instruct",
