@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthStatus } from "@/components/auth/auth-status";
 import { PromptArena } from "@/components/arena/prompt-arena";
 
 export default function ArenaPage() {
@@ -15,6 +16,7 @@ export default function ArenaPage() {
         <Link className="text-sm text-slate-300 transition hover:text-white" href="/">
           Вернуться на главную
         </Link>
+        <AuthStatus />
       </header>
 
       <PromptArena />

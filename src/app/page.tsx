@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthStatus } from "@/components/auth/auth-status";
 
 const modes = [
   { name: "Prompt Arena", status: "live", description: "Сравнение ответов нескольких AI на одну задачу" },
@@ -18,13 +19,14 @@ export default function HomePage() {
         <Link href="/" className="text-lg font-bold tracking-tight text-white">
           Новая эпоха
         </Link>
-        <nav className="flex items-center gap-4 text-sm text-slate-300">
+        <nav className="flex flex-wrap items-center justify-end gap-4 text-sm text-slate-300">
           <Link className="rounded-full bg-violet-500/20 px-4 py-1.5 font-semibold text-violet-100 transition hover:bg-violet-500/30" href="/arena">
             Prompt Arena
           </Link>
           <a className="transition hover:text-white" href="https://github.com/Bellialys/new-era-ai-platform">
             GitHub
           </a>
+          <AuthStatus />
         </nav>
       </header>
 
