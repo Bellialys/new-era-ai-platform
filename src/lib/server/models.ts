@@ -12,28 +12,12 @@ import { ApiError } from "./utils";
 
 export const ALLOWED_MODELS: ArenaModel[] = [
   {
-    id: "nvidia/nemotron-3-ultra-550b-a55b:free",
-    name: "Nemotron 3 Ultra",
-    role: "Глубокое рассуждение",
+    id: "poolside/laguna-xs.2:free",
+    name: "Laguna XS.2",
+    role: "Coding / code-oriented",
     provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная reasoning-модель NVIDIA для сложных задач и развёрнутого анализа.",
-  },
-  {
-    id: "qwen/qwen3-next-80b-a3b-instruct:free",
-    name: "Qwen3 Next 80B",
-    role: "Сбалансированный instruct",
-    provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная instruct-модель Qwen для универсальных задач Prompt Arena.",
-  },
-  {
-    id: "google/gemma-4-31b-it:free",
-    name: "Gemma 4 31B",
-    role: "Открытая general-модель",
-    provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная модель Google Gemma для сравнения качества общих ответов.",
+    badge: "Free Coding",
+    description: "Бесплатная компактная code-oriented модель Poolside для быстрых coding-сравнений.",
   },
   {
     id: "poolside/laguna-m.1:free",
@@ -44,12 +28,28 @@ export const ALLOWED_MODELS: ArenaModel[] = [
     description: "Бесплатная code-oriented модель Poolside для задач по программированию.",
   },
   {
-    id: "poolside/laguna-xs.2:free",
-    name: "Laguna XS.2",
-    role: "Coding / code-oriented",
+    id: "google/gemma-4-31b-it:free",
+    name: "Gemma 4 31B",
+    role: "Открытая general-модель",
     provider: "openrouter",
-    badge: "Free Coding",
-    description: "Бесплатная компактная code-oriented модель Poolside для быстрых coding-сравнений.",
+    badge: "Free",
+    description: "Бесплатная модель Google Gemma для сравнения качества общих ответов.",
+  },
+  {
+    id: "qwen/qwen3-next-80b-a3b-instruct:free",
+    name: "Qwen3 Next 80B",
+    role: "Сбалансированный instruct",
+    provider: "openrouter",
+    badge: "Free Limited",
+    description: "Бесплатная instruct-модель Qwen; может чаще упираться в rate limit.",
+  },
+  {
+    id: "nvidia/nemotron-3-ultra-550b-a55b:free",
+    name: "Nemotron 3 Ultra",
+    role: "Глубокое рассуждение",
+    provider: "openrouter",
+    badge: "Free Unstable",
+    description: "Бесплатная reasoning-модель NVIDIA; временно ниже в списке из-за нестабильных ответов.",
   },
 ];
 

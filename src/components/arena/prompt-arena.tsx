@@ -17,6 +17,10 @@ import { ArenaResults } from "./arena-results";
 
 const MAX_MODELS_ERROR_MESSAGE = "В MVP можно выбрать максимум три модели.";
 
+function getDefaultModelIds(models: ArenaModel[]) {
+  return models.slice(0, MODEL_MAX_SELECT).map((model) => model.id);
+}
+
 export function PromptArena() {
   const [availableModels, setAvailableModels] = useState<ArenaModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
@@ -44,9 +48,9 @@ export function PromptArena() {
           models: ArenaModel[];
         };
         setAvailableModels(data.models);
-        // Select first two models by default
-        if (data.models.length >= 2) {
-          setSelectedModelIds([data.models[0].id, data.models[1].id]);
+        // Select the recommended MVP set by default.
+        if (data.models.length >= MODEL_MIN_SELECT) {
+          setSelectedModelIds(getDefaultModelIds(data.models));
         }
       } catch (error) {
         console.error("Error loading models:", error);
@@ -221,12 +225,9 @@ export function PromptArena() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setPrompt("");
-    // Reset to first two models (or default)
-    if (availableModels.length >= 2) {
-      setSelectedModelIds([
-        availableModels[0].id,
-        availableModels[1].id,
-      ]);
+    // Reset to the recommended MVP set.
+    if (availableModels.length >= MODEL_MIN_SELECT) {
+      setSelectedModelIds(getDefaultModelIds(availableModels));
     } else {
       setSelectedModelIds([]);
     }
