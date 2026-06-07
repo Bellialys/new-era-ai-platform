@@ -174,21 +174,3 @@ export function logApiRequest(
   const duration = durationMs ? ` (${durationMs}ms)` : "";
   console.log(`[${timestamp}] ${method} ${path} ${statusCode}${duration}`);
 }
-
-/**
- * Log OpenRouter API call details (safe logging)
- * - DO NOT log API key
- * - DO NOT log full request/response bodies with sensitive data
- * - Log status, models used, timestamp
- */
-export function logOpenRouterCall(
-  models: string[],
-  statusCode: number,
-  durationMs: number
-): void {
-  const timestamp = new Date().toISOString();
-  const modelList = models.join(", ");
-  console.log(
-    `[${timestamp}] OpenRouter call (${modelList}) → ${statusCode} (${durationMs}ms)`
-  );
-}

@@ -57,7 +57,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
 
   try {
     const rateLimitKey = `compare:${getRateLimitKeyFromHeaders(request.headers)}`;
-    const rateLimit = checkRateLimit(
+    const rateLimit = await checkRateLimit(
       rateLimitKey,
       COMPARE_RATE_LIMIT_MAX_REQUESTS,
       COMPARE_RATE_LIMIT_WINDOW_MS
@@ -175,11 +175,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
     });
 
     const hasAnySuccess = arenaResponses.some((r) => r.status === "success");
-    const savedRun = await savePromptArenaRun({
-      prompt: cleanPrompt,
-      modelIds: selectedModelIds,
-      responses: arenaResponses,
-    });
+
+    // Persistence is best-effort: a database failure must not discard model
+    // answers the user already paid for. Fall back to the in-memory ids.
+    let savedRun: Awaited<ReturnType<typeof savePromptArenaRun>> = {
+      taskId: null,
+      responseIdsByModelId: {},
+    };
+    try {
+      savedRun = await savePromptArenaRun({
+        prompt: cleanPrompt,
+        modelIds: selectedModelIds,
+        responses: arenaResponses,
+      });
+    } catch (persistError) {
+      console.error("Prompt Arena persistence failed (continuing):", persistError);
+    }
 
     const savedArenaResponses = arenaResponses.map(({ usage: _usage, ...response }) => ({
       ...response,
