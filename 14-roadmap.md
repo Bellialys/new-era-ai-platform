@@ -58,6 +58,7 @@ v0.5 - Supabase Integration
 | `v1.5` | Accounts and Profiles | Авторизация, профили, личная история | Позже |
 | `v1.6` | Admin Panel and Limits | Управление моделями и лимитами | Позже |
 | `v1.7` | Code Arena Runner | Безопасный запуск кода в sandbox | Позже |
+| `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | Позже |
 | `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей | Позже |
 
 ## v0.1 - Project Documentation
@@ -260,4 +261,25 @@ npm run build
 - Accounts and Profiles;
 - Admin Panel and Limits;
 - Code Arena Runner;
+- Image Arena MVP;
 - AI Team Mode.
+
+## v1.8 - Image Arena MVP
+
+Цель: добавить будущий визуальный режим только после стабильной Prompt Arena, Storage, лимитов и safety-контролей.
+
+Главный сценарий:
+
+- пользователь вводит одну визуальную идею;
+- выбирает 2-3 image-capable модели;
+- backend вызывает модели через OpenRouter;
+- изображения сохраняются в Supabase Storage;
+- metadata и storage path сохраняются в Supabase PostgreSQL;
+- пользователь сравнивает сетку изображений и выбирает победителя.
+
+Ограничение:
+
+```text
+Не переносить Image Arena раньше Stable Prompt Arena.
+# сначала должен быть стабильный текстовый MVP, лимиты, Storage и безопасность
+```

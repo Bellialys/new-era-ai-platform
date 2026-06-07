@@ -25,7 +25,7 @@
 # исходный prompt или coding task
 
 Пользователь выбирает режим.
-# Prompt Arena, Code Arena, Battle, Judge, Leaderboard или Team Mode
+# Prompt Arena, Code Arena, Image Arena, Battle, Judge, Leaderboard или Team Mode
 
 Пользователь выбирает модели.
 # вручную или через рекомендованный preset
@@ -58,6 +58,7 @@ Backend вызывает OpenRouter API.
 | 4 | AI Team Mode | Совместная работа моделей с разными ролями |
 | 5 | Judge Mode | Оценка ответов отдельной моделью-судьёй |
 | 6 | Leaderboard | Рейтинг моделей по результатам сравнений |
+| 7 | Image Arena / Visual Arena | Сравнение изображений, сгенерированных разными image-моделями |
 
 Важно: продуктовая нумерация показывает идею платформы, но не является порядком разработки.
 
@@ -82,6 +83,7 @@ Backend вызывает OpenRouter API.
 | `v1.5` | Accounts and Profiles | Нужны пользователи и личная история |
 | `v1.6` | Admin Panel and Limits | Нужны лимиты, контроль моделей и расходов |
 | `v1.7` | Code Arena Runner | Запуск кода только после защиты и лимитов |
+| `v1.8` | Image Arena MVP | Визуальная генерация только после Storage, лимитов и safety-контролей |
 | `v2.0` | AI Team Mode | Самый сложный режим после стабильной базы |
 
 ---
@@ -100,6 +102,7 @@ type ModeSlug =
   | "judge-mode"
   | "leaderboard"
   | "code-arena-runner"
+  | "image-arena"
   | "ai-team-mode";
 ```
 
@@ -367,7 +370,32 @@ Leaderboard нельзя делать до накопления данных.
 
 ---
 
-# Режим 6 - AI Team Mode
+# Режим 6 - Image Arena / Visual Arena
+
+Версия: `v1.8`.
+
+Назначение: сравнивать изображения, которые разные image-capable модели генерируют по одной визуальной идее пользователя.
+
+Сценарий:
+
+- пользователь вводит одну визуальную идею;
+- выбирает 2-3 модели с `image` output capability;
+- backend вызывает image-capable модели через OpenRouter;
+- изображения сохраняются в Supabase Storage;
+- metadata и storage path сохраняются в Supabase PostgreSQL;
+- UI показывает сетку результатов;
+- пользователь выбирает лучший вариант.
+
+Важно:
+
+```text
+Image Arena не входит в первый MVP.
+# сначала нужна стабильная Prompt Arena, Storage, лимиты стоимости и safety-контроли
+```
+
+---
+
+# Режим 7 - AI Team Mode
 
 Версия: `v2.0`.
 

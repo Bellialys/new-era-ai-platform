@@ -29,7 +29,8 @@
 - `14-roadmap.md`;
 - `16-decisions.md`;
 - `17-code-arena-spec.md`;
-- `18-team-mode-spec.md`.
+- `18-team-mode-spec.md`;
+- `31-image-arena-spec.md`.
 
 `14-roadmap.md` является главным источником порядка версий.
 
@@ -608,3 +609,39 @@ Cost limit
 Supabase RLS
 # настроить политики доступа после подключения базы
 ```
+
+---
+
+# Будущие риски Image Arena / Visual Arena
+
+Image Arena не входит в первый MVP и должна быть отложена до стабильной Prompt Arena, Storage, лимитов и safety-контролей.
+
+Основные риски:
+
+- высокая стоимость image generation по сравнению с обычным текстовым prompt;
+- быстрый расход лимитов при выборе 2-3 моделей;
+- большие файлы и рост затрат на Storage;
+- необходимость moderation/safety rules для визуальных prompt;
+- риск раскрытия secret keys при неправильном вызове provider API;
+- риск сохранения файлов вне управляемого Storage.
+
+Обязательные правила:
+
+```text
+Image generation только через backend.
+# frontend не вызывает OpenRouter напрямую
+
+Secret keys не выводятся во frontend.
+# OPENROUTER_API_KEY и service role key остаются server-side
+
+Изображения хранятся только в Supabase Storage.
+# PostgreSQL хранит только metadata и storage path
+
+Количество генераций ограничено.
+# нужны лимиты на пользователя, IP, модель и период времени
+
+Image-capable модели проходят allowlist.
+# нельзя разрешать произвольный model key из frontend
+```
+
+До появления этих контролей нельзя добавлять `/image-arena` и `/api/image-arena/generate` в код.

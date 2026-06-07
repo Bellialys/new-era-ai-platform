@@ -234,8 +234,17 @@ v1.4 - Leaderboard
 v1.5 - Accounts and Profiles
 v1.6 - Admin Panel and Limits
 v1.7 - Code Arena Runner
+v1.8 - Image Arena MVP
 v2.0 - AI Team Mode
 ```
+
+## Будущий режим Image Arena / Visual Arena
+
+Image Arena / Visual Arena - будущий визуальный режим проекта.
+
+Идея режима: пользователь вводит одну визуальную идею, выбирает 2-3 image-capable модели, а backend отправляет запросы через OpenRouter только с server-side ключами. Разные image-модели генерируют изображения, система сохраняет файлы в Supabase Storage, записывает metadata и storage path в Supabase PostgreSQL, а пользователь сравнивает результаты в сетке и выбирает лучший вариант.
+
+Этот режим не входит в первый MVP. Он откладывается до стабильной Prompt Arena, настроенного Storage, лимитов стоимости и safety-контролей.
 
 Если другой файл противоречит этому порядку, главным считается `14-roadmap.md`.
 

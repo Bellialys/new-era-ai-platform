@@ -755,3 +755,58 @@ prompt-arena
 Сейчас API становится строже, но безопаснее.
 
 Будущие режимы нужно будет добавлять явно в `ALLOWED_MODE_SLUGS`.
+
+---
+
+# DEC-012 - Image Arena откладывается до стабильной Prompt Arena
+
+## Статус
+
+```text
+Deferred
+# решение зафиксировано, реализация отложена
+```
+
+## Решение
+
+Image Arena / Visual Arena не реализуется в текущем MVP и откладывается до стабильной Prompt Arena, настроенного Supabase Storage, лимитов стоимости и safety-контролей.
+
+## Контекст
+
+Режим Image Arena позволяет пользователю ввести одну визуальную идею, получить изображения от нескольких image-capable моделей, сравнить их и выбрать лучший результат.
+
+Этот режим требует больше инфраструктуры, чем Prompt Arena:
+
+- image-capable models;
+- Supabase Storage;
+- metadata в PostgreSQL;
+- лимиты генераций;
+- контроль стоимости;
+- moderation/safety rules;
+- отдельный UI сравнения изображений.
+
+## Причина
+
+Image generation дороже и сложнее текстовых ответов. Если добавить режим слишком рано, он может сломать roadmap MVP, увеличить расходы и создать риски безопасности.
+
+## Последствия
+
+До этапа `v1.8` Image Arena остаётся только в документации.
+
+Нельзя добавлять:
+
+- страницу `/image-arena`;
+- route `/api/image-arena/generate`;
+- таблицы `image_generations` или `artifacts` как обязательные для текущего MVP;
+- image generation calls из frontend;
+- произвольный выбор image model key пользователем.
+
+## Когда пересмотреть
+
+После Stable Prompt Arena и после того, как будут готовы:
+
+- Supabase Storage;
+- лимиты генераций;
+- allowlist model capabilities;
+- безопасное backend-хранение ключей;
+- понятные правила хранения image metadata.

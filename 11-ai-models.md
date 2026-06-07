@@ -114,3 +114,28 @@ models.model_key
 На этапе `v0.5` перенести список моделей из `src/lib/server/models.ts` в таблицу `models` Supabase.
 
 До этого текущий allowlist можно оставить как безопасное MVP-решение.
+
+---
+
+## Будущие model capabilities
+
+После перехода на Supabase модели должны иметь явные capabilities. Это позволит выбирать модели для разных режимов без раскрытия provider keys на frontend.
+
+Базовые capabilities:
+
+| Capability | Назначение |
+|---|---|
+| `text` | Генерация текстовых ответов для Prompt Arena |
+| `image` | Генерация изображений для Image Arena / Visual Arena |
+| `vision` | Анализ входных изображений |
+| `code` | Помощь с программированием для Code Arena |
+| `judge` | Оценка ответов или результатов |
+
+Правило:
+
+```text
+Image Arena использует только модели с image output capability.
+# text-only модели нельзя показывать как участников визуальной генерации
+```
+
+В будущем capabilities можно хранить в `models.capabilities` как `text[]` или `jsonb`, но это не является обязательным изменением для текущего MVP.

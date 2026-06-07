@@ -182,6 +182,7 @@ Backend получает models.model_key по UUID.
 | `/api/history` | GET | v0.7 | Получить историю сравнений |
 | `/api/history/[taskId]` | GET | v0.7 | Открыть одно сравнение |
 | `/api/admin/models` | CRUD | v1.6 | Управление моделями |
+| `/api/image-arena/generate` | POST | v1.8 | Сгенерировать изображения для будущей Image Arena |
 
 ## Правильный body для будущего /api/vote
 
@@ -202,3 +203,52 @@ Backend получает models.model_key по UUID.
 ```
 
 Правильное поле - `taskId`.
+
+---
+
+## Будущий route /api/image-arena/generate
+
+Этот route появится позже и не входит в текущий MVP.
+
+Назначение:
+
+```text
+POST /api/image-arena/generate
+# принять одну визуальную идею, вызвать 2-3 image-модели через backend и вернуть metadata результатов
+```
+
+Будущий request body:
+
+```json
+{
+  "idea": "Футуристический город на рассвете в стиле кинематографичной иллюстрации",
+  "modelIds": ["uuid-image-model-1", "uuid-image-model-2"],
+  "modeSlug": "image-arena"
+}
+```
+
+Будущий ответ должен возвращать не raw binary, а metadata:
+
+```json
+{
+  "status": "success",
+  "taskId": "uuid-task-id",
+  "images": [
+    {
+      "id": "uuid-image-generation-id",
+      "modelId": "uuid-image-model-1",
+      "status": "success",
+      "storagePath": "image-arena/task-id/model-id.png"
+    }
+  ]
+}
+```
+
+Правила:
+
+- frontend не вызывает OpenRouter напрямую;
+- frontend не получает secret keys;
+- backend разрешает только модели с `image` output capability;
+- изображения сохраняются в Supabase Storage;
+- PostgreSQL хранит только metadata и `storagePath`;
+- route включается только после лимитов стоимости и safety-контролей.

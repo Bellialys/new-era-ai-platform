@@ -38,6 +38,7 @@
 
 - Prompt Arena;
 - Code Arena;
+- Image Arena / Visual Arena;
 - Multi Model Battle;
 - Judge Mode;
 - Leaderboard;
@@ -230,6 +231,9 @@ Frontend не должен:
 
 /leaderboard
 # рейтинг моделей, появляется после v1.4
+
+/image-arena
+# будущий Visual Arena, появляется после v1.8
 
 /login
 # авторизация, появляется после v1.5
@@ -1274,3 +1278,36 @@ Browser /arena
 Supabase должен стать источником models, tasks и model_responses.
 # hardcoded allowlist заменить чтением из базы
 ```
+
+---
+
+# Будущий поток Image Arena / Visual Arena
+
+Image Arena не входит в первый MVP и не должна реализовываться до стабильной Prompt Arena.
+
+Будущий поток данных:
+
+```text
+Пользовательская визуальная идея
+# один prompt/idea для генерации изображения
+
+Next.js frontend
+# страница /image-arena отправляет идею и выбранные image-модели только в backend
+
+Next.js API route
+# будущий POST /api/image-arena/generate валидирует идею, модели, лимиты и пользователя
+
+OpenRouter image-capable models
+# backend вызывает только модели с image output capability
+
+Supabase Storage
+# бинарные файлы изображений сохраняются в Storage bucket
+
+Supabase PostgreSQL metadata
+# в базе хранится metadata, model_id, task_id, storage_path, размеры, статус и ошибки
+
+UI сравнения
+# пользователь видит сетку изображений и выбирает победителя
+```
+
+Ключевое правило: PostgreSQL не должен хранить бинарные изображения; в базе хранится только metadata и путь к файлу в Supabase Storage.

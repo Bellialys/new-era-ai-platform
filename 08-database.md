@@ -219,3 +219,49 @@ create table votes (
 5. Перед вызовом OpenRouter искать `model_key` по `models.id`.
 6. Сохранять `tasks` и `model_responses` после `/api/compare`.
 7. Пока не включать сложную авторизацию, если она тормозит MVP.
+
+---
+
+## Будущие сущности Image Arena / Visual Arena
+
+Image Arena не входит в текущие обязательные таблицы MVP. Нельзя менять scope `v0.5` так, будто визуальная генерация уже нужна сейчас.
+
+После стабильной Prompt Arena можно добавить отдельную сущность, например:
+
+```text
+image_generations
+# записи о сгенерированных изображениях
+
+artifacts
+# более общий вариант для будущих файлов: images, documents, code outputs
+```
+
+Минимальная будущая структура `image_generations`:
+
+| Поле | Тип | Назначение |
+|---|---|---|
+| `id` | uuid | ID генерации |
+| `task_id` | uuid | Связь с задачей Image Arena |
+| `model_id` | uuid | Модель, которая создала изображение |
+| `status` | text | `success`, `error`, `timeout` |
+| `storage_bucket` | text | Bucket Supabase Storage |
+| `storage_path` | text | Путь к файлу изображения |
+| `prompt_text` | text | Визуальная идея пользователя |
+| `width` | integer null | Ширина изображения |
+| `height` | integer null | Высота изображения |
+| `mime_type` | text null | Например `image/png` или `image/jpeg` |
+| `error_code` | text null | Код ошибки |
+| `error_message` | text null | Сообщение ошибки |
+| `created_at` | timestamptz | Дата создания |
+
+Правило хранения:
+
+```text
+Supabase Storage хранит файлы изображений.
+# binary/image data не хранится в PostgreSQL
+
+Supabase PostgreSQL хранит metadata и storage path.
+# база нужна для истории, сравнения, победителя, лимитов и аудита
+```
+
+Для Image Arena также понадобятся лимиты на количество генераций, размер файлов, доступ к Storage и очистку старых artifacts.
