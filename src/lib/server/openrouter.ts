@@ -42,9 +42,9 @@ interface OpenRouterResponse {
 
 interface OpenRouterErrorResponse {
   error?: {
-    message: string;
-    type: string;
-    code: string;
+    message?: string;
+    type?: string;
+    code?: string | number;
   };
 }
 
@@ -102,6 +102,37 @@ async function readOpenRouterJson(
   }
 }
 
+function getOpenRouterErrorCode(
+  data: OpenRouterResponse | OpenRouterErrorResponse | null
+): string | undefined {
+  const errorData = data as OpenRouterErrorResponse | null;
+  const rawCode = errorData?.error?.code;
+
+  return rawCode === undefined ? undefined : String(rawCode);
+}
+
+function logOpenRouterDiagnostic({
+  modelId,
+  status,
+  statusText,
+  errorCode,
+  latencyMs,
+}: {
+  modelId: string;
+  status: number;
+  statusText: string;
+  errorCode?: string;
+  latencyMs: number;
+}): void {
+  console.info("[OpenRouter]", {
+    modelId,
+    status,
+    statusText,
+    errorCode: errorCode ?? null,
+    latencyMs,
+  });
+}
+
 export type ModelUsage = {
   inputTokens: number | null;
   outputTokens: number | null;
@@ -144,21 +175,37 @@ export async function fetchOpenRouterResponse(
     });
 
     const data = await readOpenRouterJson(response);
+    const latencyMs = Date.now() - startTime;
+    const providerErrorCode = getOpenRouterErrorCode(data);
+
+    logOpenRouterDiagnostic({
+      modelId,
+      status: response.status,
+      statusText: response.statusText,
+      errorCode: providerErrorCode,
+      latencyMs,
+    });
 
     if (!response.ok) {
       const errorData = data as OpenRouterErrorResponse | null;
       const errorMessage =
         errorData?.error?.message || `OpenRouter API returned ${response.status}`;
-      const errorCode = errorData?.error?.code || "OPENROUTER_ERROR";
+      const errorCode = providerErrorCode || "OPENROUTER_ERROR";
 
       if (response.status === 401 || response.status === 403) {
         throw new ApiError(403, "AUTH_ERROR", "AI provider authentication failed.");
+      }
+      if (response.status === 402) {
+        throw new ApiError(402, "INSUFFICIENT_CREDITS", "AI provider account has insufficient credits.");
       }
       if (response.status === 429) {
         throw new ApiError(429, "RATE_LIMIT", "OpenRouter rate limit exceeded. Please try again later.");
       }
       if (response.status >= 500) {
         throw new ApiError(502, errorCode, "AI provider service error. Please try again.");
+      }
+      if (!data) {
+        throw new ApiError(502, "INVALID_RESPONSE", "AI provider returned a non-JSON error response.");
       }
       throw new ApiError(response.status, errorCode, errorMessage);
     }
@@ -175,7 +222,7 @@ export async function fetchOpenRouterResponse(
 
     return {
       text: content,
-      latencyMs: Date.now() - startTime,
+      latencyMs,
       usage: {
         inputTokens: responseData.usage?.prompt_tokens ?? null,
         outputTokens: responseData.usage?.completion_tokens ?? null,
