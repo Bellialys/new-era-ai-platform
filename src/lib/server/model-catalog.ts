@@ -2,13 +2,12 @@
  * Model catalog (v0.5)
  *
  * The catalog is the single source of available models for both /api/models and
- * /api/compare. When Supabase is configured and the `models` table is populated
- * it is read from the database; otherwise it falls back to the hardcoded
- * ALLOWED_MODELS list so the app keeps working without a database.
+ * /api/compare. When Supabase is configured, it must be read from the database.
+ * The hardcoded list is only an offline fallback for unconfigured environments.
  *
  * The client only ever sees and echoes back a `selectionId`:
  *   - DB mode:       selectionId = models.id (UUID), modelKey stays server-side
- *   - fallback mode: selectionId = OpenRouter model_key
+ *   - fallback mode: selectionId = OpenRouter model_key (dev/unconfigured only)
  * The OpenRouter `model_key` is resolved server-side from the selectionId, so
  * the browser never needs to know the raw provider key.
  */
@@ -74,9 +73,19 @@ function fallbackCatalog(): ResolvedModel[] {
   }));
 }
 
+function logModelCatalogFailure(reason: string, error: unknown): void {
+  const diagnostic = error as { code?: unknown; message?: unknown };
+
+  console.warn(reason, {
+    code: typeof diagnostic?.code === "string" ? diagnostic.code : null,
+    message: typeof diagnostic?.message === "string" ? diagnostic.message : "Unknown error",
+  });
+}
+
 /**
- * Load the full active/public catalog. Tries Supabase first, then falls back to
- * the hardcoded list on any error or when the table is empty.
+ * Load the full active/public catalog. Falls back only when Supabase is not
+ * configured; configured database failures must be visible so v0.5 does not
+ * silently expose OpenRouter keys as client selection ids.
  */
 export async function loadModelCatalog(): Promise<ResolvedModel[]> {
   const supabase = getSupabaseServerClient();
@@ -92,11 +101,22 @@ export async function loadModelCatalog(): Promise<ResolvedModel[]> {
       .eq("is_public", true)
       .order("sort_order", { ascending: true });
 
-    if (error || !data || data.length === 0) {
-      if (error) {
-        console.warn("models table query failed; using hardcoded catalog:", error);
-      }
-      return fallbackCatalog();
+    if (error) {
+      logModelCatalogFailure("models table query failed", error);
+      throw new ApiError(
+        503,
+        "MODEL_CATALOG_UNAVAILABLE",
+        "Model catalog is unavailable. Please try again later."
+      );
+    }
+
+    if (!data || data.length === 0) {
+      console.warn("models table returned no active public models.");
+      throw new ApiError(
+        503,
+        "MODEL_CATALOG_EMPTY",
+        "Model catalog is not configured. Please contact the project owner."
+      );
     }
 
     return (data as DbModelRow[]).map((row) => ({
@@ -109,8 +129,16 @@ export async function loadModelCatalog(): Promise<ResolvedModel[]> {
       description: row.description ?? undefined,
     }));
   } catch (caught) {
-    console.warn("models table is unavailable; using hardcoded catalog:", caught);
-    return fallbackCatalog();
+    if (caught instanceof ApiError) {
+      throw caught;
+    }
+
+    logModelCatalogFailure("models table is unavailable", caught);
+    throw new ApiError(
+      503,
+      "MODEL_CATALOG_UNAVAILABLE",
+      "Model catalog is unavailable. Please try again later."
+    );
   }
 }
 
