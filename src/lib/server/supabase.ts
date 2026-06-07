@@ -5,13 +5,13 @@ let cachedClient: SupabaseClient | null = null;
 
 export function getSupabaseServerClient(): SupabaseClient | null {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!supabaseUrl && !serviceRoleKey) {
+  if (!supabaseUrl && !publishableKey) {
     return null;
   }
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !publishableKey) {
     throw new ApiError(
       500,
       "DATABASE_NOT_CONFIGURED",
@@ -20,7 +20,7 @@ export function getSupabaseServerClient(): SupabaseClient | null {
   }
 
   if (!cachedClient) {
-    cachedClient = createClient(supabaseUrl, serviceRoleKey, {
+    cachedClient = createClient(supabaseUrl, publishableKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
