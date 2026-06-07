@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabase";
 import { getAuthErrorMessage } from "./auth-messages";
 
 export function LoginForm() {
@@ -16,6 +16,12 @@ export function LoginForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
+
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setErrorMessage("Authentication is not configured yet.");
+      return;
+    }
 
     const cleanEmail = email.trim();
     if (!cleanEmail || !password) {

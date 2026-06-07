@@ -1,3 +1,7 @@
+-- User profiles for Supabase Auth.
+-- A profile row is created automatically on signup via a trigger on auth.users.
+-- RLS limits each user to reading and updating only their own profile.
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,

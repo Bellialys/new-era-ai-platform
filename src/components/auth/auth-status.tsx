@@ -3,15 +3,21 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabase";
 
 export function AuthStatus() {
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Only start in the loading state when Supabase is actually configured.
+  const [isLoading, setIsLoading] = useState(() => getSupabaseClient() !== null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return;
+    }
+
     let isMounted = true;
 
     supabase.auth.getSession().then(({ data }) => {
@@ -38,6 +44,11 @@ export function AuthStatus() {
   }, []);
 
   async function handleLogout() {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return;
+    }
+
     setErrorMessage(null);
     setIsSigningOut(true);
 
@@ -51,6 +62,11 @@ export function AuthStatus() {
 
     setSession(null);
     setIsSigningOut(false);
+  }
+
+  // Hide all auth UI when Supabase is not configured (keeps the site usable).
+  if (!getSupabaseClient()) {
+    return null;
   }
 
   if (isLoading) {

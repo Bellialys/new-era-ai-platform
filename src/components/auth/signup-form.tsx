@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabase";
 import { getAuthErrorMessage } from "./auth-messages";
 
 export function SignupForm() {
@@ -18,6 +18,12 @@ export function SignupForm() {
     event.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
+
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setErrorMessage("Authentication is not configured yet.");
+      return;
+    }
 
     const cleanEmail = email.trim();
     if (!cleanEmail) {
