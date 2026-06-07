@@ -1224,7 +1224,7 @@ Build проходит без ошибок.
 
 ---
 
-# Актуализация деплоя v0.4.1
+# Актуализация деплоя v0.5
 
 Перед деплоем на Vercel нужно убедиться, что локально проходят проверки:
 
@@ -1235,18 +1235,30 @@ npm run typecheck
 npm run lint
 # проверяет ESLint
 
+npm run test
+# запускает тесты проекта
+
 npm run build
 # проверяет production-сборку
 ```
 
-Минимальные переменные Vercel для v0.4.1:
+Минимальные переменные Vercel для v0.5:
 
 ```text
 OPENROUTER_API_KEY
 # секретный ключ OpenRouter, только server-side
 
+NEXT_PUBLIC_SUPABASE_URL
+# публичный URL Supabase project
+
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+# публичный publishable key для browser Supabase client
+
+SUPABASE_SERVICE_ROLE_KEY
+# server-only key для сохранения tasks/model_responses, без NEXT_PUBLIC_
+
 NEXT_PUBLIC_SITE_URL
 # публичный URL сайта после деплоя
 ```
 
-Переменные Supabase добавлять на этапе `v0.5`.
+Реальные значения добавляются только в Vercel env и `.env.local`; они не должны попадать в Git или выводиться в логах.

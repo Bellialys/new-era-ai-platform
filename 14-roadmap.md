@@ -11,7 +11,7 @@
 ## Текущий статус
 
 ```text
-v0.4.1 - OpenRouter Integration Fix
+v0.5.0 - Supabase Integration
 # текущий этап проекта
 ```
 
@@ -22,18 +22,23 @@ v0.4.1 - OpenRouter Integration Fix
 - `/api/models`;
 - `/api/compare`;
 - OpenRouter на backend;
-- безопасная server-side allowlist моделей;
+- Supabase PostgreSQL migrations;
+- `/api/models` читает Supabase catalog с hardcoded fallback;
+- безопасная server-side allowlist моделей как fallback;
 - валидация `prompt`, `modelIds`, `modeSlug`;
 - исправленная обработка API-ошибок;
 - базовый in-memory rate limit для `/api/compare`;
-- server-only Supabase client и миграция как подготовка v0.5;
-- successful `typecheck`, `lint`, `build`.
+- server-only Supabase client;
+- browser-side Supabase client только с publishable key;
+- best-effort сохранение `tasks` и `model_responses`;
+- profiles/grants migrations;
+- successful `typecheck`, `lint`, `test`, `build`.
 
 Следующий главный этап:
 
 ```text
-v0.5 - Supabase Integration
-# подключить базу и сохранять задачи/ответы
+v0.6 - Voting MVP
+# сохранить выбор победителя
 ```
 
 ## Канонический порядок версий
@@ -44,9 +49,9 @@ v0.5 - Supabase Integration
 | `v0.2` | Next.js Base | Проект запускается локально | Готово |
 | `v0.3` | UI MVP | Интерфейс Prompt Arena без реального AI | Готово |
 | `v0.4` | OpenRouter Integration | Реальные AI-ответы через backend | Готово |
-| `v0.4.1` | OpenRouter Integration Fix | Исправлена валидация, ошибки, документация | Текущий этап |
-| `v0.5` | Supabase Integration | Сохранение задач и ответов в базе | Следующий этап |
-| `v0.6` | Voting MVP | Сохранение выбора лучшего ответа | Позже |
+| `v0.4.1` | OpenRouter Integration Fix | Исправлена валидация, ошибки, документация | Готово |
+| `v0.5` | Supabase Integration | Модели, задачи и ответы через Supabase | Текущий этап |
+| `v0.6` | Voting MVP | Сохранение выбора лучшего ответа | Следующий этап |
 | `v0.7` | History MVP | История сравнений | Позже |
 | `v0.8` | First Deploy | Рабочая версия опубликована на Vercel | Позже |
 | `v0.9` | MVP Stabilization | Лимиты, UX, обработка ошибок | Позже |
@@ -155,30 +160,26 @@ npm run build
 
 Цель: подключить базу данных и начать сохранять результаты сравнений.
 
-Что сделать:
+Готово:
 
-- создать проект Supabase;
-- создать таблицы `models`, `tasks`, `model_responses`, `votes`;
-- заполнить `models` текущими моделями;
+- создать таблицы `models`, `tasks`, `model_responses`;
+- добавить `profiles`, RLS policies и auth trigger;
+- заполнить `models` curated free OpenRouter set;
 - добавить server-side Supabase client;
-- поменять `modelIds`: frontend отправляет UUID из `models.id`;
+- добавить browser-side Supabase client только с publishable key;
+- `/api/models` читает активные публичные модели из Supabase;
+- если Supabase catalog недоступен, `/api/models` использует hardcoded fallback;
+- в Supabase mode `modelIds` равны UUID из `models.id`;
 - backend получает `models.model_key` и вызывает OpenRouter;
 - `/api/compare` создаёт запись в `tasks`;
 - `/api/compare` сохраняет ответы в `model_responses`;
-- ответ `/api/compare` возвращает `taskId`.
-
-Уже подготовлено до полного v0.5:
-
-- добавлена зависимость `@supabase/supabase-js`;
-- добавлен server-only Supabase client;
-- добавлена миграция `0001_prompt_arena_mvp.sql`;
-- `/api/compare` умеет сохранять `tasks` и `model_responses`, если Supabase env заполнен.
+- ответ `/api/compare` возвращает `taskId` или `null`, если persistence недоступен.
 
 Что всё ещё отличает проект от полноценного v0.5:
 
-- `/api/models` пока читает hardcoded allowlist;
-- frontend пока отправляет OpenRouter model keys, а не `models.id` UUID;
-- локально/в Vercel ещё нужно применить Supabase migration и заполнить env.
+- нужно регулярно сверять remote migration status через Supabase CLI;
+- нужно проверить production env на Vercel без вывода секретов;
+- `votes` ещё не сохраняются.
 
 Что не делать в v0.5:
 

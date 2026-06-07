@@ -1229,7 +1229,7 @@ AI Team Mode не начинается до v2.0.
 
 ---
 
-# Актуализация архитектуры v0.4.1
+# Актуализация архитектуры v0.5
 
 Текущий backend слой находится здесь:
 
@@ -1241,10 +1241,19 @@ src/app/api/compare/route.ts
 # принимает prompt, modelIds и modeSlug
 
 src/lib/server/models.ts
-# server-side allowlist моделей
+# hardcoded fallback allowlist моделей
+
+src/lib/server/model-catalog.ts
+# Supabase-first catalog и fallback resolution
 
 src/lib/server/openrouter.ts
 # вызовы OpenRouter API
+
+src/lib/server/arena-persistence.ts
+# best-effort сохранение Prompt Arena в Supabase
+
+src/lib/server/supabase.ts
+# server-only Supabase client
 
 src/lib/server/utils.ts
 # ApiError, validation, safe logging
@@ -1257,26 +1266,29 @@ Browser /arena
 # пользователь вводит prompt и выбирает модели
 
 GET /api/models
-# frontend получает разрешённые модели
+# frontend получает Supabase models.id или fallback selection ids
 
 POST /api/compare
 # frontend отправляет prompt, modelIds, modeSlug
 
-Backend validation
-# проверка prompt, modelIds, modeSlug и allowlist
+Backend validation and model catalog
+# проверка prompt, modelIds, modeSlug; resolution selectionId -> model_key
 
 OpenRouter API
 # backend получает ответы моделей
 
+Supabase PostgreSQL
+# backend best-effort сохраняет task и model_responses
+
 Browser /arena
-# frontend показывает карточки ответов
+# frontend показывает карточки ответов и taskId, если сохранение прошло
 ```
 
-Следующее архитектурное изменение для `v0.5`:
+Текущий fallback:
 
 ```text
-Supabase должен стать источником models, tasks и model_responses.
-# hardcoded allowlist заменить чтением из базы
+Если Supabase не настроен или models query недоступен, Prompt Arena использует hardcoded allowlist.
+# это нужно для устойчивости MVP и локальной разработки
 ```
 
 ---

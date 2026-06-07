@@ -580,15 +580,21 @@ GitHub хранит код, документацию и package-lock.json.
 
 ---
 
-# Актуализация безопасности v0.4.1
+# Актуализация безопасности v0.5
 
 В текущей версии реализовано:
 
 - OpenRouter API key читается только на server side;
 - frontend не получает `OPENROUTER_API_KEY`;
+- browser Supabase client использует только `NEXT_PUBLIC_SUPABASE_URL` и `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`;
+- server Supabase client использует `NEXT_PUBLIC_SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`;
+- service role key не используется в frontend и не имеет префикса `NEXT_PUBLIC_`;
 - список моделей проверяется на backend;
+- `/api/models` читает Supabase catalog с hardcoded fallback;
 - `modeSlug` проверяется на backend;
 - `/api/compare` защищён базовым in-memory rate limit;
+- `/api/compare` best-effort сохраняет `tasks` и `model_responses`;
+- RLS и grants для текущих таблиц описаны Supabase migrations;
 - неизвестные ошибки скрываются за `INTERNAL_ERROR`;
 - пользовательские ошибки возвращаются как контролируемые `ApiError`;
 - OpenRouter prompt body не логируется;
@@ -607,7 +613,7 @@ Cost limit
 # ограничить дорогие модели и количество запросов
 
 Supabase RLS
-# настроить политики доступа после подключения базы
+# регулярно проверять политики при добавлении votes/history/accounts
 ```
 
 ---

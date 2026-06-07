@@ -450,7 +450,7 @@ Stable Prompt Arena готова, если:
 
 ---
 
-# Актуализация v0.4.1
+# Актуализация v0.5
 
 Текущий проект уже прошёл стадию чистого Static UI MVP.
 
@@ -460,18 +460,20 @@ Stable Prompt Arena готова, если:
 - загрузка моделей через `/api/models`;
 - отправка prompt через `/api/compare`;
 - реальные ответы через OpenRouter на backend;
-- server-side allowlist моделей;
+- Supabase catalog для моделей;
+- server-side allowlist моделей как fallback;
 - проверка `prompt`, `modelIds`, `modeSlug`;
-- безопасные API-ошибки.
+- безопасные API-ошибки;
 - базовый in-memory rate limit на `/api/compare`;
-- заготовка Supabase persistence для `tasks` и `model_responses`;
-- сохранение token usage в `model_responses`, когда Supabase настроен.
+- Supabase persistence для `tasks` и `model_responses` с best-effort fallback;
+- сохранение token usage в `model_responses`, когда Supabase настроен;
+- миграции `profiles` и grants.
 
 Следующая граница MVP:
 
 ```text
-v0.5 - Supabase Integration
-# завершить Supabase flow: модели из БД, UUID на клиенте, model_key только server-side
+v0.6 - Voting MVP
+# сохранить выбор победителя в votes
 ```
 
 Всё ещё не входит в ближайший MVP:

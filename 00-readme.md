@@ -38,7 +38,7 @@
 
 ## Текущий статус
 
-Текущая версия: **v0.4.1 - OpenRouter Integration Fix**.
+Текущая версия: **v0.5.0 - Supabase Integration**.
 
 Сейчас проект уже не является чистым mock UI.
 
@@ -53,22 +53,24 @@
 - `GET /api/models`;
 - `POST /api/compare`;
 - серверная интеграция OpenRouter;
-- server-side allowlist моделей;
+- Supabase PostgreSQL migrations для `models`, `tasks`, `model_responses` и `profiles`;
+- server-side Supabase client для сохранения Prompt Arena;
+- browser-side Supabase client только с publishable key;
+- чтение моделей из Supabase с fallback на hardcoded allowlist;
+- server-side allowlist моделей как аварийный fallback;
 - безопасная обработка ошибок API;
 - проверка `prompt`, `modelIds`, `modeSlug`;
 - отмена устаревших client-side запросов;
+- best-effort сохранение задач и ответов в Supabase;
 - `package-lock.json`;
-- успешные проверки `typecheck`, `lint`, `build`.
+- успешные проверки `typecheck`, `lint`, `test`, `build`.
 
 Пока не готово:
 
-- Supabase database integration;
-- сохранение задач;
-- сохранение ответов;
 - сохранение голосов;
 - история сравнений;
 - production deploy на Vercel;
-- аккаунты пользователей;
+- полноценные пользовательские аккаунты и личная история;
 - админ-панель;
 - дополнительные режимы.
 
@@ -90,8 +92,8 @@ Tailwind CSS
 OpenRouter API
 # единый вход к разным AI-моделям
 
-Supabase PostgreSQL
-# база данных для v0.5+
+Supabase PostgreSQL + Auth + Storage
+# PostgreSQL для Prompt Arena, Auth/profiles, Storage для будущих artifacts
 
 Vercel
 # деплой проекта
@@ -110,9 +112,9 @@ Visual Studio Code
 | `v0.1` | Project Documentation | Документация проекта | Готово |
 | `v0.2` | Next.js Base | Проект запускается локально | Готово |
 | `v0.3` | UI MVP | Prompt Arena UI без реального AI | Готово |
-| `v0.4` | OpenRouter Integration | Реальные ответы через backend | Готово частично |
-| `v0.4.1` | OpenRouter Integration Fix | Исправлена валидация, ошибки и документация | Текущий этап |
-| `v0.5` | Supabase Integration | Сохранение задач и ответов | Следующий этап |
+| `v0.4` | OpenRouter Integration | Реальные ответы через backend | Готово |
+| `v0.4.1` | OpenRouter Integration Fix | Исправлена валидация, ошибки и документация | Готово |
+| `v0.5` | Supabase Integration | Модели, задачи и ответы через Supabase | Текущий этап |
 | `v0.6` | Voting MVP | Сохранение выбора победителя | Позже |
 | `v0.7` | History MVP | История сравнений | Позже |
 | `v0.8` | First Deploy | Публикация на Vercel | Позже |

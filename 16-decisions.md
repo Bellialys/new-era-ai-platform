@@ -652,31 +652,29 @@ AI Team Mode требует многошаговой работы моделей
 
 ---
 
-# DEC-010 - Разделить текущие OpenRouter model keys и будущие Supabase model UUID
+# DEC-010 - Разделить Supabase model UUID и fallback OpenRouter model keys
 
 ## Статус
 
 ```text
 Accepted
-# решение принято для v0.4.1 и v0.5
+# решение принято для v0.5
 ```
 
 ## Решение
 
-В версии `v0.4.1` поле `modelIds` временно содержит OpenRouter model keys из server-side allowlist.
+В основном `v0.5` режиме поле `modelIds` содержит UUID из таблицы `public.models`.
 
 Пример:
 
 ```json
 {
   "modelIds": [
-    "google/gemini-flash-1.5",
-    "mistralai/mistral-small-3.1-24b-instruct"
+    "11111111-1111-4111-8111-111111111111",
+    "22222222-2222-4222-8222-222222222222"
   ]
 }
 ```
-
-Начиная с `v0.5`, после подключения Supabase, frontend должен отправлять UUID из таблицы `models`.
 
 ```text
 models.id
@@ -686,11 +684,17 @@ models.model_key
 # технический OpenRouter ID, который должен оставаться на backend
 ```
 
+Если Supabase catalog не настроен, временно недоступен или вернул пустой список, `/api/models` использует hardcoded fallback. В fallback mode `modelIds` равны OpenRouter model keys из server-side allowlist.
+
+Fallback допустим только для устойчивости MVP и локальной разработки. Он не даёт пользователю право отправлять произвольный provider key.
+
 ## Контекст
 
-В текущем MVP ещё нет Supabase. Поэтому hardcoded allowlist на backend является допустимым временным решением.
+В текущем MVP Supabase уже подключён как основной источник `models`, `tasks` и `model_responses`.
 
-Но для production-архитектуры нельзя позволять frontend напрямую управлять OpenRouter model key.
+Однако проект должен продолжать работать локально и во время временных проблем базы, поэтому hardcoded allowlist остаётся аварийным fallback.
+
+Для production-архитектуры нельзя позволять frontend напрямую управлять произвольным OpenRouter model key.
 
 ## Причина
 
@@ -704,21 +708,19 @@ models.model_key
 
 ## Последствия
 
-В `v0.4.1` код остаётся простым и рабочим.
-
-В `v0.5` нужно изменить контракт `/api/compare`:
+В `v0.5` контракт `/api/compare` поддерживает два безопасных источника selection IDs:
 
 ```text
-v0.4.1 modelIds = OpenRouter model keys
-# временно
+Supabase mode: modelIds = public.models.id UUID
+# основной режим
 
-v0.5+ modelIds = Supabase models.id UUID
-# правильно для базы и production
+Fallback mode: modelIds = OpenRouter model keys из hardcoded allowlist
+# только если Supabase catalog недоступен
 ```
 
 ## Когда пересмотреть
 
-После реализации `v0.5 Supabase Integration` проверить, что OpenRouter `model_key` больше не приходит с frontend.
+После `v0.6 Voting MVP` проверить, можно ли сделать Supabase catalog обязательным для production deploy, оставив fallback только для local/dev.
 
 ---
 

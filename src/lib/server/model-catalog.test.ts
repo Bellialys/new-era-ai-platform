@@ -131,7 +131,7 @@ describe("model catalog (DB mode)", () => {
     ]);
   });
 
-  it("throws instead of falling back when a configured models query fails", async () => {
+  it("falls back when a configured models query fails", async () => {
     const { client } = createMockSupabase({
       data: null,
       error: { code: "42501", message: "permission denied for table models" },
@@ -140,21 +140,21 @@ describe("model catalog (DB mode)", () => {
       client as unknown as ReturnType<typeof getSupabaseServerClient>
     );
 
-    await expect(getAvailableModels()).rejects.toMatchObject({
-      statusCode: 503,
-      errorCode: "MODEL_CATALOG_UNAVAILABLE",
-    });
+    const models = await getAvailableModels();
+
+    expect(models).toHaveLength(ALLOWED_MODELS.length);
+    expect(models[0].id).toBe(ALLOWED_MODELS[0].id);
   });
 
-  it("throws instead of falling back when the configured catalog is empty", async () => {
+  it("falls back when the configured catalog is empty", async () => {
     const { client } = createMockSupabase({ data: [], error: null });
     mockedGetSupabaseServerClient.mockReturnValue(
       client as unknown as ReturnType<typeof getSupabaseServerClient>
     );
 
-    await expect(getAvailableModels()).rejects.toMatchObject({
-      statusCode: 503,
-      errorCode: "MODEL_CATALOG_EMPTY",
-    });
+    const models = await getAvailableModels();
+
+    expect(models).toHaveLength(ALLOWED_MODELS.length);
+    expect(models[0].id).toBe(ALLOWED_MODELS[0].id);
   });
 });

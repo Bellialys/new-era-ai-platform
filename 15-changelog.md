@@ -7,8 +7,47 @@
 ## Текущая версия
 
 ```text
-v0.4.1 - OpenRouter Integration Fix
-# текущая исправленная версия проекта
+v0.5.0 - Supabase Integration
+# текущая рабочая MVP-версия проекта
+```
+
+## v0.5.0 - Supabase Integration
+
+Дата: 2026-06-07
+
+### Added
+
+- Добавлены Supabase migrations для `models`, `tasks`, `model_responses`, `profiles` и grants.
+- Добавлен Supabase model catalog как основной источник `/api/models`.
+- Добавлен hardcoded fallback catalog, если Supabase недоступен.
+- Добавлено best-effort сохранение Prompt Arena runs в `tasks` и `model_responses`.
+- Добавлена документация будущего режима Image Arena / Visual Arena без реализации в коде.
+
+### Changed
+
+- Версия в `package.json` и `package-lock.json` поднята до `0.5.0`.
+- Документация синхронизирована с фактической схемой `prompt_text`, `response_text`, `role_tags`, `price_label`.
+- Roadmap теперь отмечает `v0.5` как текущий этап, а `v0.6 Voting MVP` как следующий.
+
+### Fixed
+
+- `/api/models` снова безопасно возвращает fallback catalog при ошибке или пустом Supabase catalog.
+- Тесты model catalog обновлены под Supabase-first/fallback поведение.
+
+### Verified
+
+```bash
+npm run typecheck
+# TypeScript проверка прошла
+
+npm run lint
+# ESLint проверка прошла
+
+npm run test
+# Vitest проверка прошла
+
+npm run build
+# production-сборка прошла
 ```
 
 ## v0.4.1 - Full Project Audit Fix

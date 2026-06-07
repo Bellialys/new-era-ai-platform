@@ -7,8 +7,8 @@
 Текущий статус:
 
 ```text
-v0.4.1
-# модели подключаются через OpenRouter и server-side allowlist
+v0.5.0
+# модели подключаются через OpenRouter, Supabase catalog и server-side fallback allowlist
 ```
 
 ## Главный принцип
@@ -22,22 +22,32 @@ Frontend загружает модели через GET /api/models.
 # пользователь видит только разрешённые модели
 
 Frontend отправляет selected modelIds в POST /api/compare.
-# в v0.4.1 это OpenRouter model keys из allowlist
+# в Supabase mode это models.id UUID, в fallback mode - hardcoded OpenRouter key
 
 Backend повторно проверяет modelIds.
 # настоящая защита находится на сервере
+
+Backend резолвит selectionId в OpenRouter model_key.
+# provider key остаётся server-side
 
 Backend вызывает OpenRouter.
 # API-ключ не попадает в браузер
 ```
 
-## Текущие модели v0.4.1
+## Текущие модели v0.5
+
+Каталог моделей берётся из `public.models`, если Supabase настроен и таблица доступна.
+
+Fallback список находится в `src/lib/server/models.ts` и содержит curated free OpenRouter text/chat models.
+
+Начало fallback списка:
 
 | ID | Название | Роль |
 |---|---|---|
-| `google/gemini-flash-1.5` | Gemini Flash 1.5 | Быстрый и точный |
-| `mistralai/mistral-small-3.1-24b-instruct` | Mistral Small 3.1 | Сбалансированный анализ |
-| `meta-llama/llama-3.1-8b-instruct` | Llama 3.1 8B | Открытая модель |
+| `openai/gpt-oss-120b:free` | GPT-OSS 120B | Сильная general-модель |
+| `meta-llama/llama-3.3-70b-instruct:free` | Llama 3.3 70B | Сбалансированный instruct |
+| `qwen/qwen3-next-80b-a3b-instruct:free` | Qwen3 Next 80B | Сбалансированный instruct |
+| `google/gemma-4-31b-it:free` | Gemma 4 31B | Открытая general-модель |
 
 Эти модели находятся в файле:
 
@@ -58,9 +68,11 @@ Allowlist защищает проект от:
 
 ## Важное правило для v0.5
 
-В `v0.4.1` поле `id` модели временно равно OpenRouter model key.
+В Supabase mode поле `id` модели равно `models.id`.
 
-После подключения Supabase нужно разделить:
+В fallback mode поле `id` модели временно равно OpenRouter model key из hardcoded allowlist.
+
+В production-архитектуре нужно держать разделение:
 
 ```text
 models.id
@@ -73,7 +85,7 @@ models.display_name
 # название модели в интерфейсе
 ```
 
-То есть frontend должен отправлять:
+То есть frontend в основном режиме должен отправлять:
 
 ```json
 {
@@ -85,7 +97,7 @@ models.display_name
 
 ```text
 models.model_key
-# например google/gemini-flash-1.5
+# например openai/gpt-oss-120b:free
 ```
 
 ## Критерии добавления новой модели
@@ -111,9 +123,9 @@ models.model_key
 
 ## Следующий шаг
 
-На этапе `v0.5` перенести список моделей из `src/lib/server/models.ts` в таблицу `models` Supabase.
+На этапе стабилизации `v0.5` нужно применять миграции Supabase и держать `public.models` синхронизированной с curated fallback list.
 
-До этого текущий allowlist можно оставить как безопасное MVP-решение.
+Hardcoded allowlist остаётся безопасным fallback, а не основным источником production-каталога.
 
 ---
 
