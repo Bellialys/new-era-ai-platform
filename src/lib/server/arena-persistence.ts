@@ -4,7 +4,12 @@ import { getSupabaseServerClient } from "./supabase";
 
 type ArenaResponseForPersistence = {
   id: string;
+  /** Identifier the client echoes back (UUID in DB mode, model_key otherwise). */
   modelId: string;
+  /** OpenRouter model key. */
+  modelKey: string;
+  /** Supabase models.id, or null when served from the hardcoded fallback. */
+  dbModelId: string | null;
   modelName: string;
   status: "success" | "error";
   answerText: string | null;
@@ -20,7 +25,7 @@ type ArenaResponseForPersistence = {
 
 type SavePromptArenaRunInput = {
   prompt: string;
-  modelIds: string[];
+  modelKeys: string[];
   responses: ArenaResponseForPersistence[];
 };
 
@@ -31,7 +36,7 @@ type SavePromptArenaRunResult = {
 
 export async function savePromptArenaRun({
   prompt,
-  modelIds,
+  modelKeys,
   responses,
 }: SavePromptArenaRunInput): Promise<SavePromptArenaRunResult> {
   const supabase = getSupabaseServerClient();
@@ -51,7 +56,7 @@ export async function savePromptArenaRun({
       mode_slug: MODE_SLUG_PROMPT_ARENA,
       prompt_text: prompt,
       status: taskStatus,
-      selected_models: modelIds,
+      selected_models: modelKeys,
       settings: {},
       error_message:
         taskStatus === "failed" ? "All selected models failed to return a response." : null,
@@ -68,23 +73,12 @@ export async function savePromptArenaRun({
     );
   }
 
-  const { data: modelRows, error: modelsError } = await supabase
-    .from("models")
-    .select("id, model_key")
-    .in("model_key", modelIds);
-
-  if (modelsError) {
-    console.warn("Supabase model lookup failed; saving responses without model_id:", modelsError);
-  }
-
-  const modelIdsByKey = new Map(
-    (modelRows ?? []).map((model) => [model.model_key, model.id])
-  );
-
+  // model_id (Supabase UUID) is already resolved upstream by the model catalog,
+  // so no extra models lookup is needed here.
   const responseRows = responses.map((response) => ({
     task_id: task.id,
-    model_id: modelIdsByKey.get(response.modelId) ?? null,
-    model_key: response.modelId,
+    model_id: response.dbModelId,
+    model_key: response.modelKey,
     display_name: response.modelName,
     response_text: response.status === "success" ? response.answerText : null,
     status: response.errorCode === "TIMEOUT" ? ("timeout" as const) : response.status,
@@ -111,10 +105,19 @@ export async function savePromptArenaRun({
     );
   }
 
+  // Map the saved row ids back to the client-facing selectionId. modelKey is
+  // unique within a run, so it is a safe correlation key.
+  const selectionIdByModelKey = new Map(
+    responses.map((response) => [response.modelKey, response.modelId])
+  );
+
   return {
     taskId: task.id,
     responseIdsByModelId: Object.fromEntries(
-      savedResponses.map((response) => [response.model_key, response.id])
+      savedResponses.map((response) => [
+        selectionIdByModelKey.get(response.model_key) ?? response.model_key,
+        response.id,
+      ])
     ),
   };
 }

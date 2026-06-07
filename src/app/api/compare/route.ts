@@ -14,9 +14,8 @@ import {
   validateModeSlug,
   createErrorResponse,
   logApiRequest,
-  validateModelAllowlist,
+  resolveSelectedModels,
   fetchMultipleResponses,
-  getModelById,
   ApiError,
   savePromptArenaRun,
   checkRateLimit,
@@ -45,6 +44,8 @@ interface CompareResponse {
 }
 
 type PersistableCompareResponse = CompareResponse["responses"][number] & {
+  modelKey: string;
+  dbModelId: string | null;
   usage?: {
     inputTokens: number | null;
     outputTokens: number | null;
@@ -131,45 +132,54 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
     }
     const selectedModelIds = modelIdValidation.value ?? [];
 
+    let selectedModels;
     try {
-      validateModelAllowlist(selectedModelIds);
+      selectedModels = await resolveSelectedModels(selectedModelIds);
     } catch (error) {
-      console.warn("Model allowlist validation failed:", error);
-      logApiRequest("POST", "/api/compare", 403, Date.now() - startTime);
+      const statusCode = error instanceof ApiError ? error.statusCode : 403;
+      console.warn("Model resolution failed:", error);
+      logApiRequest("POST", "/api/compare", statusCode, Date.now() - startTime);
       return NextResponse.json(
         createErrorResponse(
-          new ApiError(403, "MODEL_NOT_ALLOWED", "One or more models are not allowed.")
+          error instanceof ApiError
+            ? error
+            : new ApiError(403, "MODEL_NOT_ALLOWED", "One or more models are not allowed.")
         ),
-        { status: 403 }
+        { status: statusCode }
       );
     }
 
-    const responses = await fetchMultipleResponses(cleanPrompt, selectedModelIds);
+    const responses = await fetchMultipleResponses(
+      cleanPrompt,
+      selectedModels.map((model) => model.modelKey)
+    );
 
-    const arenaResponses: PersistableCompareResponse[] = selectedModelIds.map((modelId, index) => {
+    const arenaResponses: PersistableCompareResponse[] = selectedModels.map((model, index) => {
       const result = responses[index];
-      const model = getModelById(modelId);
-      const modelName = model?.name ?? modelId;
 
       if (result.success) {
         return {
           id: crypto.randomUUID(),
-          modelId,
-          modelName,
+          modelId: model.selectionId,
+          modelName: model.name,
           status: "success" as const,
           answerText: result.text,
           latencyMs: result.latencyMs,
+          modelKey: model.modelKey,
+          dbModelId: model.modelId,
           usage: result.usage,
         };
       } else {
         return {
           id: crypto.randomUUID(),
-          modelId,
-          modelName,
+          modelId: model.selectionId,
+          modelName: model.name,
           status: "error" as const,
           answerText: null,
           errorCode: result.errorCode,
           errorMessage: result.errorMessage,
+          modelKey: model.modelKey,
+          dbModelId: model.modelId,
         };
       }
     });
@@ -185,17 +195,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
     try {
       savedRun = await savePromptArenaRun({
         prompt: cleanPrompt,
-        modelIds: selectedModelIds,
+        modelKeys: selectedModels.map((model) => model.modelKey),
         responses: arenaResponses,
       });
     } catch (persistError) {
       console.error("Prompt Arena persistence failed (continuing):", persistError);
     }
 
-    const savedArenaResponses = arenaResponses.map(({ usage: _usage, ...response }) => ({
-      ...response,
-      id: savedRun.responseIdsByModelId[response.modelId] ?? response.id,
-    }));
+    const savedArenaResponses = arenaResponses.map(
+      ({ usage: _usage, modelKey: _modelKey, dbModelId: _dbModelId, ...response }) => ({
+        ...response,
+        id: savedRun.responseIdsByModelId[response.modelId] ?? response.id,
+      })
+    );
 
     logApiRequest("POST", "/api/compare", 200, Date.now() - startTime);
 

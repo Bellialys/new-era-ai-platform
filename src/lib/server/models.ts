@@ -1,14 +1,15 @@
 /**
- * Available models configuration
- * This will be moved to database (Supabase) in v0.5
- * For now, we use a hardcoded allowlist for security
+ * Hardcoded model list — the offline fallback for the model catalog.
+ *
+ * In v0.5 the live catalog is read from Supabase (see model-catalog.ts). This
+ * list is used only when Supabase is not configured or the `models` table is
+ * empty, so the app still works without a database.
  *
  * IMPORTANT: Verify model IDs against OpenRouter before deploying:
  * curl https://openrouter.ai/api/v1/models -H "Authorization: Bearer $OPENROUTER_API_KEY"
  */
 
 import type { ArenaModel } from "@/types/arena";
-import { ApiError } from "./utils";
 
 // Curated set of free OpenRouter text/chat models (verified against the live
 // /api/v1/models list). Order matters: the UI preselects the first models, so
@@ -167,31 +168,6 @@ export const ALLOWED_MODELS: ArenaModel[] = [
     description: "Бесплатная очень маленькая instruct-модель LiquidAI 1.2B для мгновенных ответов.",
   },
 ];
-
-export function getAvailableModels(): ArenaModel[] {
-  return ALLOWED_MODELS.map((model) => ({
-    id: model.id,
-    name: model.name,
-    role: model.role,
-    provider: model.provider,
-    badge: model.badge,
-    description: model.description,
-  }));
-}
-
-export function validateModelAllowlist(modelIds: string[]): void {
-  const allowedIds = new Set(ALLOWED_MODELS.map((m) => m.id));
-
-  for (const modelId of modelIds) {
-    if (!allowedIds.has(modelId)) {
-      throw new ApiError(
-        403,
-        "MODEL_NOT_ALLOWED",
-        "One or more selected models are not allowed."
-      );
-    }
-  }
-}
 
 export function getModelById(modelId: string): ArenaModel | undefined {
   return ALLOWED_MODELS.find((m) => m.id === modelId);

@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  ALLOWED_MODELS,
-  getAvailableModels,
-  getModelById,
-  validateModelAllowlist,
-} from "./models";
-import { ApiError } from "./utils";
+import { ALLOWED_MODELS, getModelById } from "./models";
 
 describe("ALLOWED_MODELS", () => {
   it("only contains free OpenRouter models with unique ids", () => {
@@ -20,12 +14,6 @@ describe("ALLOWED_MODELS", () => {
   });
 });
 
-describe("getAvailableModels", () => {
-  it("returns one entry per allowed model", () => {
-    expect(getAvailableModels()).toHaveLength(ALLOWED_MODELS.length);
-  });
-});
-
 describe("getModelById", () => {
   it("finds a known model", () => {
     expect(getModelById(ALLOWED_MODELS[0].id)?.id).toBe(ALLOWED_MODELS[0].id);
@@ -33,21 +21,5 @@ describe("getModelById", () => {
 
   it("returns undefined for an unknown model", () => {
     expect(getModelById("does/not-exist")).toBeUndefined();
-  });
-});
-
-describe("validateModelAllowlist", () => {
-  it("passes when all ids are allowed", () => {
-    expect(() => validateModelAllowlist([ALLOWED_MODELS[0].id])).not.toThrow();
-  });
-
-  it("throws ApiError 403 for a disallowed id", () => {
-    try {
-      validateModelAllowlist(["evil/model"]);
-      throw new Error("expected validateModelAllowlist to throw");
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApiError);
-      expect((error as ApiError).statusCode).toBe(403);
-    }
   });
 });

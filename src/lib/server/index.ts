@@ -4,6 +4,7 @@
  */
 
 export * from "./models";
+export * from "./model-catalog";
 export * from "./openrouter";
 export * from "./arena-persistence";
 export * from "./rate-limit";

@@ -14,8 +14,8 @@ export async function GET() {
   const startTime = Date.now();
 
   try {
-    // Get available models
-    const models = getAvailableModels();
+    // Get available models (from Supabase when configured, hardcoded otherwise)
+    const models = await getAvailableModels();
 
     // Log request
     logApiRequest("GET", "/api/models", 200, Date.now() - startTime);
