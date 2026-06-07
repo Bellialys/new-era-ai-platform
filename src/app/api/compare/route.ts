@@ -4,10 +4,14 @@ import {
   PROMPT_MAX_LENGTH,
   MODEL_MIN_SELECT,
   MODEL_MAX_SELECT,
+  COMPARE_RATE_LIMIT_MAX_REQUESTS,
+  COMPARE_RATE_LIMIT_WINDOW_MS,
+  MODE_SLUG_PROMPT_ARENA,
 } from "@/lib/arena/constants";
 import {
   validatePrompt,
   validateModelIds,
+  validateModeSlug,
   createErrorResponse,
   logApiRequest,
   validateModelAllowlist,
@@ -15,12 +19,14 @@ import {
   getModelById,
   ApiError,
   savePromptArenaRun,
+  checkRateLimit,
+  getRateLimitKeyFromHeaders,
 } from "@/lib/server";
 
 interface CompareRequest {
-  prompt: string;
-  modelIds: string[];
-  modeSlug?: string;
+  prompt?: unknown;
+  modelIds?: unknown;
+  modeSlug?: unknown;
 }
 
 interface CompareResponse {
@@ -38,10 +44,43 @@ interface CompareResponse {
   }[];
 }
 
+type PersistableCompareResponse = CompareResponse["responses"][number] & {
+  usage?: {
+    inputTokens: number | null;
+    outputTokens: number | null;
+    totalTokens: number | null;
+  };
+};
+
 export async function POST(request: NextRequest): Promise<NextResponse<CompareResponse | ReturnType<typeof createErrorResponse>>> {
   const startTime = Date.now();
 
   try {
+    const rateLimitKey = `compare:${getRateLimitKeyFromHeaders(request.headers)}`;
+    const rateLimit = checkRateLimit(
+      rateLimitKey,
+      COMPARE_RATE_LIMIT_MAX_REQUESTS,
+      COMPARE_RATE_LIMIT_WINDOW_MS
+    );
+
+    if (rateLimit.limited) {
+      logApiRequest("POST", "/api/compare", 429, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(429, "RATE_LIMIT", "Too many compare requests. Please try again later.")
+        ),
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.max(
+              Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+              1
+            ).toString(),
+          },
+        }
+      );
+    }
+
     let body: unknown;
     try {
       body = await request.json();
@@ -57,11 +96,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
 
     const { prompt, modelIds, modeSlug } = body as CompareRequest;
 
-    if (modeSlug !== "prompt-arena") {
+    const modeValidation = validateModeSlug(modeSlug, MODE_SLUG_PROMPT_ARENA);
+    if (!modeValidation.valid) {
       logApiRequest("POST", "/api/compare", 400, Date.now() - startTime);
       return NextResponse.json(
         createErrorResponse(
-          new ApiError(400, "INVALID_MODE", "Only Prompt Arena mode is supported.")
+          new ApiError(400, "INVALID_MODE", modeValidation.error ?? "Invalid mode")
         ),
         { status: 400 }
       );
@@ -77,6 +117,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
         { status: 400 }
       );
     }
+    const cleanPrompt = promptValidation.value ?? "";
 
     const modelIdValidation = validateModelIds(modelIds, MODEL_MIN_SELECT, MODEL_MAX_SELECT);
     if (!modelIdValidation.valid) {
@@ -88,9 +129,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
         { status: 400 }
       );
     }
+    const selectedModelIds = modelIdValidation.value ?? [];
 
     try {
-      validateModelAllowlist(modelIds);
+      validateModelAllowlist(selectedModelIds);
     } catch (error) {
       console.warn("Model allowlist validation failed:", error);
       logApiRequest("POST", "/api/compare", 403, Date.now() - startTime);
@@ -102,10 +144,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
       );
     }
 
-    const cleanPrompt = prompt.trim();
-    const responses = await fetchMultipleResponses(cleanPrompt, modelIds);
+    const responses = await fetchMultipleResponses(cleanPrompt, selectedModelIds);
 
-    const arenaResponses = modelIds.map((modelId, index) => {
+    const arenaResponses: PersistableCompareResponse[] = selectedModelIds.map((modelId, index) => {
       const result = responses[index];
       const model = getModelById(modelId);
       const modelName = model?.name ?? modelId;
@@ -118,6 +159,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
           status: "success" as const,
           answerText: result.text,
           latencyMs: result.latencyMs,
+          usage: result.usage,
         };
       } else {
         return {
@@ -135,11 +177,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
     const hasAnySuccess = arenaResponses.some((r) => r.status === "success");
     const savedRun = await savePromptArenaRun({
       prompt: cleanPrompt,
-      modelIds,
+      modelIds: selectedModelIds,
       responses: arenaResponses,
     });
 
-    const savedArenaResponses = arenaResponses.map((response) => ({
+    const savedArenaResponses = arenaResponses.map(({ usage: _usage, ...response }) => ({
       ...response,
       id: savedRun.responseIdsByModelId[response.modelId] ?? response.id,
     }));
@@ -155,8 +197,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
       { status: 200 }
     );
   } catch (error) {
+    const statusCode = error instanceof ApiError ? error.statusCode : 500;
     console.error("POST /api/compare error:", error);
-    logApiRequest("POST", "/api/compare", 500, Date.now() - startTime);
-    return NextResponse.json(createErrorResponse(error), { status: 500 });
+    logApiRequest("POST", "/api/compare", statusCode, Date.now() - startTime);
+    return NextResponse.json(createErrorResponse(error), { status: statusCode });
   }
 }

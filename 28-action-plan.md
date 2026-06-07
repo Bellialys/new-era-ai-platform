@@ -33,9 +33,11 @@ v0.5 - Supabase Integration
 - `GET /api/models`;
 - `POST /api/compare`;
 - server-side OpenRouter слой;
+- базовый in-memory rate limit для `/api/compare`;
 - server-only Supabase client;
 - миграция `supabase/migrations/0001_prompt_arena_mvp.sql`;
-- сохранение `tasks` и `model_responses` как заготовка v0.5.
+- сохранение `tasks` и `model_responses` как заготовка v0.5;
+- сохранение token usage в `model_responses`, если Supabase настроен.
 
 ---
 
@@ -45,22 +47,13 @@ v0.5 - Supabase Integration
 
 ## 1. Удалить корневые дубликаты server-файлов
 
-Сейчас в корне репозитория есть файлы:
+Статус:
 
 ```text
-index.ts
-models.ts
-openrouter.ts
-utils.ts
+Выполнено
 ```
 
-Они дублируют `src/lib/server/*`, но содержат устаревший код. Из-за них `npm run typecheck` падает.
-
-Нужно удалить их из Git:
-
-```bash
-git rm index.ts models.ts openrouter.ts utils.ts
-```
+Корневые `index.ts`, `models.ts`, `openrouter.ts`, `utils.ts` удалены. Источник server-кода теперь находится в `src/lib/server/*`.
 
 Критерий готовности:
 
@@ -71,16 +64,20 @@ npm run typecheck
 
 ## 2. Закрыть расходный риск `/api/compare`
 
-Сейчас публичный `POST /api/compare` может запускать несколько OpenRouter-запросов на один пользовательский запрос.
+Статус:
 
-До Vercel deploy нужен минимальный rate limit:
+```text
+Частично выполнено
+```
+
+Добавлен базовый in-memory rate limit:
 
 - считать запросы по IP или anonymous session;
 - ограничить число сравнений в коротком окне;
 - возвращать безопасную ошибку `RATE_LIMIT`;
 - не логировать prompt, Authorization headers и секреты.
 
-Минимальный вариант для MVP: in-memory лимит для локального/Vercel preview и отдельная задача на устойчивый лимит через Supabase/Upstash позже.
+Что ещё нужно позже: заменить in-memory лимит на устойчивый production-ready вариант через Supabase/Upstash или другую инфраструктуру.
 
 ## 3. Зафиксировать контракт `modeSlug`
 
@@ -92,25 +89,23 @@ Frontend сейчас отправляет:
 }
 ```
 
-Backend требует ровно `prompt-arena`, но тип `CompareRequest` всё ещё допускает `modeSlug?: string`.
+Backend валидирует `modeSlug` через allowlist и использует `prompt-arena` как безопасный fallback для текущего MVP.
 
-Нужно выбрать один честный контракт:
+Текущий контракт:
 
-- либо сделать `modeSlug` обязательным в типе;
-- либо backend должен подставлять `prompt-arena` по умолчанию, если поле отсутствует.
-
-Для текущего roadmap лучше сделать поле обязательным: режимы должны расширяться явно.
+- frontend отправляет `modeSlug: "prompt-arena"`;
+- backend принимает только разрешённые режимы;
+- новый режим потребует явного расширения allowlist и миграции БД.
 
 ## 4. Свести `ArenaModel` к одному типу
 
-Сейчас `ArenaModel` определён в двух местах:
+Статус:
 
 ```text
-src/types/arena.ts
-src/lib/server/models.ts
+Выполнено
 ```
 
-Нужно оставить один общий тип в `src/types/arena.ts`, а server allowlist должен импортировать его. Это убирает дрейф между client/server контрактами.
+Единый тип находится в `src/types/arena.ts`, server allowlist импортирует его.
 
 ## 5. Синхронизировать env и constants
 
@@ -121,7 +116,7 @@ src/lib/server/models.ts
 - лимиты фиксируются в коде и `.env.example` только документирует значения;
 - или server-side код читает env override с безопасным fallback.
 
-Для MVP лучше: кодовые constants как источник истины, env override только для server-only параметров вроде timeout/max tokens.
+Текущий статус: кодовые constants остаются источником истины, server-only override поддержан для timeout/max tokens.
 
 ---
 
@@ -156,7 +151,13 @@ total_tokens
 estimated_cost
 ```
 
-Нужно расширить `fetchOpenRouterResponse`, чтобы он возвращал usage, и сохранять токены в `model_responses`.
+Статус:
+
+```text
+Выполнено
+```
+
+`fetchOpenRouterResponse` возвращает usage, а persistence сохраняет токены в `model_responses`.
 
 Это даст основу для:
 
@@ -306,13 +307,12 @@ LLM-судья оценивает ответы других моделей.
 # Рекомендуемый ближайший порядок
 
 ```text
-1. Удалить корневые дубликаты server-файлов.
-2. Вернуть зелёные typecheck/lint/build.
-3. Добавить минимальный rate limit для /api/compare.
-4. Свести ArenaModel к одному типу.
-5. Завершить v0.5 Supabase flow: модели из БД, UUID на клиенте, model_key только server-side.
-6. Добавить /api/vote для сохранения победителя.
-7. Только потом переходить к history и новым режимам.
+1. Завершить v0.5 Supabase flow: модели из БД, UUID на клиенте, model_key только server-side.
+2. Применить миграцию Supabase и заполнить env в локальной/Vercel среде.
+3. Добавить /api/vote для сохранения победителя.
+4. Добавить history после сохранения votes.
+5. Заменить in-memory rate limit на production-ready лимит.
+6. Только потом переходить к новым режимам.
 ```
 
 Главная мысль: сначала сделать Prompt Arena устойчивой и сохраняемой, потом расширять платформу.

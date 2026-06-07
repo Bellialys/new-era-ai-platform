@@ -5,7 +5,10 @@
  * - Implements timeout and error handling
  */
 
-import { OPENROUTER_TIMEOUT_MS } from "@/lib/arena/constants";
+import {
+  OPENROUTER_MAX_TOKENS,
+  OPENROUTER_TIMEOUT_MS,
+} from "@/lib/arena/constants";
 import { ApiError } from "./utils";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -75,21 +78,51 @@ function getOpenRouterTimeoutMs(): number {
   return parsedTimeout;
 }
 
+function getOpenRouterMaxTokens(): number {
+  const maxTokensFromEnv = process.env.OPENROUTER_MAX_TOKENS;
+  if (!maxTokensFromEnv) {
+    return OPENROUTER_MAX_TOKENS;
+  }
+
+  const parsedMaxTokens = Number(maxTokensFromEnv);
+  if (!Number.isFinite(parsedMaxTokens) || parsedMaxTokens <= 0) {
+    return OPENROUTER_MAX_TOKENS;
+  }
+
+  return Math.floor(parsedMaxTokens);
+}
+
+async function readOpenRouterJson(
+  response: Response
+): Promise<OpenRouterResponse | OpenRouterErrorResponse | null> {
+  try {
+    return (await response.json()) as OpenRouterResponse | OpenRouterErrorResponse;
+  } catch {
+    return null;
+  }
+}
+
+export type ModelUsage = {
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+};
+
 export type ModelResult =
-  | { success: true; text: string; latencyMs: number }
+  | { success: true; text: string; latencyMs: number; usage: ModelUsage }
   | { success: false; errorCode: string; errorMessage: string };
 
 export async function fetchOpenRouterResponse(
   prompt: string,
   modelId: string
-): Promise<{ text: string; latencyMs: number }> {
+): Promise<{ text: string; latencyMs: number; usage: ModelUsage }> {
   const apiKey = getApiKey();
 
   const request: OpenRouterRequest = {
     model: modelId,
     messages: [{ role: "user", content: prompt }],
     temperature: 0.7,
-    max_tokens: 1000,
+    max_tokens: getOpenRouterMaxTokens(),
   };
 
   const controller = new AbortController();
@@ -110,15 +143,13 @@ export async function fetchOpenRouterResponse(
       signal: controller.signal,
     });
 
-    const data = (await response.json()) as
-      | OpenRouterResponse
-      | OpenRouterErrorResponse;
+    const data = await readOpenRouterJson(response);
 
     if (!response.ok) {
-      const errorData = data as OpenRouterErrorResponse;
+      const errorData = data as OpenRouterErrorResponse | null;
       const errorMessage =
-        errorData.error?.message || `OpenRouter API returned ${response.status}`;
-      const errorCode = errorData.error?.code || "OPENROUTER_ERROR";
+        errorData?.error?.message || `OpenRouter API returned ${response.status}`;
+      const errorCode = errorData?.error?.code || "OPENROUTER_ERROR";
 
       if (response.status === 401 || response.status === 403) {
         throw new ApiError(403, "AUTH_ERROR", "AI provider authentication failed.");
@@ -132,13 +163,25 @@ export async function fetchOpenRouterResponse(
       throw new ApiError(response.status, errorCode, errorMessage);
     }
 
-    const responseData = data as OpenRouterResponse;
-    const content = responseData.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new ApiError(502, "INVALID_RESPONSE", "OpenRouter returned empty response");
+    if (!data) {
+      throw new ApiError(502, "INVALID_RESPONSE", "AI provider returned a non-JSON response.");
     }
 
-    return { text: content, latencyMs: Date.now() - startTime };
+    const responseData = data as OpenRouterResponse;
+    const content = responseData.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+      throw new ApiError(502, "INVALID_RESPONSE", "AI provider returned an empty response.");
+    }
+
+    return {
+      text: content,
+      latencyMs: Date.now() - startTime,
+      usage: {
+        inputTokens: responseData.usage?.prompt_tokens ?? null,
+        outputTokens: responseData.usage?.completion_tokens ?? null,
+        totalTokens: responseData.usage?.total_tokens ?? null,
+      },
+    };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new ApiError(504, "TIMEOUT", `AI provider request timed out after ${timeoutMs}ms.`);
@@ -159,8 +202,8 @@ export async function fetchMultipleResponses(
 ): Promise<ModelResult[]> {
   const promises = modelIds.map(async (modelId): Promise<ModelResult> => {
     try {
-      const { text, latencyMs } = await fetchOpenRouterResponse(prompt, modelId);
-      return { success: true, text, latencyMs };
+      const { text, latencyMs, usage } = await fetchOpenRouterResponse(prompt, modelId);
+      return { success: true, text, latencyMs, usage };
     } catch (error) {
       const errorCode = error instanceof ApiError ? error.errorCode : "UNKNOWN_ERROR";
       const errorMessage = error instanceof ApiError

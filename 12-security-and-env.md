@@ -587,6 +587,7 @@ GitHub хранит код, документацию и package-lock.json.
 - frontend не получает `OPENROUTER_API_KEY`;
 - список моделей проверяется на backend;
 - `modeSlug` проверяется на backend;
+- `/api/compare` защищён базовым in-memory rate limit;
 - неизвестные ошибки скрываются за `INTERNAL_ERROR`;
 - пользовательские ошибки возвращаются как контролируемые `ApiError`;
 - OpenRouter prompt body не логируется;
@@ -595,8 +596,8 @@ GitHub хранит код, документацию и package-lock.json.
 Что добавить позже:
 
 ```text
-Rate limit
-# ограничить частоту запросов на /api/compare
+Persistent rate limit
+# заменить in-memory лимит на устойчивый production-ready лимит
 
 Prompt privacy policy
 # явно описать, что отправляется в OpenRouter

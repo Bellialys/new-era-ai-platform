@@ -1,3 +1,4 @@
+import { MODE_SLUG_PROMPT_ARENA } from "@/lib/arena/constants";
 import { ApiError } from "./utils";
 import { getSupabaseServerClient } from "./supabase";
 
@@ -10,6 +11,11 @@ type ArenaResponseForPersistence = {
   latencyMs?: number;
   errorCode?: string;
   errorMessage?: string;
+  usage?: {
+    inputTokens: number | null;
+    outputTokens: number | null;
+    totalTokens: number | null;
+  };
 };
 
 type SavePromptArenaRunInput = {
@@ -42,7 +48,7 @@ export async function savePromptArenaRun({
   const { data: task, error: taskError } = await supabase
     .from("tasks")
     .insert({
-      mode_slug: "prompt-arena",
+      mode_slug: MODE_SLUG_PROMPT_ARENA,
       prompt_text: prompt,
       status: taskStatus,
       selected_models: modelIds,
@@ -85,6 +91,9 @@ export async function savePromptArenaRun({
     error_code: response.errorCode ?? null,
     error_message: response.errorMessage ?? null,
     latency_ms: response.latencyMs ?? null,
+    input_tokens: response.usage?.inputTokens ?? null,
+    output_tokens: response.usage?.outputTokens ?? null,
+    total_tokens: response.usage?.totalTokens ?? null,
     raw_response: {},
   }));
 

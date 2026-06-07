@@ -11,6 +11,45 @@ v0.4.1 - OpenRouter Integration Fix
 # текущая исправленная версия проекта
 ```
 
+## v0.4.1 - Full Project Audit Fix
+
+Дата: 2026-06-07
+
+### Added
+
+- Добавлен базовый in-memory rate limit для `/api/compare`.
+- Добавлено сохранение OpenRouter token usage в `model_responses`.
+- Добавлен `MODE_SLUG_PROMPT_ARENA` как общий slug Prompt Arena.
+- Добавлен `OPENROUTER_MAX_TOKENS` в `.env.example`.
+- Добавлен audit/action status в `28-action-plan.md`.
+
+### Changed
+
+- `ArenaModel` сведён к одному типу в `src/types/arena.ts`.
+- `/api/compare` теперь использует нормализованные значения валидаторов.
+- `/api/compare` уважает `ApiError.statusCode` в общем error path.
+- OpenRouter client безопасно обрабатывает non-JSON responses.
+- Документация синхронизирована с текущим состоянием v0.4.1 и v0.5 groundwork.
+
+### Fixed
+
+- Удалены корневые дубликаты `index.ts`, `models.ts`, `openrouter.ts`, `utils.ts`, которые ломали `typecheck`.
+- Исправлено отображение `latencyMs = 0`.
+- Старые client-side запросы теперь отменяются через `AbortController`.
+
+### Verified
+
+```bash
+npm run typecheck
+# TypeScript проверка прошла
+
+npm run lint
+# ESLint проверка прошла
+
+npm run build
+# production-сборка прошла
+```
+
 ## v0.4.1 - OpenRouter Integration Fix
 
 Дата: 2026-06-06

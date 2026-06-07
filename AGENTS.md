@@ -50,6 +50,15 @@ src/lib/server/models.ts
 src/lib/server/openrouter.ts
 # интеграция OpenRouter
 
+src/lib/server/rate-limit.ts
+# базовый in-memory rate limit для дорогих API-запросов
+
+src/lib/server/arena-persistence.ts
+# заготовка сохранения Prompt Arena в Supabase
+
+src/lib/server/supabase.ts
+# server-only Supabase client
+
 src/lib/server/utils.ts
 # ошибки, валидация, логирование
 
@@ -63,7 +72,7 @@ src/components/arena
 
 ```text
 modelIds = OpenRouter model keys из allowlist
-# временно до Supabase
+# временно, пока v0.5 не переведёт frontend на Supabase UUID
 ```
 
 В `v0.5+`:

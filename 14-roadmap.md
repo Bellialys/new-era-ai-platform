@@ -25,6 +25,8 @@ v0.4.1 - OpenRouter Integration Fix
 - безопасная server-side allowlist моделей;
 - валидация `prompt`, `modelIds`, `modeSlug`;
 - исправленная обработка API-ошибок;
+- базовый in-memory rate limit для `/api/compare`;
+- server-only Supabase client и миграция как подготовка v0.5;
 - successful `typecheck`, `lint`, `build`.
 
 Следующий главный этап:
@@ -130,6 +132,9 @@ v0.5 - Supabase Integration
 - `OPENROUTER_MAX_TOKENS` вынесен в constants;
 - клиент отменяет устаревшие запросы через `AbortController`;
 - `latencyMs = 0` теперь корректно отображается;
+- корневые дубликаты server-файлов удалены;
+- `/api/compare` имеет базовый in-memory rate limit;
+- OpenRouter `usage` сохраняется в поля токенов при настроенном Supabase;
 - документация синхронизирована с реальным кодом.
 
 Критерии готовности:
@@ -160,6 +165,19 @@ npm run build
 - `/api/compare` создаёт запись в `tasks`;
 - `/api/compare` сохраняет ответы в `model_responses`;
 - ответ `/api/compare` возвращает `taskId`.
+
+Уже подготовлено до полного v0.5:
+
+- добавлена зависимость `@supabase/supabase-js`;
+- добавлен server-only Supabase client;
+- добавлена миграция `0001_prompt_arena_mvp.sql`;
+- `/api/compare` умеет сохранять `tasks` и `model_responses`, если Supabase env заполнен.
+
+Что всё ещё отличает проект от полноценного v0.5:
+
+- `/api/models` пока читает hardcoded allowlist;
+- frontend пока отправляет OpenRouter model keys, а не `models.id` UUID;
+- локально/в Vercel ещё нужно применить Supabase migration и заполнить env.
 
 Что не делать в v0.5:
 
@@ -209,7 +227,7 @@ npm run build
 
 Что сделать:
 
-- добавить rate limit;
+- заменить базовый in-memory rate limit на устойчивый production-ready лимит;
 - улучшить ошибки;
 - улучшить mobile UX;
 - проверить edge cases;

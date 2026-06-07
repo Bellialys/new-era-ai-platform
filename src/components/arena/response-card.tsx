@@ -33,7 +33,7 @@ export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCar
           >
             {response.status === "success" ? "Успех" : "Ошибка"}
           </span>
-          {response.latencyMs ? (
+          {response.latencyMs !== undefined ? (
             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
               {response.latencyMs} ms
             </span>

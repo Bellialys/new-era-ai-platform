@@ -463,12 +463,15 @@ Stable Prompt Arena готова, если:
 - server-side allowlist моделей;
 - проверка `prompt`, `modelIds`, `modeSlug`;
 - безопасные API-ошибки.
+- базовый in-memory rate limit на `/api/compare`;
+- заготовка Supabase persistence для `tasks` и `model_responses`;
+- сохранение token usage в `model_responses`, когда Supabase настроен.
 
 Следующая граница MVP:
 
 ```text
 v0.5 - Supabase Integration
-# сохранять task и model responses в базу
+# завершить Supabase flow: модели из БД, UUID на клиенте, model_key только server-side
 ```
 
 Всё ещё не входит в ближайший MVP:

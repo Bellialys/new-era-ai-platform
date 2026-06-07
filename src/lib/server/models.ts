@@ -7,14 +7,8 @@
  * curl https://openrouter.ai/api/v1/models -H "Authorization: Bearer $OPENROUTER_API_KEY"
  */
 
-export interface ArenaModel {
-  id: string;
-  name: string;
-  role: string;
-  provider: "openrouter";
-  badge?: string;
-  description?: string;
-}
+import type { ArenaModel } from "@/types/arena";
+import { ApiError } from "./utils";
 
 export const ALLOWED_MODELS: ArenaModel[] = [
   {
@@ -59,8 +53,10 @@ export function validateModelAllowlist(modelIds: string[]): void {
 
   for (const modelId of modelIds) {
     if (!allowedIds.has(modelId)) {
-      throw new Error(
-        `Model "${modelId}" is not in the allowed models list. Allowed models: ${Array.from(allowedIds).join(", ")}`
+      throw new ApiError(
+        403,
+        "MODEL_NOT_ALLOWED",
+        "One or more selected models are not allowed."
       );
     }
   }

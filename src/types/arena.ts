@@ -1,7 +1,7 @@
 export type ArenaModel = {
   id: string;
   name: string;
-  provider: string;
+  provider: "openrouter";
   role: string;
   badge?: string;
   description?: string;

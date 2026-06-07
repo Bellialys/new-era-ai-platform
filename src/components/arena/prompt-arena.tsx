@@ -29,6 +29,7 @@ export function PromptArena() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Load available models on mount
   useEffect(() => {
@@ -60,6 +61,12 @@ export function PromptArena() {
     loadModels();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   function buildResponseViews(apiResponses: ArenaApiResponse[]): ArenaResponseView[] {
     return apiResponses.map((response) => {
       const matchedModel = availableModels.find(
@@ -75,6 +82,8 @@ export function PromptArena() {
 
   function clearStaleResults() {
     requestIdRef.current += 1;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setResponses([]);
     setWinnerResponseId(null);
     setIsLoading(false);
@@ -137,6 +146,9 @@ export function PromptArena() {
 
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     setErrorMessage(null);
     setIsLoading(true);
@@ -156,6 +168,7 @@ export function PromptArena() {
             modelIds: selectedModelIds,
             modeSlug: "prompt-arena",
           }),
+          signal: abortController.signal,
         });
 
         // Check if this response is still relevant
@@ -184,6 +197,10 @@ export function PromptArena() {
 
         setResponses(buildResponseViews(data.responses));
       } catch (error) {
+        if (requestIdRef.current !== requestId) {
+          return;
+        }
+
         console.error("Error fetching responses:", error);
         setErrorMessage(
           error instanceof Error
@@ -192,6 +209,7 @@ export function PromptArena() {
         );
       } finally {
         if (requestIdRef.current === requestId) {
+          abortControllerRef.current = null;
           setIsLoading(false);
         }
       }
@@ -200,6 +218,8 @@ export function PromptArena() {
 
   function handleReset() {
     requestIdRef.current += 1;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setPrompt("");
     // Reset to first two models (or default)
     if (availableModels.length >= 2) {
