@@ -4,6 +4,35 @@
 
 Пользователь вводит одну задачу, выбирает несколько AI-моделей, получает ответы рядом, сравнивает качество и выбирает лучший результат.
 
+## Текущий статус
+
+Текущая версия проекта: **v0.4.1 - OpenRouter Integration Fix**.
+
+Готово сейчас:
+
+- Next.js App Router проект;
+- главная страница `/`;
+- интерактивная страница `/arena`;
+- backend route `GET /api/models`;
+- backend route `POST /api/compare`;
+- серверная интеграция OpenRouter;
+- server-side allowlist моделей;
+- проверка `prompt`, `modelIds`, `modeSlug`;
+- безопасные API-ошибки через `ApiError`;
+- отмена устаревших запросов на клиенте через `AbortController`;
+- `package-lock.json`;
+- успешные проверки `typecheck`, `lint`, `build`.
+
+Ещё не готово:
+
+- Supabase integration;
+- сохранение задач и ответов;
+- сохранение голоса победителя;
+- история сравнений;
+- Vercel deploy;
+- аккаунты пользователей;
+- Code Arena, Judge Mode, Leaderboard и AI Team Mode.
+
 ## Главная цель
 
 Создать продвинутую AI-платформу с режимами:
@@ -15,21 +44,7 @@
 - Judge Mode;
 - Leaderboard.
 
-## Первый MVP
-
-Первый рабочий MVP - **Stable Prompt Arena**.
-
-В MVP нужно реализовать:
-
-- ввод задачи пользователем;
-- выбор 2-3 AI-моделей;
-- отправку запроса через backend;
-- получение ответов через OpenRouter API;
-- отображение ответов рядом;
-- выбор лучшего ответа;
-- сохранение задачи, ответов и голоса в Supabase PostgreSQL;
-- базовую историю сравнений;
-- деплой на Vercel.
+Первый стабильный MVP - **Stable Prompt Arena**.
 
 ## Технологический стек
 
@@ -43,20 +58,94 @@
 | Repository | GitHub |
 | Editor | Visual Studio Code |
 
-## Главные правила разработки
+## Локальный запуск
 
-1. Сначала создаём простой рабочий MVP.
-2. Не добавляем сложные режимы раньше времени.
-3. Все AI-запросы идут только через backend.
-4. Секретные значения не хранятся в GitHub.
-5. `.env.local` используется только локально.
-6. Production-переменные хранятся только в Vercel Environment Variables.
-7. Перед новой функцией проверяем, что старая часть не сломалась.
-8. Каждый важный этап фиксируем через Git commit.
+```bash
+npm install
+# устанавливает зависимости проекта
+
+npm run dev
+# запускает локальный сервер разработки
+
+npm run typecheck
+# проверяет TypeScript без production-сборки
+
+npm run lint
+# проверяет код через ESLint
+
+npm run build
+# проверяет production-сборку
+```
+
+## Переменные окружения
+
+Создай `.env.local` на основе `.env.example`.
+
+```bash
+cp .env.example .env.local
+# создаёт локальный файл переменных окружения
+```
+
+Минимум для реальных AI-ответов:
+
+```env
+OPENROUTER_API_KEY=your_real_openrouter_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+Нельзя добавлять в GitHub:
+
+- `.env.local`;
+- реальные API-ключи;
+- production-секреты;
+- приватные переменные Vercel.
+
+## API текущей версии
+
+### `GET /api/models`
+
+Возвращает список разрешённых моделей из server-side allowlist.
+
+### `POST /api/compare`
+
+Текущий запрос `v0.4.1`:
+
+```json
+{
+  "prompt": "Сравни Next.js и Nuxt для MVP AI-платформы",
+  "modelIds": [
+    "google/gemini-flash-1.5",
+    "mistralai/mistral-small-3.1-24b-instruct"
+  ],
+  "modeSlug": "prompt-arena"
+}
+```
+
+Текущий ответ `v0.4.1`:
+
+```json
+{
+  "status": "success",
+  "modeSlug": "prompt-arena",
+  "responses": [
+    {
+      "id": "generated-response-id",
+      "modelId": "google/gemini-flash-1.5",
+      "modelName": "Gemini Flash 1.5",
+      "status": "success",
+      "answerText": "Ответ модели",
+      "latencyMs": 1234
+    }
+  ]
+}
+```
+
+Важное правило:
+
+- в `v0.4.1` поле `modelIds` содержит OpenRouter model keys из allowlist;
+- в `v0.5+` после Supabase поле `modelIds` должно перейти на UUID из таблицы `models`, а OpenRouter `model_key` должен остаться только на backend.
 
 ## Документация проекта
-
-Основные документы лежат в корне репозитория:
 
 | Файл | Назначение |
 |---|---|
@@ -69,7 +158,7 @@
 | `06-project-modes.md` | Режимы проекта |
 | `07-architecture.md` | Архитектура |
 | `08-database.md` | База данных |
-| `09-api-structure.md` | API-структура и контракт `/api/compare` |
+| `09-api-structure.md` | API-структура |
 | `10-ui-pages.md` | Страницы интерфейса |
 | `11-ai-models.md` | AI-модели |
 | `12-security-and-env.md` | Безопасность и переменные окружения |
@@ -79,118 +168,15 @@
 | `16-decisions.md` | Архитектурные решения |
 | `17-code-arena-spec.md` | Code Arena |
 | `18-team-mode-spec.md` | AI Team Mode |
-| `19a-nextjs-setup.md` | Базовая настройка Next.js |
-| `19-development-checklist.md` | Чек-лист ближайшей разработки |
-| `20-stage-2-verification.md` | Отчёт проверки этапа v0.2 |
-| `21-stage-3-verification.md` | Отчёт проверки этапа v0.3 |
-| `22-documentation-audit.md` | Исторический аудит документации |
-| `23-documentation-audit-deep.md` | Исторический углублённый аудит документации |
-| `24-documentation-sync-report.md` | Отчёт синхронизации документации |
-| `25-code-consistency-audit.md` | Исторический аудит согласованности кода и документации перед v0.4 |
-| `26-code-fix-report.md` | Отчёт исправлений кода после аудита |
-| `27-final-documentation-review.md` | Финальная перепроверка документации |
-| `AGENTS.md` | Правила для работы с кодом и AI-агентами |
+| `19-development-checklist.md` | Чек-лист разработки |
+| `27-final-documentation-review.md` | Текущая финальная проверка документации |
+| `AGENTS.md` | Правила для AI-агентов и разработчиков |
 
-## Текущее состояние
+## Главные правила разработки
 
-Сейчас репозиторий находится на этапе **v0.3 - Static UI MVP**.
-
-Готово:
-
-- проектная документация;
-- roadmap;
-- описание MVP;
-- описание архитектуры;
-- описание базы данных;
-- описание API;
-- правила безопасности;
-- стартовые файлы репозитория;
-- `package.json`;
-- базовая конфигурация Next.js;
-- базовая конфигурация TypeScript;
-- базовая конфигурация ESLint;
-- базовая конфигурация Tailwind CSS;
-- корневой `src/app/layout.tsx`;
-- главная страница `/`;
-- интерактивная страница `/arena`;
-- mock-данные моделей;
-- mock-генератор ответов с `answerText`;
-- разделение `ArenaApiResponse` и `ArenaResponseView`;
-- добавление `modelRole` на клиенте по `modelId`;
-- client-side состояние Prompt Arena;
-- валидация prompt и выбора моделей;
-- ограничение prompt до `MAX_PROMPT_LENGTH=8000`;
-- сброс старых responses при изменении prompt или выбора моделей;
-- loading, empty, error и success-состояния;
-- UI-выбор победителя для успешных ответов;
-- `AGENTS.md` с правилами работы над проектом.
-
-Ещё не готово:
-
-- `package-lock.json` нужно создать локально через `npm install` и закоммитить в GitHub;
-- после последних удалённых правок нужно локально прогнать `npm run typecheck`, `npm run lint`, `npm run build`;
-- backend API routes;
-- OpenRouter integration;
-- Supabase integration;
-- Vercel deploy.
-
-## Канонический контракт `/api/compare`
-
-Документ `09-api-structure.md` является источником истины для будущего backend API.
-
-Для ответа модели используется поле:
-
-```text
-answerText
-# текст успешного ответа модели
-```
-
-Не использовать как API-контракт:
-
-```text
-text
-# старое поле, не должно использоваться в API-контракте
-```
-
-Поле `modelRole` относится к UI-представлению и подмешивается на клиенте по `modelId`, а не дублируется в ответе `/api/compare`.
-
-## Локальная разработка
-
-После клонирования репозитория команды будут такими:
-
-```bash
-npm install
-# устанавливает зависимости проекта и создаёт package-lock.json
-
-npm run dev
-# запускает проект локально
-
-npm run typecheck
-# проверяет TypeScript без сборки
-
-npm run lint
-# проверяет код линтером
-
-npm run build
-# проверяет production-сборку
-```
-
-После локального `npm install` нужно добавить `package-lock.json` в Git:
-
-```bash
-git add package-lock.json
-# добавить lock-файл зависимостей
-
-git commit -m "chore: add package lock"
-# зафиксировать точные версии зависимостей
-```
-
-## Безопасность
-
-Нельзя добавлять в GitHub:
-
-- `.env.local`;
-- реальные приватные значения окружения;
-- любые production-секреты.
-
-Для примера переменных используется только `.env.example`.
+1. Сначала делаем простой рабочий MVP.
+2. Не добавляем сложные режимы раньше времени.
+3. Все AI-запросы идут только через backend.
+4. Секреты хранятся только в `.env.local` и Vercel Environment Variables.
+5. Перед новой функцией проверяем, что старая часть не сломалась.
+6. Каждый важный этап фиксируем через Git commit.

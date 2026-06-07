@@ -447,3 +447,35 @@ Stable Prompt Arena готова, если:
 - секреты не попали в GitHub;
 - `.env.local` не коммитится;
 - базовые лимиты работают.
+
+---
+
+# Актуализация v0.4.1
+
+Текущий проект уже прошёл стадию чистого Static UI MVP.
+
+Сейчас готово:
+
+- Prompt Arena UI;
+- загрузка моделей через `/api/models`;
+- отправка prompt через `/api/compare`;
+- реальные ответы через OpenRouter на backend;
+- server-side allowlist моделей;
+- проверка `prompt`, `modelIds`, `modeSlug`;
+- безопасные API-ошибки.
+
+Следующая граница MVP:
+
+```text
+v0.5 - Supabase Integration
+# сохранять task и model responses в базу
+```
+
+Всё ещё не входит в ближайший MVP:
+
+- Code Arena Runner;
+- AI Team Mode;
+- Leaderboard;
+- сложная админ-панель;
+- платёжная система;
+- запуск пользовательского кода.

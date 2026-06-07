@@ -576,3 +576,34 @@ Backend вызывает OpenRouter и Supabase.
 GitHub хранит код, документацию и package-lock.json.
 # но не хранит .env.local и реальные ключи
 ```
+
+---
+
+# Актуализация безопасности v0.4.1
+
+В текущей версии реализовано:
+
+- OpenRouter API key читается только на server side;
+- frontend не получает `OPENROUTER_API_KEY`;
+- список моделей проверяется на backend;
+- `modeSlug` проверяется на backend;
+- неизвестные ошибки скрываются за `INTERNAL_ERROR`;
+- пользовательские ошибки возвращаются как контролируемые `ApiError`;
+- OpenRouter prompt body не логируется;
+- Authorization headers не логируются.
+
+Что добавить позже:
+
+```text
+Rate limit
+# ограничить частоту запросов на /api/compare
+
+Prompt privacy policy
+# явно описать, что отправляется в OpenRouter
+
+Cost limit
+# ограничить дорогие модели и количество запросов
+
+Supabase RLS
+# настроить политики доступа после подключения базы
+```
