@@ -2,73 +2,109 @@
 
 ## Назначение файла
 
-Этот документ фиксирует следующий большой функциональный этап проекта **Новая эпоха**: регистрацию, гостевой режим и полноценную страницу профиля.
+Этот документ фиксирует этап **v0.6 - Auth, Guest Mode and Profile** для проекта **Новая эпоха**.
 
-Документ нужен, чтобы Codex и разработчик понимали, на что опираться при дальнейшей разработке, и не смешивали регистрацию, голосование, историю и платные лимиты в хаотичный один шаг.
+Главная цель этапа - сделать понятную систему доступа:
 
-Главное правило: сначала делаем рабочий маленький фундамент, потом расширяем.
+1. пользователь не может пользоваться функциями платформы как полностью неизвестный посетитель;
+2. пользователь должен выбрать один из двух режимов: аккаунт или гостевая карточка;
+3. гостевой режим разрешён, но только как управляемая anonymous session с ограничениями;
+4. зарегистрированный пользователь получает профиль, историю, фото, email management и будущие расширенные возможности.
 
-## Версия этапа
+## Ключевое правило доступа
 
 ```text
-v0.6 - Auth, Guest Mode and Profile
-# пользователи, гостевой режим, профиль и ограничения доступа к моделям
+Нельзя пользоваться Prompt Arena без user session или anonymous session.
+# либо пользователь вошёл в аккаунт, либо нажал "Продолжить как гость" и получил карточку Анонимус #1234
 ```
 
-## Главная идея
+Это означает:
 
-В проекте должны быть два режима использования:
+- сайт можно открыть без входа;
+- публичный лендинг, `/auth`, `/api/health` можно смотреть без входа;
+- запуск сравнения моделей нельзя делать как пустой неизвестный пользователь;
+- перед запуском Prompt Arena пользователь должен выбрать `Войти / Зарегистрироваться` или `Продолжить как гость`;
+- гостевой режим создаёт реальную запись `anonymous_sessions` и получает `anonymousSessionId`;
+- `/api/compare` должен принимать запрос только если есть `user_id` или валидный `anonymous_session_id`;
+- без обоих вариантов backend должен возвращать `401 AUTH_REQUIRED`.
 
-1. **Гостевой режим** - пользователь может попробовать платформу без регистрации, но только с бесплатными моделями и ограниченными возможностями.
-2. **Аккаунт пользователя** - пользователь может войти, иметь профиль, фото, имя, фамилию, email, историю сравнений, сохранение голосов и будущие лимиты/тарифы.
+## Два режима пользователя
 
-Гостевой режим не должен быть просто пустым состоянием. При выборе гостевого режима система должна автоматически создавать временную карточку пользователя, например:
+| Возможность | Гость | Аккаунт |
+|---|---:|---:|
+| Открыть сайт | Да | Да |
+| Запустить Prompt Arena | Да, после создания guest session | Да |
+| Использовать бесплатные модели | Да | Да |
+| Использовать registered модели | Нет | Да |
+| Использовать premium модели | Нет | Позже по тарифу |
+| Постоянная история | Нет | Да |
+| Временная история | Да | Да |
+| Профиль | Только guest card | Полный профиль |
+| Фото профиля | Нет | Да |
+| Изменение имени/фамилии | Нет | Да |
+| Изменение email | Нет | Да |
+| Leaderboard | Ограниченно | Да |
+
+## Access Gate UI
+
+Перед использованием Prompt Arena показать блок выбора режима:
 
 ```text
-Анонимус #4827
-Гостевой режим
-Доступ: бесплатные модели
-История: временная
+Добро пожаловать в Новую эпоху
+Сравнивайте ответы разных AI-моделей
+
+[Войти]
+[Создать аккаунт]
+[Продолжить как гость]
 ```
 
-## Гостевой режим
-
-### Что должен видеть гость
-
-В шапке или панели пользователя должна отображаться компактная карточка:
+После выбора гостевого режима показывать карточку:
 
 ```text
-[аватар]
+[А]
 Анонимус #4827
 Гость
 Только бесплатные модели
 ```
 
-Аватар можно сделать без загрузки изображения:
+Пока режим не выбран:
 
-- первая буква `A`;
-- случайный цвет;
-- avatarSeed;
-- colorSeed.
+- поле prompt disabled;
+- выбор моделей disabled;
+- кнопка запуска disabled;
+- текст подсказки: `Сначала войдите или продолжите как гость`.
 
-### Что доступно гостю
+## Гостевой режим
 
-| Возможность | Статус |
-|---|---|
-| Запустить Prompt Arena | Да |
-| Получить ответы моделей | Да |
-| Использовать бесплатные модели | Да |
-| Использовать registered/premium модели | Нет |
-| Сохранить task через anonymous_session_id | Да |
-| Выбрать победителя локально | Да |
-| Сохранить постоянную историю | Нет |
-| Загрузить фото | Нет |
-| Изменить email | Нет |
-| Участвовать в будущем Leaderboard как полноценный пользователь | Нет |
+### Что должен делать гостевой режим
 
-### Техническая логика гостя
+При нажатии `Продолжить как гость` система должна:
 
-Нужно создать таблицу:
+1. проверить localStorage на наличие `new-era-anonymous-session-id`;
+2. если его нет - создать новую anonymous session через backend;
+3. сгенерировать имя вида `Анонимус #4827`;
+4. сгенерировать `avatarSeed` и `colorSeed`;
+5. сохранить session id в localStorage;
+6. показать guest card;
+7. разрешить Prompt Arena только с бесплатными моделями.
+
+### localStorage keys
+
+```text
+new-era-anonymous-session-id
+# UUID гостевой сессии
+
+new-era-anonymous-display-name
+# Например: Анонимус #4827
+
+new-era-anonymous-avatar-seed
+# seed для аватара
+
+new-era-anonymous-color-seed
+# seed для цвета карточки
+```
+
+### Таблица anonymous_sessions
 
 ```sql
 create table public.anonymous_sessions (
@@ -82,43 +118,26 @@ create table public.anonymous_sessions (
 );
 ```
 
-На клиенте нужно хранить:
-
-```text
-new-era-anonymous-session-id
-# UUID гостевой сессии
-
-new-era-anonymous-display-name
-# Например: Анонимус #4827
-```
-
-Если localStorage пустой:
-
-1. Сгенерировать гостя.
-2. Создать `anonymous_sessions` запись через backend route.
-3. Сохранить `anonymousSessionId` в localStorage.
-4. Передавать `anonymousSessionId` в `/api/compare`.
-
 ## Ограничение моделей для гостей
 
-Анонимный режим должен использовать только бесплатные модели.
+Гости должны использовать только бесплатные модели.
 
-Ограничение должно быть не только в UI, но и на backend.
-
-### Изменение таблицы `models`
-
-Добавить поле:
+Для этого в таблицу `models` нужно добавить:
 
 ```sql
 alter table public.models
   add column if not exists access_level text not null default 'anonymous';
+
+alter table public.models
+  add constraint models_access_level_check
+  check (access_level in ('anonymous', 'registered', 'premium'));
 ```
 
-Допустимые значения:
+Значения:
 
 ```text
 anonymous
-# доступно всем, включая гостей
+# доступно гостям и аккаунтам
 
 registered
 # доступно только вошедшим пользователям
@@ -127,42 +146,18 @@ premium
 # будущий платный/расширенный доступ
 ```
 
-Добавить check constraint:
+Правила backend:
 
-```sql
-alter table public.models
-  add constraint models_access_level_check
-  check (access_level in ('anonymous', 'registered', 'premium'));
-```
-
-### Backend-правило
-
-В `/api/models`:
-
-- если пользователь гость - отдавать только `access_level = 'anonymous'`;
-- если пользователь авторизован - отдавать `anonymous` и `registered`;
-- `premium` оставить на будущие тарифы.
-
-В `/api/compare`:
-
-- повторно проверить доступ к выбранным моделям;
-- если гость отправил registered/premium модель - вернуть `403 MODEL_NOT_ALLOWED`;
-- нельзя полагаться только на frontend-фильтрацию.
+- `/api/models` для гостя отдаёт только `access_level = 'anonymous'`;
+- `/api/models` для аккаунта отдаёт `anonymous` и `registered`;
+- `/api/compare` повторно проверяет доступ на сервере;
+- если гость вручную отправил закрытую модель - вернуть `403 MODEL_NOT_ALLOWED`.
 
 ## Регистрация и вход
 
-### Рекомендуемый стек
+Использовать Supabase Auth + `@supabase/ssr`.
 
-Использовать Supabase Auth + `@supabase/ssr`, потому что проект уже использует Supabase и Next.js App Router.
-
-Нужно добавить:
-
-```bash
-npm install @supabase/ssr
-# официальный SSR-helper для Supabase Auth в Next.js
-```
-
-### Страницы
+Нужные страницы:
 
 ```text
 /auth
@@ -181,7 +176,7 @@ npm install @supabase/ssr
 # профиль пользователя
 ```
 
-### Компоненты
+Нужные компоненты:
 
 ```text
 src/components/auth/auth-card.tsx
@@ -200,77 +195,11 @@ src/components/auth/user-menu.tsx
 # меню пользователя в шапке
 ```
 
-### Поля регистрации
-
-Минимальный вариант:
-
-- имя;
-- email;
-- пароль;
-- повтор пароля;
-- checkbox согласия с условиями.
-
-Позже можно добавить:
-
-- фамилия;
-- отображаемое имя;
-- OAuth Google;
-- OAuth GitHub.
-
 ## Профиль пользователя
 
-Страница `/profile` должна быть полноценной функциональной страницей, а не просто выводом email.
+Страница `/profile` должна быть функциональной, а не просто выводом email.
 
-### Верхняя карточка
-
-```text
-[Фото профиля]
-Имя Фамилия
-email@example.com
-План: Free
-Дата регистрации: 09.06.2026
-```
-
-Кнопки:
-
-```text
-Изменить фото
-Редактировать профиль
-Выйти
-```
-
-### Блок личных данных
-
-Редактируемые поля:
-
-- имя;
-- фамилия;
-- отображаемое имя;
-- email через подтверждение;
-- фото профиля.
-
-Нередактируемые поля:
-
-- user id;
-- роль;
-- тариф;
-- дата регистрации.
-
-### Таблица `profiles`
-
-Расширить `profiles`:
-
-```sql
-alter table public.profiles
-  add column if not exists first_name text,
-  add column if not exists last_name text,
-  add column if not exists avatar_url text,
-  add column if not exists role text not null default 'user',
-  add column if not exists plan text not null default 'free',
-  add column if not exists updated_at timestamptz not null default now();
-```
-
-Рекомендуемые поля:
+Поля профиля:
 
 | Поле | Назначение |
 |---|---|
@@ -285,11 +214,21 @@ alter table public.profiles
 | `created_at` | дата создания |
 | `updated_at` | дата обновления |
 
+Расширение `profiles`:
+
+```sql
+alter table public.profiles
+  add column if not exists first_name text,
+  add column if not exists last_name text,
+  add column if not exists avatar_url text,
+  add column if not exists role text not null default 'user',
+  add column if not exists plan text not null default 'free',
+  add column if not exists updated_at timestamptz not null default now();
+```
+
 ## Фото профиля
 
-Фото профиля хранить в Supabase Storage.
-
-Bucket:
+Фото хранить в Supabase Storage bucket:
 
 ```text
 avatars
@@ -306,94 +245,72 @@ avatars/{user_id}/avatar.webp
 
 - JPG, PNG, WEBP;
 - максимум 2 MB;
-- лучше квадрат 1:1;
 - upload/update/delete только владельцу;
-- public read можно разрешить, если аватары публичные.
+- `profiles.avatar_url` обновляется после загрузки.
 
 ## Изменение email
 
-Email нельзя менять только в `profiles.email`.
+Email менять только через Supabase Auth.
 
-Правильный процесс:
+Процесс:
 
-1. Пользователь вводит новый email.
-2. Backend вызывает Supabase Auth update email.
-3. Supabase отправляет подтверждение.
-4. После подтверждения меняется email в Auth.
+1. пользователь вводит новый email;
+2. backend вызывает Supabase Auth update email;
+3. Supabase отправляет письмо подтверждения;
+4. после подтверждения меняется email в Auth;
 5. `profiles.email` синхронизируется с Auth.
 
-В UI показывать нейтральный статус:
+## Этапы v0.6
 
-```text
-Письмо подтверждения отправлено на новый email.
-```
+### v0.6.1 - Access Gate and Guest Mode
 
-## Привязка задач к пользователю
-
-После Auth нужно изменить `/api/compare`:
-
-- если пользователь вошёл - сохранять `tasks.user_id`;
-- если пользователь гость - сохранять `tasks.anonymous_session_id`;
-- `anonymous_session_id` оставить для гостевого режима.
-
-На будущее можно сделать перенос гостевой истории в аккаунт:
-
-```text
-anonymous_sessions.converted_user_id = auth.users.id
-# гость зарегистрировался, историю можно связать с аккаунтом
-```
-
-Но в v0.6.1 перенос истории не делать.
-
-## Этапы реализации
-
-### v0.6.1 - Guest Mode
-
-Цель: сделать гостевую карточку и anonymous session.
+Главный результат: нельзя использовать Prompt Arena без аккаунта или гостевой карточки.
 
 Что сделать:
 
-- создать миграцию `anonymous_sessions`;
+- добавить Access Gate UI;
+- заблокировать prompt/model selection/start button до выбора режима;
+- создать `anonymous_sessions` migration;
+- добавить backend route создания guest session;
 - добавить generator `Анонимус #1234`;
-- сохранять guest id в localStorage;
-- добавить guest card в UI;
-- передавать `anonymousSessionId` в `/api/compare`;
-- не ломать текущий Prompt Arena.
+- сохранить guest id в localStorage;
+- показать guest card в UI;
+- `/api/compare` принимает только `user_id` или валидный `anonymous_session_id`;
+- без user/guest возвращать `401 AUTH_REQUIRED`.
 
-Оценка: 5-8 часов.
+Оценка: 6-10 часов.
 
 ### v0.6.2 - Model Access Levels
 
-Цель: ограничить модели для гостей.
+Главный результат: гости используют только бесплатные модели.
 
 Что сделать:
 
 - добавить `models.access_level`;
 - обновить seed моделей;
 - `/api/models` фильтрует модели по режиму;
-- `/api/compare` проверяет доступ на backend;
-- вернуть `403 MODEL_NOT_ALLOWED`, если гость выбирает закрытую модель.
+- `/api/compare` проверяет доступ на backend.
 
 Оценка: 4-6 часов.
 
 ### v0.6.3 - Auth SSR
 
-Цель: добавить регистрацию и вход.
+Главный результат: пользователь может зарегистрироваться, войти и выйти.
 
 Что сделать:
 
 - добавить `@supabase/ssr`;
-- создать browser/server clients;
+- создать Supabase browser/server clients;
 - добавить proxy/cookies session refresh;
-- `/auth` login/signup;
-- `/auth/callback`;
-- logout.
+- создать `/auth`;
+- создать `/auth/callback`;
+- добавить login/signup/logout.
 
 Оценка: 6-10 часов.
 
 ### v0.6.4 - Profile MVP
 
-Цель: сделать функциональную страницу профиля.
+Главный результат: пользователь может управлять профилем.
 
 Что сделать:
 
@@ -401,18 +318,18 @@ anonymous_sessions.converted_user_id = auth.users.id
 - сделать `/profile`;
 - редактировать имя, фамилию, display name;
 - показывать email, role, plan;
-- сделать basic profile statistics.
+- добавить базовую статистику.
 
 Оценка: 8-12 часов.
 
 ### v0.6.5 - Avatar Upload
 
-Цель: фото профиля.
+Главный результат: пользователь может загрузить фото профиля.
 
 Что сделать:
 
 - создать bucket `avatars`;
-- добавить RLS Storage policies;
+- добавить Storage RLS policies;
 - upload avatar;
 - preview avatar;
 - delete/update avatar;
@@ -422,7 +339,7 @@ anonymous_sessions.converted_user_id = auth.users.id
 
 ### v0.6.6 - Email and Password Management
 
-Цель: управлять email и паролем.
+Главный результат: безопасное управление email и паролем.
 
 Что сделать:
 
@@ -435,20 +352,18 @@ anonymous_sessions.converted_user_id = auth.users.id
 
 ### v0.6.7 - User-linked Arena
 
-Цель: связать Prompt Arena с пользователем.
+Главный результат: Prompt Arena понимает user/guest.
 
 Что сделать:
 
-- `/api/compare` определяет user/guest;
-- `tasks.user_id` для аккаунтов;
-- `tasks.anonymous_session_id` для гостей;
+- `/api/compare` определяет user или guest;
+- для аккаунта сохраняет `tasks.user_id`;
+- для гостя сохраняет `tasks.anonymous_session_id`;
 - profile statistics считает tasks/responses/votes.
 
 Оценка: 5-8 часов.
 
 ### v0.6.8 - Testing and Deployment
-
-Цель: проверить, что всё работает.
 
 Команды:
 
@@ -474,58 +389,34 @@ supabase db push
 
 Оценка: 6-8 часов.
 
-## Оценка времени
-
-| Этап | Время |
-|---|---:|
-| Guest Mode | 5-8 часов |
-| Model Access Levels | 4-6 часов |
-| Auth SSR | 6-10 часов |
-| Profile MVP | 8-12 часов |
-| Avatar Upload | 6-10 часов |
-| Email/Password Management | 5-8 часов |
-| User-linked Arena | 5-8 часов |
-| Testing and Deployment | 6-8 часов |
-
-Минимально: 45 часов.
-
-Качественно: 55-70 часов.
-
-## Что не делать в первом шаге
-
-В `v0.6.1` не делать:
-
-- полноценную регистрацию;
-- Google/GitHub OAuth;
-- Storage avatars;
-- перенос гостевой истории;
-- тарифы;
-- платежи;
-- Leaderboard.
-
 ## Первый task для Codex
 
 ```text
-Сделай v0.6.1 Guest Mode.
+Сделай v0.6.1 Access Gate and Guest Mode.
 
 Требования:
 1. Создать Supabase migration для таблицы anonymous_sessions.
-2. Добавить генератор гостя: Анонимус #1234, avatarSeed, colorSeed.
-3. Сохранять anonymousSessionId в localStorage.
-4. Добавить гостевую карточку в интерфейс.
-5. Передавать anonymousSessionId в /api/compare.
-6. /api/compare должен сохранять tasks.anonymous_session_id для гостя.
-7. Не ломать текущий Prompt Arena.
-8. Не добавлять регистрацию и Storage в этом шаге.
-9. После изменений выполнить typecheck, lint, build.
+2. Добавить backend route для создания/обновления guest session.
+3. Добавить генератор гостя: Анонимус #1234, avatarSeed, colorSeed.
+4. Сохранять anonymousSessionId в localStorage.
+5. Добавить Access Gate UI: нельзя пользоваться Prompt Arena до входа или выбора гостевого режима.
+6. Добавить гостевую карточку в интерфейс.
+7. Передавать anonymousSessionId в /api/compare.
+8. /api/compare должен возвращать 401 AUTH_REQUIRED, если нет user session и нет valid anonymousSessionId.
+9. /api/compare должен сохранять tasks.anonymous_session_id для гостя.
+10. Не добавлять регистрацию и Storage в этом шаге.
+11. Не ломать текущий Prompt Arena и fallback моделей.
+12. После изменений выполнить typecheck, lint, build.
 ```
 
 ## Критерий готовности v0.6.1
 
 Готово, если:
 
-- гость получает карточку `Анонимус #xxxx`;
+- без входа и без гостевой карточки нельзя запустить Prompt Arena;
+- при нажатии `Продолжить как гость` появляется карточка `Анонимус #xxxx`;
 - карточка сохраняется после перезагрузки страницы;
-- задача сохраняется с `anonymous_session_id`;
+- гость видит только бесплатные модели после v0.6.2;
+- задача гостя сохраняется с `anonymous_session_id`;
 - `/api/health` остаётся `ok`;
 - `npm run typecheck`, `npm run lint`, `npm run build` проходят без ошибок.
