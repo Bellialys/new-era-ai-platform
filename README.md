@@ -169,6 +169,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 | `17-code-arena-spec.md` | Code Arena |
 | `18-team-mode-spec.md` | AI Team Mode |
 | `19-development-checklist.md` | Чек-лист разработки |
+| `27-environments.md` | Матрица окружений Local / Preview / Staging / Production |
 | `27-final-documentation-review.md` | Текущая финальная проверка документации |
 | `AGENTS.md` | Правила для AI-агентов и разработчиков |
 
