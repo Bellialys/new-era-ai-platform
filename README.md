@@ -105,11 +105,30 @@ npm run build
 
 npm run smoke
 # проверяет базовый health/models smoke-check
+
+npm run env:check
+# проверяет обязательные переменные окружения (без вывода значений секретов)
 ```
 
 ## Переменные окружения
 
 Создай `.env.local` на основе `.env.example`.
+
+Проверить окружение можно безопасным чекером (не выводит значения секретов):
+
+```bash
+npm run env:check
+# basic-проверка переменных для запуска сайта
+
+npm run env:check:full
+# полный набор переменных проекта
+
+npm run env:check:example
+# генерирует .env.local.example только из placeholder-значений
+```
+
+Политика и детали: `docs/34-env-check-policy.md` и
+`docs/34-env-check-implementation.md`.
 
 ```bash
 cp .env.example .env.local

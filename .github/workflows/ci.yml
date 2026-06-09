@@ -13,6 +13,16 @@ jobs:
     name: Typecheck, lint, test, build, docs, smoke
     runs-on: ubuntu-latest
 
+    # Non-secret placeholders so the build's prebuild env-check (basic) passes in
+    # CI. These are NOT secrets: the build does not call Supabase/OpenRouter, and
+    # API routes are dynamic. Real values live only in Vercel / local .env.local.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+      SUPABASE_SERVICE_ROLE_KEY: sb_secret_placeholder
+      OPENROUTER_API_KEY: sk-or-v1-placeholder
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4

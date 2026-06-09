@@ -1,0 +1,89 @@
+{
+  "description": "Single source of truth for environment variables checked by scripts/check-env.mjs. Never contains real values — only names, validation rules and safe placeholder examples.",
+  "groups": ["basic", "migrations", "full"],
+  "variables": [
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_URL",
+      "required": true,
+      "category": "public",
+      "groups": ["basic", "full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^https://.+\\.supabase\\.co$",
+        "message": "must be a valid Supabase project URL (https://<ref>.supabase.co)"
+      },
+      "example": "https://your-project.supabase.co"
+    },
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      "aliases": ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+      "required": true,
+      "category": "public",
+      "groups": ["basic", "full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^(eyJ|sb_publishable_)",
+        "message": "must look like a Supabase publishable/anon key"
+      },
+      "example": "your-supabase-publishable-key"
+    },
+    {
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "required": true,
+      "category": "secret",
+      "groups": ["basic", "full"],
+      "validation": {
+        "type": "supabaseServiceRoleJwt",
+        "message": "must be a Supabase service_role key, not the anon key"
+      },
+      "example": "your-service-role-key"
+    },
+    {
+      "name": "OPENROUTER_API_KEY",
+      "required": true,
+      "category": "secret",
+      "groups": ["basic", "full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^sk-or-v1-",
+        "message": "must start with sk-or-v1-"
+      },
+      "example": "your-openrouter-key"
+    },
+    {
+      "name": "NEXT_PUBLIC_SITE_URL",
+      "required": false,
+      "category": "public",
+      "groups": ["basic", "full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^https?://.+",
+        "message": "must be a valid http(s) URL"
+      },
+      "example": "http://localhost:3000"
+    },
+    {
+      "name": "DATABASE_URL",
+      "required": true,
+      "category": "secret",
+      "groups": ["migrations", "full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^postgresql://",
+        "message": "must start with postgresql://"
+      },
+      "example": "postgresql://user:password@host:5432/database"
+    },
+    {
+      "name": "SUPABASE_ACCESS_TOKEN",
+      "required": true,
+      "category": "secret",
+      "groups": ["migrations", "full"],
+      "validation": {
+        "type": "nonEmptyString",
+        "message": "must be a Supabase CLI / account access token"
+      },
+      "example": "your-supabase-access-token"
+    }
+  ]
+}
