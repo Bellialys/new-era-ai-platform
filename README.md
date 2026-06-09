@@ -8,7 +8,7 @@
 
 ## Текущий статус
 
-Текущая версия проекта: **v0.5.2 - Supabase, migrations and health stabilization**.
+Текущая версия проекта: **v0.5.3 - Voting MVP stabilization**.
 
 Статус синхронизирован с `14-roadmap.md`.
 
@@ -20,6 +20,7 @@
 - backend route `GET /api/models`;
 - backend route `POST /api/compare`;
 - backend route `GET /api/health`;
+- backend route `POST /api/vote`;
 - серверная интеграция OpenRouter;
 - Supabase PostgreSQL migrations для `models`, `tasks`, `model_responses` и `profiles`;
 - server-side Supabase client для сохранения Prompt Arena;
@@ -30,15 +31,16 @@
 - безопасные API-ошибки через `ApiError`;
 - отмена устаревших запросов на клиенте через `AbortController`;
 - best-effort сохранение задач и ответов в Supabase;
+- сохранение Winner vote из основной Prompt Arena через backend route;
 - синхронизированная история Supabase migrations;
 - исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`;
 - smoke-check script `npm run smoke`;
+- минимальный GitHub Actions CI;
 - `package-lock.json`;
 - успешные проверки `typecheck`, `lint`, `test`, `build`.
 
 Пока не готово как стабильный пользовательский этап:
 
-- сохранение голосов как завершённый Voting MVP;
 - история сравнений;
 - production deploy на Vercel;
 - полноценные пользовательские аккаунты и личная история;
@@ -146,7 +148,7 @@ server-side hardcoded allowlist
 
 ### `POST /api/compare`
 
-Текущий запрос `v0.5.2`:
+Текущий запрос `v0.5.3`:
 
 ```json
 {
@@ -156,7 +158,7 @@ server-side hardcoded allowlist
 }
 ```
 
-Текущий ответ `v0.5.2`:
+Текущий ответ `v0.5.3`:
 
 ```json
 {
@@ -181,6 +183,21 @@ server-side hardcoded allowlist
 - в fallback mode `modelIds` могут временно совпадать с server-side OpenRouter model keys;
 - OpenRouter `model_key` не должен приходить с frontend как доверенное значение;
 - backend всегда повторно проверяет выбранные модели.
+
+### `POST /api/vote`
+
+Текущий запрос `v0.5.3`:
+
+```json
+{
+  "taskId": "saved-task-uuid",
+  "responseId": "saved-model-response-uuid",
+  "voteType": "best",
+  "anonymousSessionId": "anonymous-session-id"
+}
+```
+
+`responseId` соответствует `votes.model_response_id`. Кнопка Winner в основной `/arena` активна только для сохранённых successful responses.
 
 Подробный контракт API описан в `28-api-contracts.md`.
 

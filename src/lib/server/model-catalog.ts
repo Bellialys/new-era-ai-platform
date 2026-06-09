@@ -1,9 +1,9 @@
 /**
- * Model catalog (v0.5)
+ * Model catalog (v0.5.3)
  *
- * The catalog is the single source of available models for both /api/models and
- * /api/compare. When Supabase is configured, the app reads from the database
- * first, then falls back to the hardcoded list if the catalog is unavailable.
+ * Supabase models is the primary source of available models for both
+ * /api/models and /api/compare. The hardcoded list in models.ts is an offline
+ * fallback and must mirror the seed in supabase/migrations/0002_sync_free_models.sql.
  *
  * The client only ever sees and echoes back a `selectionId`:
  *   - DB mode:       selectionId = models.id (UUID), modelKey stays server-side

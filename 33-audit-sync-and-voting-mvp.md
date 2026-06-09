@@ -36,23 +36,17 @@ Expected request fields:
 
 The route uses the existing server helper `saveBestVote`.
 
-## Important limitation
+## v0.5.3 stabilization status
 
-The backend vote route is added, but `src/components/arena/prompt-arena.tsx` still needs to call `/api/vote` from the winner button.
+The earlier limitation is closed:
 
-The GitHub connector allowed new files, but blocked updates to existing files during this audit session. Because of that, existing files that still need direct updates are listed below.
-
-## Files still needing direct update
-
-- `README.md` - update project status from `v0.4.1` to current Supabase MVP status.
-- `AGENTS.md` - update current status and next stage.
-- `15-changelog.md` - add `v0.5.3 - Audit Sync and Voting MVP`.
-- `src/components/arena/arena-form.tsx` - replace visible `v0.4` badge with `v0.5` or `v0.5.3`.
-- `src/components/arena/prompt-arena.tsx` - store `taskId` from `/api/compare` and call `/api/vote` when selecting a winner.
-- `src/components/arena/arena-results.tsx` - pass vote saving state/message to the result area.
-- `src/components/arena/response-card.tsx` - optionally disable the winner button while the vote is saving.
-- `32-model-catalog-governance.md` - mark the extended schema as future governance unless migrations are added.
-- Delete temporary `99-write-check.md`.
+- `src/components/arena/prompt-arena.tsx` stores `taskId` from `/api/compare`;
+- Winner selection calls `POST /api/vote`;
+- UI shows saving, success and error states;
+- Winner button is disabled when the comparison was not saved in Supabase;
+- `src/components/arena/prompt-arena-voting.tsx` is now only a compatibility alias;
+- `README.md`, `AGENTS.md` and `15-changelog.md` are updated to `v0.5.3`;
+- temporary addendum/status files were integrated, archived or removed.
 
 ## Required verification
 
@@ -72,4 +66,4 @@ npm run smoke
 
 ## Rule for Codex
 
-Until `README.md` and `AGENTS.md` are updated, this file and `08-database.md` should be treated as the more current project status for Supabase and voting work.
+`14-roadmap.md` is the main project status source. This file is now a historical audit/stabilization record for the v0.5.3 voting work.

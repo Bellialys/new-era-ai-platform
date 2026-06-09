@@ -37,7 +37,7 @@ export function ArenaForm({
           </p>
         </div>
         <span className="rounded-full bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-100">
-          v0.4
+          v0.5.3
         </span>
       </div>
 

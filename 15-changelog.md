@@ -7,8 +7,40 @@
 ## Текущая версия
 
 ```text
-v0.5.2 - Supabase, migrations and health stabilization
-# текущий стабильный фундамент проекта по 14-roadmap.md
+v0.5.3 - Voting MVP stabilization
+# текущий стабильный MVP-релиз по 14-roadmap.md
+```
+
+## v0.5.3 - Voting MVP Stabilization
+
+Дата: 2026-06-10
+
+### Added
+
+- Добавлен минимальный GitHub Actions CI.
+- Добавлена migration metadata для будущего model catalog governance через `raw_metadata`.
+
+### Changed
+
+- Основная Prompt Arena теперь сохраняет Winner vote через `POST /api/vote`.
+- `/arena-voting` оставлен как совместимый маршрут без отдельной копии voting-логики.
+- README, roadmap, AGENTS и package metadata синхронизированы на `v0.5.3`.
+- `README-status-v0-5-3.md` перенесён в `archive/`.
+- Смысл `15-changelog-addendum.md` и `32-model-catalog-governance-addendum.md` перенесён в основные документы.
+
+### Fixed
+
+- Убрано состояние, где Winner-кнопка была видимой, но сохраняла выбор только локально.
+- Model catalog больше не утверждает live-verification OpenRouter IDs без фактической проверки API.
+
+### Verified
+
+```bash
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+npm run smoke
 ```
 
 ## v0.5.2 - Supabase, migrations and health stabilization
@@ -69,7 +101,7 @@ npm run smoke
 
 - Версия в `package.json` и `package-lock.json` поднята до `0.5.0`.
 - Документация синхронизирована с фактической схемой `prompt_text`, `response_text`, `role_tags`, `price_label`.
-- Roadmap теперь отмечает `v0.5` как текущий этап, а `v0.6 Voting MVP` как следующий.
+- На момент `v0.5.0` roadmap отмечал `v0.5` как текущий этап, а Voting MVP как следующий крупный шаг.
 
 ### Fixed
 

@@ -73,7 +73,8 @@ Backend вызывает OpenRouter API.
 | `v0.3` | UI MVP для Prompt Arena | Нужен первый видимый интерфейс |
 | `v0.4` | OpenRouter Integration | Нужны реальные ответы моделей |
 | `v0.5` | Supabase Persistence | Нужно сохранять задачи и ответы |
-| `v0.6` | Saved Voting | Нужно сохранять выбор лучшего ответа |
+| `v0.5.3` | Saved Voting | Нужно сохранять выбор лучшего ответа |
+| `v0.6` | Auth, Guest Mode and Profile | Нужна связь задач с пользователем или anonymous session |
 | `v0.7` | History | Нужна история сравнений |
 | `v1.0` | Stable Prompt Arena | Первый стабильный рабочий MVP |
 | `v1.1` | Code Arena Lite | Режим кода без запуска чужого кода |
@@ -223,16 +224,13 @@ v0.3 - UI MVP
 v0.4 - OpenRouter Integration
 # реальные ответы моделей
 
-v0.5.2 - Supabase, migrations and health stabilization
-# сохранение задач и ответов, health-check, smoke-check и выровненные migrations
+v0.5.3 - Voting MVP stabilization
+# сохранение задач, ответов и Winner vote, health-check, smoke-check и выровненные migrations
 
 v0.6 - Auth, Guest Mode and Profile
 # владелец задачи: пользователь или anonymous session
 
-v0.7 - Voting MVP
-# сохранение выбора лучшего ответа через votes.model_response_id
-
-v0.8 - History
+v0.7 - History
 # история сравнений
 
 v1.0 - Stable Prompt Arena

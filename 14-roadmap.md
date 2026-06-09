@@ -11,8 +11,8 @@
 ## Текущий статус
 
 ```text
-v0.5.2 - Supabase, migrations and health stabilization
-# текущий стабильный фундамент проекта
+v0.5.3 - Voting MVP stabilization
+# текущий стабильный MVP-релиз перед v0.6
 ```
 
 Сейчас уже есть:
@@ -22,6 +22,7 @@ v0.5.2 - Supabase, migrations and health stabilization
 - `/api/models`;
 - `/api/compare`;
 - `/api/health`;
+- `/api/vote`;
 - OpenRouter на backend;
 - Supabase PostgreSQL migrations;
 - `/api/models` читает Supabase catalog с hardcoded fallback;
@@ -32,10 +33,13 @@ v0.5.2 - Supabase, migrations and health stabilization
 - server-only Supabase client;
 - browser-side Supabase client только с publishable key;
 - best-effort сохранение `tasks` и `model_responses`;
+- сохранение Winner vote из основной Prompt Arena через `POST /api/vote`;
 - profiles/grants migrations;
 - синхронизированная история Supabase migrations;
 - исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`;
-- smoke-check script `npm run smoke`.
+- smoke-check script `npm run smoke`;
+- минимальный GitHub Actions CI;
+- подготовленные governance metadata для model catalog без утверждения live-verification OpenRouter IDs.
 
 Следующий главный этап:
 
@@ -63,10 +67,11 @@ v0.6 - Auth, Guest Mode and Profile
 | `v0.5` | Supabase Integration | Модели, задачи и ответы через Supabase | Готово |
 | `v0.5.1` | Migration Sync | Репозиторий и remote Supabase migrations синхронизированы | Готово |
 | `v0.5.2` | Health and Voting Foundation | `/api/health`, smoke-check, исправленная база votes | Готово |
+| `v0.5.3` | Voting MVP Stabilization | Основная Prompt Arena сохраняет Winner vote через `/api/vote`, добавлен CI | Текущий стабильный MVP |
 | `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, ограничения моделей | Следующий этап |
-| `v0.7` | Voting MVP | `/api/vote` и сохранение выбора лучшего ответа | Позже |
-| `v0.8` | History MVP | История сравнений | Позже |
-| `v0.9` | First Deploy Stabilization | Проверка production, env, smoke, UX | Позже |
+| `v0.7` | History MVP | История сравнений | Позже |
+| `v0.8` | First Deploy Stabilization | Проверка production, env, smoke, UX | Позже |
+| `v0.9` | Stable Prompt Arena hardening | Финальная стабилизация перед v1.0 | Позже |
 | `v1.0` | Stable Prompt Arena | Первая стабильная версия MVP | Позже |
 | `v1.1` | Code Arena Lite | Сравнение решений по коду без запуска кода | Позже |
 | `v1.2` | Multi Model Battle | Формальные бои моделей | Позже |
@@ -210,6 +215,22 @@ npm run build
 - старые широкие индексы votes удалены;
 - новые индексы разделяют `best` и `like/dislike` reactions.
 
+## v0.5.3 - Voting MVP Stabilization
+
+Цель: закрыть текущий MVP-этап без запуска v0.6.
+
+Готово:
+
+- основная `/arena` сохраняет Winner vote через `POST /api/vote`;
+- `/arena-voting` больше не содержит отдельную копию бизнес-логики;
+- UI показывает состояние сохранения, успех и ошибку Winner vote;
+- кнопка Winner отключена, если сравнение не сохранено в Supabase и голос нельзя записать в БД;
+- `README.md`, `AGENTS.md`, `15-changelog.md` и package metadata синхронизированы на `v0.5.3`;
+- добавлен минимальный GitHub Actions CI;
+- model catalog зафиксирован как Supabase-first с hardcoded fallback;
+- governance metadata для моделей подготовлены через `raw_metadata`;
+- OpenRouter model IDs оставлены с явным TODO на live-verification перед public deploy.
+
 ## v0.6 - Auth, Guest Mode and Profile
 
 Цель: сделать пользователей и гостевой режим фундаментом дальнейшего проекта.
@@ -326,19 +347,7 @@ supabase db push
 # проверить remote sync
 ```
 
-## v0.7 - Voting MVP
-
-Цель: сохранить выбор лучшего ответа через backend.
-
-Что сделать:
-
-- создать `/api/vote`;
-- принимать `taskId`, `modelResponseId`, `voteType`;
-- сохранять `best` vote в таблицу `votes`;
-- не давать голосовать за error response;
-- показывать выбранного победителя после сохранения.
-
-## v0.8 - History MVP
+## v0.7 - History MVP
 
 Цель: дать пользователю открыть прошлые сравнения.
 
@@ -349,7 +358,7 @@ supabase db push
 - создать `/api/history/[taskId]`;
 - показывать task, responses, vote.
 
-## v0.9 - First Deploy Stabilization
+## v0.8 - First Deploy Stabilization
 
 Цель: стабилизировать production после добавления аккаунтов.
 

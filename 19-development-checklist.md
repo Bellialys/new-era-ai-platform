@@ -9,8 +9,8 @@
 ## Текущий статус
 
 ```text
-v0.5.2 - Supabase, migrations and health stabilization
-# текущий стабильный фундамент проекта
+v0.5.3 - Voting MVP stabilization
+# текущий стабильный MVP-релиз перед v0.6
 ```
 
 Следующий этап:
@@ -43,15 +43,18 @@ v0.6 - Auth, Guest Mode and Profile
 - [x] Best-effort сохранение model responses в `/api/compare`.
 - [x] Возврат `taskId` из `/api/compare`, если persistence доступен.
 - [x] Исправленная схема `votes` на `model_response_id` и `vote_type = best | like | dislike`.
+- [x] Основная Prompt Arena сохраняет Winner vote через `/api/vote`.
+- [x] UI показывает saving/success/error для Winner vote.
 - [x] Smoke-check script `npm run smoke`.
+- [x] Минимальный GitHub Actions CI.
 - [x] `package-lock.json`.
 
 ## Не готово
 
 - [ ] Полный Auth/Guest/Profile этап `v0.6`.
-- [ ] Стабильный пользовательский Voting MVP `v0.7`.
-- [ ] Страница истории `v0.8`.
-- [ ] Production deploy stabilization `v0.9`.
+- [ ] Страница истории `v0.7`.
+- [ ] Production deploy stabilization `v0.8`.
+- [ ] Stable Prompt Arena hardening `v0.9`.
 - [ ] Stable Prompt Arena `v1.0`.
 
 ## Проверка перед каждым commit

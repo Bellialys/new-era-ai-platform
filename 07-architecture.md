@@ -665,14 +665,14 @@ Runner запрещён до v1.7.
 # Prompt Arena получает ответы моделей через OpenRouter
 ```
 
-## v0.5.2 - Supabase, migrations and health stabilization
+## v0.5.3 - Voting MVP stabilization
 
 ```text
 Цель:
-# сохранять задачи и ответы в базу, держать migrations и health/smoke checks стабильными
+# сохранять задачи, ответы и Winner vote, держать migrations и health/smoke checks стабильными
 
 Результат:
-# tasks и model_responses заполняются после сравнения, /api/health проверяет базовую готовность
+# tasks, model_responses и votes работают в основном Prompt Arena MVP
 ```
 
 ## v0.6 - Auth, Guest Mode and Profile
@@ -685,17 +685,7 @@ Runner запрещён до v1.7.
 # задачи и голоса можно связывать с user_id или anonymous_session_id
 ```
 
-## v0.7 - Voting MVP
-
-```text
-Цель:
-# дать пользователю выбрать лучший ответ
-
-Результат:
-# votes сохраняет голос пользователя через model_response_id
-```
-
-## v0.8 - History
+## v0.7 - History
 
 ```text
 Цель:
@@ -705,7 +695,7 @@ Runner запрещён до v1.7.
 # пользователь может открыть прошлые сравнения
 ```
 
-## v0.9 - First Deploy Stabilization
+## v0.8 - First Deploy Stabilization
 
 ```text
 Цель:

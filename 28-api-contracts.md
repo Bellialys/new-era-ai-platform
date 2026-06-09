@@ -121,7 +121,7 @@ server-side allowlist -> frontend
 - выбирать можно только response со статусом `success`;
 - голос должен принадлежать authenticated user или guest через `anonymousSessionId`;
 - актуальная схема БД использует `votes.model_response_id` и `vote_type = 'best'`;
-- старое значение `winner` может поддерживаться только как compatibility alias на backend.
+- старое значение `winner` не должно использоваться в новом frontend-коде или документации.
 
 Минимальный ответ:
 

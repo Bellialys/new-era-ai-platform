@@ -6,10 +6,24 @@ type ArenaResultsProps = {
   isLoading: boolean;
   loadingModelNames: string[];
   winnerResponseId: string | null;
-  onSelectWinner: (responseId: string) => void;
+  canSaveWinner: boolean;
+  voteStatus: "idle" | "saving" | "success" | "error";
+  voteMessage: string | null;
+  savingVoteResponseId: string | null;
+  onSelectWinner: (responseId: string) => void | Promise<void>;
 };
 
-export function ArenaResults({ responses, isLoading, loadingModelNames, winnerResponseId, onSelectWinner }: ArenaResultsProps) {
+export function ArenaResults({
+  responses,
+  isLoading,
+  loadingModelNames,
+  winnerResponseId,
+  canSaveWinner,
+  voteStatus,
+  voteMessage,
+  savingVoteResponseId,
+  onSelectWinner,
+}: ArenaResultsProps) {
   if (isLoading) {
     return (
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur">
@@ -76,11 +90,27 @@ export function ArenaResults({ responses, isLoading, loadingModelNames, winnerRe
           )}
         </div>
       </div>
+      {voteMessage ? (
+        <div
+          className={
+            voteStatus === "error"
+              ? "rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100"
+              : voteStatus === "success"
+                ? "rounded-2xl border border-emerald-300/30 bg-emerald-500/10 p-4 text-sm text-emerald-100"
+                : "rounded-2xl border border-white/10 bg-white/[0.06] p-4 text-sm text-slate-200"
+          }
+        >
+          {voteMessage}
+        </div>
+      ) : null}
       {responses.map((response) => (
         <ResponseCard
           key={response.id}
           response={response}
           isWinner={winnerResponseId === response.id}
+          canSaveWinner={canSaveWinner}
+          isSavingWinner={savingVoteResponseId === response.id}
+          isVoteLocked={voteStatus === "saving"}
           onSelectWinner={onSelectWinner}
         />
       ))}

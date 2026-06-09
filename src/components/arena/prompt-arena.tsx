@@ -16,9 +16,23 @@ import { ArenaForm } from "./arena-form";
 import { ArenaResults } from "./arena-results";
 
 const MAX_MODELS_ERROR_MESSAGE = "В MVP можно выбрать максимум три модели.";
+const ANONYMOUS_SESSION_STORAGE_KEY = "new-era-anonymous-session-id";
+
+type VoteStatus = "idle" | "saving" | "success" | "error";
 
 function getDefaultModelIds(models: ArenaModel[]) {
   return models.slice(0, MODEL_MAX_SELECT).map((model) => model.id);
+}
+
+function getOrCreateAnonymousSessionId() {
+  const existingSessionId = window.localStorage.getItem(ANONYMOUS_SESSION_STORAGE_KEY);
+  if (existingSessionId) {
+    return existingSessionId;
+  }
+
+  const newSessionId = crypto.randomUUID();
+  window.localStorage.setItem(ANONYMOUS_SESSION_STORAGE_KEY, newSessionId);
+  return newSessionId;
 }
 
 export function PromptArena() {
@@ -28,8 +42,12 @@ export function PromptArena() {
 
   const [prompt, setPrompt] = useState("");
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
+  const [taskId, setTaskId] = useState<string | null>(null);
   const [responses, setResponses] = useState<ArenaResponseView[]>([]);
   const [winnerResponseId, setWinnerResponseId] = useState<string | null>(null);
+  const [voteStatus, setVoteStatus] = useState<VoteStatus>("idle");
+  const [voteMessage, setVoteMessage] = useState<string | null>(null);
+  const [savingVoteResponseId, setSavingVoteResponseId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -88,8 +106,12 @@ export function PromptArena() {
     requestIdRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    setTaskId(null);
     setResponses([]);
     setWinnerResponseId(null);
+    setVoteStatus("idle");
+    setVoteMessage(null);
+    setSavingVoteResponseId(null);
     setIsLoading(false);
   }
 
@@ -155,7 +177,11 @@ export function PromptArena() {
     abortControllerRef.current = abortController;
 
     setErrorMessage(null);
+    setVoteStatus("idle");
+    setVoteMessage(null);
+    setSavingVoteResponseId(null);
     setIsLoading(true);
+    setTaskId(null);
     setResponses([]);
     setWinnerResponseId(null);
 
@@ -192,6 +218,7 @@ export function PromptArena() {
 
         const data = (await response.json()) as {
           status: string;
+          taskId?: string | null;
           responses: ArenaApiResponse[];
         };
 
@@ -199,7 +226,14 @@ export function PromptArena() {
           throw new Error("Invalid API response format");
         }
 
+        setTaskId(data.taskId ?? null);
         setResponses(buildResponseViews(data.responses));
+        if (!data.taskId) {
+          setVoteStatus("error");
+          setVoteMessage(
+            "Winner voting недоступен: сравнение не сохранено в Supabase."
+          );
+        }
       } catch (error) {
         if (requestIdRef.current !== requestId) {
           return;
@@ -220,6 +254,56 @@ export function PromptArena() {
     })();
   }
 
+  async function handleSelectWinner(responseId: string) {
+    if (!taskId) {
+      setVoteStatus("error");
+      setVoteMessage(
+        "Winner voting недоступен: сравнение не сохранено в Supabase."
+      );
+      return;
+    }
+
+    setVoteStatus("saving");
+    setVoteMessage("Сохраняем Winner vote...");
+    setSavingVoteResponseId(responseId);
+
+    try {
+      const response = await fetch("/api/vote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          taskId,
+          responseId,
+          voteType: "best",
+          anonymousSessionId: getOrCreateAnonymousSessionId(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = (await response.json()) as {
+          message?: string;
+        };
+        throw new Error(errorData.message || "Не удалось сохранить Winner vote.");
+      }
+
+      setWinnerResponseId(responseId);
+      setVoteStatus("success");
+      setVoteMessage("Winner vote сохранён.");
+    } catch (error) {
+      console.error("Error saving winner vote:", error);
+      setVoteStatus("error");
+      setVoteMessage(
+        error instanceof Error
+          ? error.message
+          : "Не удалось сохранить Winner vote."
+      );
+    } finally {
+      setSavingVoteResponseId(null);
+    }
+  }
+
   function handleReset() {
     requestIdRef.current += 1;
     abortControllerRef.current?.abort();
@@ -231,8 +315,12 @@ export function PromptArena() {
     } else {
       setSelectedModelIds([]);
     }
+    setTaskId(null);
     setResponses([]);
     setWinnerResponseId(null);
+    setVoteStatus("idle");
+    setVoteMessage(null);
+    setSavingVoteResponseId(null);
     setErrorMessage(null);
     setIsLoading(false);
   }
@@ -260,7 +348,11 @@ export function PromptArena() {
           .filter((m) => selectedModelIds.includes(m.id))
           .map((m) => m.name)}
         winnerResponseId={winnerResponseId}
-        onSelectWinner={setWinnerResponseId}
+        canSaveWinner={Boolean(taskId)}
+        voteStatus={voteStatus}
+        voteMessage={voteMessage}
+        savingVoteResponseId={savingVoteResponseId}
+        onSelectWinner={handleSelectWinner}
       />
     </section>
   );

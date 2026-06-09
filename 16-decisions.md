@@ -749,7 +749,7 @@ Fallback mode: modelIds = OpenRouter model keys из hardcoded allowlist
 
 ## Когда пересмотреть
 
-После `v0.6 Voting MVP` проверить, можно ли сделать Supabase catalog обязательным для production deploy, оставив fallback только для local/dev.
+После `v0.5.3 Voting MVP stabilization` и перед public production deploy проверить, можно ли сделать Supabase catalog обязательным, оставив fallback только для local/dev.
 
 ---
 

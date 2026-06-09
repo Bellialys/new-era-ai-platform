@@ -106,13 +106,13 @@ v0.5.1 - Migration Sync
 v0.5.2 - Health and Voting Foundation
 # health route, smoke-check, исправленная база votes
 
+v0.5.3 - Voting MVP Stabilization
+# основная Prompt Arena сохраняет Winner vote, CI добавлен
+
 v0.6 - Auth, Guest Mode and Profile
 # гостевой режим, регистрация, профиль
 
-v0.7 - Voting MVP
-# сохранение выбора лучшего ответа
-
-v0.8 - History MVP
+v0.7 - History MVP
 # история сравнений
 
 v0.9 - First Deploy Stabilization
@@ -1230,7 +1230,7 @@ Build проходит без ошибок.
 
 ---
 
-# Актуализация деплоя v0.5.2
+# Актуализация деплоя v0.5.3
 
 Перед деплоем на Vercel нужно убедиться, что локально проходят проверки:
 
@@ -1246,9 +1246,12 @@ npm run test
 
 npm run build
 # проверяет production-сборку
+
+npm run smoke
+# проверяет health/models smoke-check
 ```
 
-Минимальные переменные Vercel для v0.5.2:
+Минимальные переменные Vercel для v0.5.3:
 
 ```text
 OPENROUTER_API_KEY

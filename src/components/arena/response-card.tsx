@@ -3,12 +3,28 @@ import type { ArenaResponseView } from "@/types/arena";
 type ResponseCardProps = {
   response: ArenaResponseView;
   isWinner: boolean;
-  onSelectWinner: (responseId: string) => void;
+  canSaveWinner: boolean;
+  isSavingWinner: boolean;
+  isVoteLocked: boolean;
+  onSelectWinner: (responseId: string) => void | Promise<void>;
 };
 
-export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCardProps) {
+export function ResponseCard({
+  response,
+  isWinner,
+  canSaveWinner,
+  isSavingWinner,
+  isVoteLocked,
+  onSelectWinner,
+}: ResponseCardProps) {
   const responseText = response.answerText ?? response.errorMessage ?? "Модель не вернула ответ.";
-  const canSelectWinner = response.status === "success";
+  const canSelectWinner = response.status === "success" && canSaveWinner;
+  const isDisabled = !canSelectWinner || isVoteLocked || isWinner;
+  const winnerButtonLabel = isSavingWinner
+    ? "Сохраняем Winner..."
+    : isWinner
+      ? "Winner сохранён"
+      : "Сохранить Winner";
 
   return (
     <article
@@ -56,13 +72,18 @@ export function ResponseCard({ response, isWinner, onSelectWinner }: ResponseCar
       </div>
 
       <button
-        disabled={!canSelectWinner}
+        disabled={isDisabled}
         onClick={() => onSelectWinner(response.id)}
         className="mt-5 rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
       >
-        {isWinner ? "Выбрано победителем" : "Выбрать победителем"}
+        {winnerButtonLabel}
       </button>
+      {response.status === "success" && !canSaveWinner ? (
+        <p className="mt-2 text-xs text-amber-100">
+          Winner voting появится после успешного сохранения сравнения в Supabase.
+        </p>
+      ) : null}
     </article>
   );
 }

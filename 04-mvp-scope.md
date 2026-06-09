@@ -108,10 +108,11 @@ v1.0 - Stable Prompt Arena
 | `v0.5` | Supabase Integration | Подключена база Supabase PostgreSQL |
 | `v0.5.1` | Migration Sync | Репозиторий и remote Supabase migrations синхронизированы |
 | `v0.5.2` | Health and Voting Foundation | `/api/health`, smoke-check, исправленная база votes |
+| `v0.5.3` | Voting MVP Stabilization | Основная Prompt Arena сохраняет Winner vote через `/api/vote` |
 | `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, ограничения моделей |
-| `v0.7` | Voting MVP | `/api/vote` и сохранение выбора лучшего ответа |
-| `v0.8` | History MVP | Можно посмотреть прошлые сравнения |
-| `v0.9` | First Deploy Stabilization | Проверка production, env, smoke, UX |
+| `v0.7` | History MVP | Можно посмотреть прошлые сравнения |
+| `v0.8` | First Deploy Stabilization | Проверка production, env, smoke, UX |
+| `v0.9` | Stable Prompt Arena hardening | Финальная стабилизация перед v1.0 |
 | `v1.0` | Stable Prompt Arena | Первая стабильная рабочая версия проекта |
 
 ---
@@ -454,7 +455,7 @@ Stable Prompt Arena готова, если:
 
 ---
 
-# Актуализация v0.5.2
+# Актуализация v0.5.3
 
 Текущий проект уже прошёл стадию чистого Static UI MVP.
 
@@ -473,9 +474,11 @@ Stable Prompt Arena готова, если:
 - сохранение token usage в `model_responses`, когда Supabase настроен;
 - миграции `profiles` и grants;
 - `/api/health`;
+- `/api/vote`;
 - smoke-check script `npm run smoke`;
 - синхронизированная история Supabase migrations;
-- исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`.
+- исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`;
+- сохранение Winner vote из основной Prompt Arena.
 
 Следующая граница MVP:
 

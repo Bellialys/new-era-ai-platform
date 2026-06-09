@@ -7,7 +7,7 @@
 Текущий статус:
 
 ```text
-v0.5.2
+v0.5.3
 # модели подключаются через OpenRouter, Supabase catalog и server-side fallback allowlist
 # 14-roadmap.md остаётся главным источником текущего статуса
 ```
@@ -35,11 +35,13 @@ Backend вызывает OpenRouter.
 # API-ключ не попадает в браузер
 ```
 
-## Текущие модели v0.5.2
+## Текущие модели v0.5.3
 
 Каталог моделей берётся из `public.models`, если Supabase настроен и таблица доступна.
 
-Fallback список находится в `src/lib/server/models.ts` и содержит curated free OpenRouter text/chat models.
+Fallback список находится в `src/lib/server/models.ts` и содержит curated free OpenRouter text/chat model keys.
+
+Важно: OpenRouter model IDs нужно проверить live перед public deploy. В `v0.5.3` в документации и metadata оставлен явный TODO, а проект не утверждает, что эти IDs проверены без OpenRouter API key.
 
 Начало fallback списка:
 

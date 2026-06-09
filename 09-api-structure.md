@@ -7,8 +7,8 @@
 Текущий статус:
 
 ```text
-v0.5.2
-# GET /api/models, POST /api/compare, GET /api/health и /api/vote foundation реализованы
+v0.5.3
+# GET /api/models, POST /api/compare, GET /api/health и POST /api/vote реализованы
 # 14-roadmap.md остаётся главным источником статуса этапов
 ```
 
@@ -35,7 +35,7 @@ Database использует snake_case.
 | `/api/models` | GET | Реализовано | Получить список разрешённых моделей |
 | `/api/compare` | POST | Реализовано | Отправить prompt нескольким моделям |
 | `/api/health` | GET | Реализовано | Проверить базовое состояние приложения |
-| `/api/vote` | POST | Foundation | Сохранить best vote через backend route |
+| `/api/vote` | POST | Реализовано | Сохранить best vote через backend route |
 
 ## GET /api/models
 
@@ -181,8 +181,8 @@ modelIds = OpenRouter model keys из hardcoded allowlist.
 
 | Route | Метод | Этап | Назначение |
 |---|---|---|---|
-| `/api/history` | GET | v0.8 | Получить историю сравнений |
-| `/api/history/[taskId]` | GET | v0.8 | Открыть одно сравнение |
+| `/api/history` | GET | v0.7 | Получить историю сравнений |
+| `/api/history/[taskId]` | GET | v0.7 | Открыть одно сравнение |
 | `/api/admin/models` | CRUD | v1.5 | Управление моделями |
 | `/api/image-arena/generate` | POST | v1.7 | Сгенерировать изображения для будущей Image Arena |
 

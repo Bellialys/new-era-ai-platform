@@ -49,6 +49,38 @@ Endpoint должен возвращать только модели, досту
 
 ---
 
+## 3.1. MVP status v0.5.3
+
+`32-model-catalog-governance.md` описывает целевой стандарт зрелого каталога моделей.
+
+Текущая MVP-схема меньше и использует:
+
+- `model_key`;
+- `provider`;
+- `display_name`;
+- `description`;
+- `price_label`;
+- `is_active`;
+- `is_public`;
+- `role_tags`;
+- `context_length`;
+- `max_output_tokens`;
+- `raw_metadata`.
+
+Не нужно добавлять все governance-поля в таблицу сразу. В `v0.5.3` подготовительные значения для будущего governance хранятся в `raw_metadata`:
+
+- `pricing_type`;
+- `status`;
+- `supports_text`;
+- `supports_code`;
+- `supports_image_input`;
+- `supports_image_generation`;
+- `verification_status`.
+
+Важно: в этом репозитории нет OpenRouter API key, поэтому model IDs не считаются live-verified в рамках `v0.5.3`. Перед public deploy нужно отдельно проверить ключи через OpenRouter `/api/v1/models` и обновить `verification_status`.
+
+---
+
 ## 4. Обязательные поля модели
 
 | Поле | Обязательно | Назначение |

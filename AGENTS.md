@@ -13,8 +13,8 @@
 ## Текущий статус проекта
 
 ```text
-v0.5.2 - Supabase, migrations and health stabilization
-# текущий стабильный фундамент проекта
+v0.5.3 - Voting MVP stabilization
+# текущий стабильный MVP-релиз перед v0.6
 ```
 
 Следующий главный этап:
@@ -65,7 +65,7 @@ src/app/api/health/route.ts
 # базовая диагностика health/configuration
 
 src/app/api/vote/route.ts
-# будущий Voting MVP endpoint поверх server-side votes helper
+# сохранение Winner vote поверх server-side votes helper
 
 src/lib/server/models.ts
 # server-side fallback allowlist
@@ -97,7 +97,7 @@ src/components/arena
 
 ## Важное правило по моделям
 
-В основном режиме `v0.5.2`:
+В основном режиме `v0.5.3`:
 
 ```text
 modelIds = Supabase models.id UUID

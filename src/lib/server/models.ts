@@ -1,20 +1,21 @@
 /**
  * Hardcoded model list — the offline fallback for the model catalog.
  *
- * In v0.5 the live catalog is read from Supabase (see model-catalog.ts). This
+ * In v0.5.3 the live catalog is read from Supabase (see model-catalog.ts). This
  * list is used only when Supabase is not configured or the `models` table is
  * empty, so the app still works without a database.
  *
- * IMPORTANT: Verify model IDs against OpenRouter before deploying:
+ * TODO(v0.5.3): verify model IDs against OpenRouter before public deploy:
  * curl https://openrouter.ai/api/v1/models -H "Authorization: Bearer $OPENROUTER_API_KEY"
  */
 
 import type { ArenaModel } from "@/types/arena";
 
-// Curated set of free OpenRouter text/chat models (verified against the live
-// /api/v1/models list). Order matters: the UI preselects the first models, so
-// the most reliable general-purpose models come first. Non-chat free models
-// (audio, content-safety classifiers, routers) are intentionally excluded.
+// Curated set of free OpenRouter text/chat model keys mirrored by
+// supabase/migrations/0002_sync_free_models.sql. The keys must be verified
+// against OpenRouter before public deploy; this repository does not store an
+// API key and should not claim live verification without running that check.
+// Order matters: the UI preselects the first models.
 export const ALLOWED_MODELS: ArenaModel[] = [
   // --- General-purpose (default selection) ---
   {

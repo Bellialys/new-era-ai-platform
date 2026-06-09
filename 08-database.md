@@ -7,7 +7,7 @@
 Текущий статус документа:
 
 ```text
-v0.5.2
+v0.5.3
 # Supabase MVP: models, tasks, model_responses, profiles, votes
 # task_text является каноническим полем текста задачи
 # votes использует model_response_id и vote_type: best, like, dislike
@@ -335,7 +335,7 @@ create table public.votes (
 # это финальное выравнивание индексов votes под best/like/dislike
 ```
 
-## Что уже сделано в v0.5.2
+## Что уже сделано в v0.5.3
 
 1. Созданы таблицы `models`, `tasks`, `model_responses`, `profiles`, `votes`.
 2. Включён RLS на основных публичных таблицах.
@@ -352,10 +352,12 @@ create table public.votes (
 13. История миграций Supabase синхронизирована с репозиторием.
 14. Старые локальные миграции `0007` и `0008` удалены из репозитория.
 15. Server-side voting helper переведён на актуальную схему `model_response_id` и `best`.
+16. Основная Prompt Arena сохраняет Winner vote через `POST /api/vote`, если `/api/compare` вернул сохранённый `taskId`.
+17. Model catalog governance metadata подготовлены через `raw_metadata` без изменения `model_key`.
 
 ## Будущие сущности Image Arena / Visual Arena
 
-Image Arena не входит в текущий обязательный scope Prompt Arena MVP. Нельзя менять scope `v0.5.2` так, будто визуальная генерация уже нужна сейчас.
+Image Arena не входит в текущий обязательный scope Prompt Arena MVP. Нельзя менять scope `v0.5.3` так, будто визуальная генерация уже нужна сейчас.
 
 После стабильной Prompt Arena можно добавить отдельные сущности:
 
