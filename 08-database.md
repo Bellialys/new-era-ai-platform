@@ -2,78 +2,108 @@
 
 ## Назначение файла
 
-Этот файл описывает текущую и будущую структуру Supabase для проекта **Новая эпоха**.
+Этот файл описывает структуру Supabase PostgreSQL для проекта **Новая эпоха**.
 
-Текущий статус:
+Текущий статус документа:
 
 ```text
-v0.5.0
-# Supabase Integration: models, tasks, model_responses и profiles описаны миграциями
+v0.5.1
+# Supabase MVP: models, tasks, model_responses, profiles, votes
+# task_text является каноническим полем текста задачи
 ```
 
 ## Главная идея базы
 
-База должна хранить:
+База хранит:
 
 - пользователей и профили;
 - доступные AI-модели;
 - задачи пользователя;
 - ответы моделей;
-- выбор лучшего ответа в будущем `votes`;
-- историю сравнений в будущем History MVP.
+- голосование за лучший ответ;
+- историю сравнений для будущего History MVP;
+- технические данные для аудита запусков и отладки ошибок.
 
 ## Важное правило по modelIds
 
-В текущем MVP `modelIds` работает в двух безопасных режимах.
+В MVP `modelIds` работает в двух безопасных режимах.
 
 Основной режим Supabase:
 
 ```text
 Frontend получает models.id из GET /api/models.
-# это публичный UUID из Supabase
+# это публичный UUID модели внутри проекта
 
 Backend по models.id находит models.model_key.
-# OpenRouter key остаётся только на сервере
+# OpenRouter model key остаётся на сервере
 ```
 
 Fallback режим:
 
 ```text
-Если Supabase не настроен или catalog недоступен, GET /api/models возвращает hardcoded allowlist.
-# в этом режиме modelIds временно равны OpenRouter model keys из server-side fallback
+Если Supabase не настроен или каталог моделей недоступен, GET /api/models возвращает hardcoded allowlist.
+# в fallback-режиме selectionId может быть временно равен OpenRouter model key из server-side списка
 ```
 
-В обоих режимах backend повторно проверяет выбранные модели и не принимает произвольный model key.
+В обоих режимах backend повторно проверяет выбранные модели и не принимает произвольный model key от клиента.
+
+## Правило по тексту задачи
+
+Каноническое поле текста задачи:
+
+```text
+tasks.task_text
+# единое поле для Prompt Arena и будущих Arena-режимов
+```
+
+Не использовать в новом коде:
+
+```text
+prompt_text
+# старое имя поля, оставалось только как временная совместимость
+```
+
+Переход был сделан через две стадии:
+
+1. Добавить `task_text`, синхронизировать его с `prompt_text` и сохранить обратную совместимость.
+2. Перевести код на `task_text`, затем удалить `prompt_text` миграцией `20260609055000_drop_prompt_text.sql`.
 
 ## Основные таблицы
 
 ## 1. profiles
 
-Профили пользователей.
+Профили пользователей Supabase Auth.
 
 | Поле | Тип | Назначение |
 |---|---|---|
 | `id` | uuid | ID пользователя из Supabase Auth |
-| `email` | text | Email пользователя, если Supabase Auth его передал |
-| `display_name` | text | Имя пользователя в интерфейсе |
+| `email` | text null | Email пользователя |
+| `display_name` | text null | Имя пользователя в интерфейсе |
 | `created_at` | timestamptz | Дата создания |
 | `updated_at` | timestamptz | Дата обновления |
 
-На раннем MVP можно временно работать без авторизации и писать `user_id = null` в таблице `tasks`.
+Связь:
+
+```text
+profiles.id -> auth.users.id
+# профиль привязан к пользователю Supabase Auth
+```
+
+На раннем MVP приложение может работать без авторизации. В таком случае `tasks.user_id` может быть `null`.
 
 ## 2. models
 
-Список моделей, разрешённых для использования.
+Список моделей, разрешённых для использования в проекте.
 
 | Поле | Тип | Назначение |
 |---|---|---|
 | `id` | uuid | Публичный ID модели внутри проекта |
-| `provider` | text | Например `openrouter` |
-| `model_key` | text | Технический ID модели в OpenRouter |
+| `provider` | text | Провайдер, например `openrouter` |
+| `model_key` | text | Технический ID модели у провайдера |
 | `display_name` | text | Название модели в UI |
-| `description` | text | Описание модели |
-| `price_label` | text | `free`, `cheap`, `balanced`, `expensive` или `unknown` |
-| `is_active` | boolean | Доступна ли модель |
+| `description` | text null | Описание модели |
+| `price_label` | text | `free`, `cheap`, `balanced`, `expensive`, `unknown` |
+| `is_active` | boolean | Можно ли использовать модель |
 | `is_public` | boolean | Показывать ли модель в публичном каталоге |
 | `role_tags` | text[] | Теги роли: `general`, `fast`, `coding`, `reasoning` и т.д. |
 | `context_length` | integer null | Контекст модели, если известен |
@@ -89,7 +119,7 @@ Fallback режим:
 
 ```text
 model_key нельзя доверять с frontend.
-# пользователь не должен отправлять OpenRouter key напрямую после v0.5
+# frontend должен работать через models.id, а backend сам резолвит model_key
 ```
 
 ## 3. tasks
@@ -100,10 +130,10 @@ model_key нельзя доверять с frontend.
 |---|---|---|
 | `id` | uuid | ID задачи |
 | `user_id` | uuid null | ID пользователя, если есть авторизация |
-| `anonymous_session_id` | text null | Будущая связь для anonymous history/session |
-| `mode_slug` | text | Например `prompt-arena` |
-| `prompt_text` | text | Текст задачи пользователя |
-| `prompt_hash` | text null | Будущий hash prompt для аналитики/дедупликации |
+| `anonymous_session_id` | text null | Связь для anonymous history/session |
+| `mode_slug` | text | Режим: `prompt-arena`, `code-arena`, `multi-model-battle`, `ai-team-mode`, `judge-mode`, `leaderboard` |
+| `task_text` | text | Текст задачи пользователя |
+| `prompt_hash` | text null | Будущий hash задачи для аналитики/дедупликации |
 | `title` | text null | Будущий заголовок истории |
 | `status` | text | `pending`, `running`, `completed`, `partial`, `failed`, `cancelled` |
 | `selected_models` | jsonb | Список выбранных model keys для аудита запуска |
@@ -112,13 +142,18 @@ model_key нельзя доверять с frontend.
 | `created_at` | timestamptz | Дата создания |
 | `updated_at` | timestamptz | Дата обновления |
 
-Правильное имя таблицы - `tasks`.
-
-Не использовать:
+Правильное имя таблицы:
 
 ```text
-prompts
-# старое и слишком узкое название
+tasks
+# не prompts, потому что задача может относиться к разным Arena-режимам
+```
+
+Ограничение для текста задачи:
+
+```text
+char_length(task_text) >= 3 and char_length(task_text) <= 8000
+# защищает от пустых и слишком больших задач на уровне БД
 ```
 
 ## 4. model_responses
@@ -129,54 +164,61 @@ prompts
 |---|---|---|
 | `id` | uuid | ID ответа |
 | `task_id` | uuid | Связь с `tasks.id` |
-| `model_id` | uuid | Связь с `models.id` |
+| `model_id` | uuid null | Связь с `models.id` |
 | `model_key` | text | OpenRouter model key, сохранённый server-side для истории |
 | `display_name` | text null | Название модели на момент ответа |
 | `response_text` | text null | Текст ответа модели |
-| `status` | text | `success`, `error`, `timeout` или `cancelled` |
-| `latency_ms` | integer null | Время ответа |
-| `input_tokens` | integer null | Input tokens из OpenRouter usage |
-| `output_tokens` | integer null | Output tokens из OpenRouter usage |
-| `total_tokens` | integer null | Total tokens из OpenRouter usage |
-| `estimated_cost` | numeric null | Будущая оценка стоимости |
-| `raw_response` | jsonb | Безопасная provider metadata |
+| `status` | text | `success`, `error`, `timeout`, `cancelled` |
 | `error_code` | text null | Код ошибки |
 | `error_message` | text null | Сообщение ошибки |
+| `latency_ms` | integer null | Время ответа |
+| `input_tokens` | integer null | Input tokens из usage |
+| `output_tokens` | integer null | Output tokens из usage |
+| `total_tokens` | integer null | Total tokens из usage |
+| `estimated_cost` | numeric null | Будущая оценка стоимости |
+| `raw_response` | jsonb | Безопасная provider metadata |
 | `created_at` | timestamptz | Дата создания |
 
-Не использовать:
+Правильная связь:
 
 ```text
-prompt_id
-# правильное поле - task_id
+model_responses.task_id -> tasks.id
+# не prompt_id
 ```
 
 ## 5. votes
 
-Выбор лучшего ответа.
-
-Статус: будущая таблица для `v0.6 Voting MVP`. В текущих обязательных миграциях Prompt Arena она не требуется.
+Голоса пользователя или anonymous session за ответы моделей.
 
 | Поле | Тип | Назначение |
 |---|---|---|
 | `id` | uuid | ID голоса |
 | `task_id` | uuid | Связь с `tasks.id` |
-| `response_id` | uuid | Связь с `model_responses.id` |
+| `model_response_id` | uuid | Связь с `model_responses.id` |
 | `user_id` | uuid null | ID пользователя, если есть авторизация |
-| `vote_type` | text | Например `winner` |
+| `anonymous_session_id` | text null | ID anonymous session, если нет авторизации |
+| `vote_type` | text | `best`, `like`, `dislike` |
+| `reason` | text null | Будущее объяснение выбора |
 | `created_at` | timestamptz | Дата создания |
+| `updated_at` | timestamptz | Дата обновления |
 
-Важно:
+Правила голосования:
 
 ```text
-Один task - один winner vote.
-# в MVP пользователь выбирает один лучший ответ
+Один task - один best vote от одного user_id.
+# пользователь выбирает один лучший ответ в сравнении
+
+Один task - один best vote от одного anonymous_session_id.
+# guest-пользователь тоже не должен голосовать много раз за лучший ответ
+
+like/dislike ограничиваются по model_response_id + voter + vote_type.
+# защита от дублей реакций
 ```
 
-## Текущий SQL-скелет v0.5
+## Текущий SQL-скелет целевого состояния
 
 ```sql
-create table models (
+create table public.models (
   id uuid primary key default gen_random_uuid(),
   provider text not null default 'openrouter',
   model_key text not null unique,
@@ -190,18 +232,18 @@ create table models (
   max_output_tokens integer,
   input_price_per_million numeric,
   output_price_per_million numeric,
-  sort_order integer not null default 0,
+  sort_order integer not null default 100,
   raw_metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create table tasks (
+create table public.tasks (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   anonymous_session_id text,
   mode_slug text not null default 'prompt-arena',
-  prompt_text text not null,
+  task_text text not null,
   prompt_hash text,
   title text,
   status text not null default 'pending',
@@ -212,51 +254,92 @@ create table tasks (
   updated_at timestamptz not null default now()
 );
 
-create table model_responses (
+create table public.model_responses (
   id uuid primary key default gen_random_uuid(),
-  task_id uuid not null references tasks(id) on delete cascade,
-  model_id uuid references models(id) on delete set null,
+  task_id uuid not null references public.tasks(id) on delete cascade,
+  model_id uuid references public.models(id) on delete set null,
   model_key text not null,
   display_name text,
-  status text not null,
-  response_text text null,
-  latency_ms integer null,
-  input_tokens integer null,
-  output_tokens integer null,
-  total_tokens integer null,
-  estimated_cost numeric null,
+  response_text text,
+  status text not null default 'success',
+  error_code text,
+  error_message text,
+  latency_ms integer,
+  input_tokens integer,
+  output_tokens integer,
+  total_tokens integer,
+  estimated_cost numeric,
   raw_response jsonb not null default '{}'::jsonb,
-  error_code text null,
-  error_message text null,
   created_at timestamptz not null default now()
+);
+
+create table public.votes (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references public.tasks(id) on delete cascade,
+  model_response_id uuid not null references public.model_responses(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
+  anonymous_session_id text,
+  vote_type text not null default 'best',
+  reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 ```
 
-## Что уже сделано в v0.5
+## Миграции
 
-1. Созданы миграции для `models`, `tasks`, `model_responses` и `profiles`.
-2. `models` заполняется curated free OpenRouter set.
-3. Добавлен server-side Supabase client.
-4. `/api/models` читает активные публичные модели из Supabase.
-5. Если Supabase недоступен, `/api/models` использует hardcoded fallback.
-6. Перед вызовом OpenRouter backend резолвит `selectionId` в server-only `model_key`.
-7. `/api/compare` best-effort сохраняет `tasks` и `model_responses`.
-8. `votes` остаётся будущим этапом `v0.6`.
+Обязательная история миграций для текущего MVP:
 
----
+| Файл | Назначение |
+|---|---|
+| `0001_prompt_arena_mvp.sql` | Базовые таблицы Prompt Arena |
+| `0002_sync_free_models.sql` | Синхронизация списка бесплатных моделей |
+| `0003_profiles.sql` | Таблица профилей |
+| `0004_profiles_grants.sql` | Grants для profiles |
+| `0005_service_role_models_select.sql` | Доступ service role к models |
+| `0006_service_role_profiles_grants.sql` | Grants для profiles/service role |
+| `20260607212653_harden_profiles_and_indexes.sql` | Усиление profiles и индексов |
+| `20260608041610_align_mvp_tasks_and_votes.sql` | Выравнивание tasks/votes под MVP |
+| `20260609054344_db_integrity_fixes.sql` | Integrity/security fixes: search_path, updated_at triggers, unique vote indexes |
+| `20260609055000_drop_prompt_text.sql` | Финальное удаление старого `prompt_text` после перехода к `task_text` |
+
+Важно:
+
+```text
+20260609054344_db_integrity_fixes.sql уже применён в Supabase.
+# файл нужен в репозитории для истории миграций
+
+20260609055000_drop_prompt_text.sql фиксирует финальный cleanup.
+# применять после деплоя кода, который пишет tasks.task_text
+```
+
+## Что уже сделано в v0.5.1
+
+1. Созданы таблицы `models`, `tasks`, `model_responses`, `profiles`, `votes`.
+2. Включён RLS на основных публичных таблицах.
+3. `models` заполняется curated OpenRouter model set.
+4. Добавлен server-side Supabase client.
+5. `/api/models` читает активные публичные модели из Supabase.
+6. Если Supabase недоступен, `/api/models` использует hardcoded fallback.
+7. Перед вызовом OpenRouter backend резолвит `selectionId` в server-only `model_key`.
+8. `/api/compare` best-effort сохраняет `tasks` и `model_responses`.
+9. `votes` подготовлена для выбора лучшего ответа и реакций.
+10. Добавлены индексы и constraints для целостности данных.
+11. Добавлены triggers для автоматического обновления `updated_at` в `tasks` и `models`.
+12. Код Prompt Arena переведён с `prompt_text` на `task_text`.
 
 ## Будущие сущности Image Arena / Visual Arena
 
-Image Arena не входит в текущие обязательные таблицы MVP. Нельзя менять scope `v0.5` так, будто визуальная генерация уже нужна сейчас.
+Image Arena не входит в текущий обязательный scope Prompt Arena MVP. Нельзя менять scope `v0.5.1` так, будто визуальная генерация уже нужна сейчас.
 
-После стабильной Prompt Arena можно добавить отдельную сущность, например:
+После стабильной Prompt Arena можно добавить отдельные сущности:
 
 ```text
 image_generations
 # записи о сгенерированных изображениях
 
 artifacts
-# более общий вариант для будущих файлов: images, documents, code outputs
+# общий вариант для будущих файлов: images, documents, code outputs
 ```
 
 Минимальная будущая структура `image_generations`:
@@ -269,7 +352,7 @@ artifacts
 | `status` | text | `success`, `error`, `timeout` |
 | `storage_bucket` | text | Bucket Supabase Storage |
 | `storage_path` | text | Путь к файлу изображения |
-| `prompt_text` | text | Визуальная идея пользователя |
+| `task_text` | text | Визуальная идея пользователя |
 | `width` | integer null | Ширина изображения |
 | `height` | integer null | Высота изображения |
 | `mime_type` | text null | Например `image/png` или `image/jpeg` |
