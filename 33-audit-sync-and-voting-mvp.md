@@ -19,10 +19,8 @@ Current practical status:
 
 - `25-definition-of-done.md`.
 - `29-database-ownership-policy.md`.
-- `28-api-contracts.md` placeholder.
-- `28-api-contracts-addendum.md` with the real MVP API details.
-- `30-data-retention-policy.md` placeholder.
-- `30-data-retention-policy-addendum.md` with the real retention rules.
+- `28-api-contracts.md` with the MVP API details.
+- `30-data-retention-policy.md` with the MVP retention rules.
 - `src/app/api/vote/route.ts` for saving the best response vote.
 
 ## Voting API

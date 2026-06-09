@@ -139,4 +139,3 @@ server-side allowlist -> frontend
 
 - `09-api-structure.md` - подробная структура API.
 - `12-security-and-env.md` - правила безопасности API и env.
-- `28-api-contracts-addendum.md` - временные заметки, которые нужно перенести в этот документ или удалить при следующей синхронизации.

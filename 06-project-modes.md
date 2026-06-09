@@ -143,7 +143,7 @@ Supabase PostgreSQL использует `snake_case`.
 mode_slug
 # режим задачи в базе
 
-prompt_text
+task_text
 # текст задачи в базе
 
 selected_models
@@ -152,7 +152,7 @@ selected_models
 task_id
 # связь ответа или голоса с задачей
 
-response_id
+model_response_id
 # связь голоса с ответом
 ```
 
@@ -223,13 +223,16 @@ v0.3 - UI MVP
 v0.4 - OpenRouter Integration
 # реальные ответы моделей
 
-v0.5 - Supabase Persistence
-# сохранение задач и ответов
+v0.5.2 - Supabase, migrations and health stabilization
+# сохранение задач и ответов, health-check, smoke-check и выровненные migrations
 
-v0.6 - Voting MVP
-# сохранение выбора лучшего ответа
+v0.6 - Auth, Guest Mode and Profile
+# владелец задачи: пользователь или anonymous session
 
-v0.7 - History
+v0.7 - Voting MVP
+# сохранение выбора лучшего ответа через votes.model_response_id
+
+v0.8 - History
 # история сравнений
 
 v1.0 - Stable Prompt Arena

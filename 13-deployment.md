@@ -1,4 +1,4 @@
-# 13 - Деплой проекта
+﻿# 13 - Деплой проекта
 
 ## Назначение файла
 
@@ -100,17 +100,23 @@ v0.4 - OpenRouter Integration
 v0.5 - Supabase Integration
 # сохранение задач, ответов и моделей
 
-v0.6 - Voting MVP
-# выбор лучшего ответа
+v0.5.1 - Migration Sync
+# синхронизация migrations
 
-v0.7 - History MVP
+v0.5.2 - Health and Voting Foundation
+# health route, smoke-check, исправленная база votes
+
+v0.6 - Auth, Guest Mode and Profile
+# гостевой режим, регистрация, профиль
+
+v0.7 - Voting MVP
+# сохранение выбора лучшего ответа
+
+v0.8 - History MVP
 # история сравнений
 
-v0.8 - First Deploy
-# первый production deploy на Vercel
-
-v0.9 - MVP Stabilization
-# лимиты, ошибки, безопасность, UX
+v0.9 - First Deploy Stabilization
+# production env, smoke, UX
 
 v1.0 - Stable Prompt Arena
 # первая стабильная версия
@@ -411,8 +417,8 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
 # публичный URL Supabase
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-# публичный anon key Supabase
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+# публичный publishable key Supabase
 
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 # server-only ключ Supabase, запрещён во frontend
@@ -447,8 +453,8 @@ OPENROUTER_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 # публичный URL Supabase
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# публичный anon key Supabase
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+# публичный publishable key Supabase
 
 SUPABASE_SERVICE_ROLE_KEY=
 # server-only, не использовать во frontend
@@ -569,7 +575,7 @@ Supabase лучше подключать до первого production deploy, 
 - создана база PostgreSQL;
 - применена MVP SQL schema из `08-database.md`;
 - включены нужные RLS policies;
-- получены `NEXT_PUBLIC_SUPABASE_URL` и `NEXT_PUBLIC_SUPABASE_ANON_KEY`;
+- получены `NEXT_PUBLIC_SUPABASE_URL` и `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`;
 - `SUPABASE_SERVICE_ROLE_KEY` хранится только server-side;
 - таблицы работают локально;
 - ошибки базы корректно обрабатываются.
@@ -722,8 +728,8 @@ OPENROUTER_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 # публичный Supabase URL
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# публичный Supabase anon key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+# публичный Supabase publishable key
 
 SUPABASE_SERVICE_ROLE_KEY=
 # server-only Supabase service role key
@@ -1224,7 +1230,7 @@ Build проходит без ошибок.
 
 ---
 
-# Актуализация деплоя v0.5
+# Актуализация деплоя v0.5.2
 
 Перед деплоем на Vercel нужно убедиться, что локально проходят проверки:
 
@@ -1242,7 +1248,7 @@ npm run build
 # проверяет production-сборку
 ```
 
-Минимальные переменные Vercel для v0.5:
+Минимальные переменные Vercel для v0.5.2:
 
 ```text
 OPENROUTER_API_KEY

@@ -8,9 +8,9 @@
 
 ## Текущий статус
 
-Текущая версия проекта: **v0.5.0 - Supabase Integration**.
+Текущая версия проекта: **v0.5.2 - Supabase, migrations and health stabilization**.
 
-Статус синхронизирован с `00-readme.md`.
+Статус синхронизирован с `14-roadmap.md`.
 
 Реально готово:
 
@@ -19,6 +19,7 @@
 - интерактивная страница `/arena`;
 - backend route `GET /api/models`;
 - backend route `POST /api/compare`;
+- backend route `GET /api/health`;
 - серверная интеграция OpenRouter;
 - Supabase PostgreSQL migrations для `models`, `tasks`, `model_responses` и `profiles`;
 - server-side Supabase client для сохранения Prompt Arena;
@@ -29,6 +30,9 @@
 - безопасные API-ошибки через `ApiError`;
 - отмена устаревших запросов на клиенте через `AbortController`;
 - best-effort сохранение задач и ответов в Supabase;
+- синхронизированная история Supabase migrations;
+- исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`;
+- smoke-check script `npm run smoke`;
 - `package-lock.json`;
 - успешные проверки `typecheck`, `lint`, `test`, `build`.
 
@@ -84,6 +88,9 @@ npm run lint
 
 npm run build
 # проверяет production-сборку
+
+npm run smoke
+# проверяет базовый health/models smoke-check
 ```
 
 ## Переменные окружения
@@ -139,7 +146,7 @@ server-side hardcoded allowlist
 
 ### `POST /api/compare`
 
-Текущий запрос `v0.5.0`:
+Текущий запрос `v0.5.2`:
 
 ```json
 {
@@ -149,7 +156,7 @@ server-side hardcoded allowlist
 }
 ```
 
-Текущий ответ `v0.5.0`:
+Текущий ответ `v0.5.2`:
 
 ```json
 {

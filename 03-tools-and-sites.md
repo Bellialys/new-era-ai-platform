@@ -1,4 +1,4 @@
-# 03 - Инструменты и сайты проекта
+﻿# 03 - Инструменты и сайты проекта
 
 ## Назначение файла
 
@@ -567,8 +567,8 @@ team_steps
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
 # публичный URL Supabase проекта
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-# публичный anon key Supabase
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+# публичный publishable key Supabase
 
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 # секретный service role key, только backend
@@ -577,7 +577,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 Важно:
 
 - `NEXT_PUBLIC_SUPABASE_URL` можно использовать на клиенте;
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` можно использовать на клиенте при правильно настроенном RLS;
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` можно использовать на клиенте при правильно настроенном RLS;
 - `SUPABASE_SERVICE_ROLE_KEY` нельзя использовать на клиенте;
 - RLS нужно включать до публичного запуска;
 - schema базы описана в `08-database.md`.
@@ -606,8 +606,8 @@ OPENROUTER_API_KEY=your_openrouter_key_here
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
 # URL Supabase проекта
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-# anon key Supabase
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+# publishable key Supabase
 
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 # service role key только для backend
@@ -936,8 +936,8 @@ OPENROUTER_API_KEY=your_openrouter_key_here
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
 # публичный URL Supabase
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-# публичный anon key Supabase
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+# публичный publishable key Supabase
 
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 # секретный ключ Supabase service role, только backend
@@ -952,8 +952,8 @@ OPENROUTER_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 # сюда вставляется публичный URL Supabase
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# сюда вставляется anon key Supabase
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+# сюда вставляется publishable key Supabase
 
 SUPABASE_SERVICE_ROLE_KEY=
 # сюда вставляется service role key, только backend

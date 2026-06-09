@@ -518,7 +518,7 @@ API JSON и TypeScript = camelCase
 # modelIds, taskId, responseId, modeSlug
 
 Supabase PostgreSQL = snake_case
-# model_id, task_id, response_id, mode_slug
+# model_id, task_id, model_response_id, mode_slug
 
 Mode slug = kebab-case
 # prompt-arena, code-arena, multi-model-battle
@@ -562,7 +562,36 @@ prompt-arena
 ```text
 model_id
 task_id
+model_response_id
+```
+
+Для таблицы `votes` актуальная связь с ответом хранится именно как:
+
+```text
+model_response_id
+# внешний ключ на model_responses.id
+```
+
+Старое имя для голосов не используется:
+
+```text
 response_id
+# не применять в votes
+
+winner
+# не применять как vote_type
+```
+
+Актуальный лучший голос:
+
+```text
+best
+# текущее значение vote_type для выбора лучшего ответа
+```
+
+База также использует:
+
+```text
 mode_slug
 vote_type
 ```

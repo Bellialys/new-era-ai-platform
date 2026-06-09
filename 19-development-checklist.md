@@ -4,11 +4,21 @@
 
 Этот файл показывает, что уже готово и что делать дальше.
 
-Текущий этап: **v0.4.1 - OpenRouter Integration Fix**.
-
-Следующий этап: **v0.5 - Supabase Integration**.
+Главный источник статуса и порядка этапов: `14-roadmap.md`.
 
 ## Текущий статус
+
+```text
+v0.5.2 - Supabase, migrations and health stabilization
+# текущий стабильный фундамент проекта
+```
+
+Следующий этап:
+
+```text
+v0.6 - Auth, Guest Mode and Profile
+# подробный план: 20-auth-guest-profile-plan.md
+```
 
 ## Готово
 
@@ -21,34 +31,28 @@
 - [x] Страница `/arena`.
 - [x] `GET /api/models`.
 - [x] `POST /api/compare`.
+- [x] `GET /api/health`.
 - [x] Server-side OpenRouter integration.
-- [x] Server-side model allowlist.
-- [x] Валидация `prompt`.
-- [x] Валидация `modelIds`.
-- [x] Валидация `modeSlug`.
-- [x] Safe API errors через `ApiError`.
-- [x] OpenRouter timeout.
-- [x] Обработка non-JSON ответа OpenRouter.
-- [x] Client-side AbortController для устаревших запросов.
+- [x] Server-side model allowlist fallback.
+- [x] Supabase model catalog.
+- [x] Server-side Supabase client.
+- [x] Browser-side Supabase client only with publishable key.
+- [x] Supabase migrations for `models`, `tasks`, `model_responses`, `profiles`.
+- [x] Синхронизированная история Supabase migrations.
+- [x] Best-effort сохранение task в `/api/compare`.
+- [x] Best-effort сохранение model responses в `/api/compare`.
+- [x] Возврат `taskId` из `/api/compare`, если persistence доступен.
+- [x] Исправленная схема `votes` на `model_response_id` и `vote_type = best | like | dislike`.
+- [x] Smoke-check script `npm run smoke`.
 - [x] `package-lock.json`.
-- [x] Проверка `npm run typecheck`.
-- [x] Проверка `npm run lint`.
-- [x] Проверка `npm run build`.
 
 ## Не готово
 
-- [ ] Supabase project.
-- [ ] Таблица `models`.
-- [ ] Таблица `tasks`.
-- [ ] Таблица `model_responses`.
-- [ ] Таблица `votes`.
-- [ ] Server-side Supabase client.
-- [ ] Сохранение task в `/api/compare`.
-- [ ] Сохранение model responses в `/api/compare`.
-- [ ] Возврат `taskId` из `/api/compare`.
-- [ ] `/api/vote`.
-- [ ] Страница истории.
-- [ ] Vercel deploy.
+- [ ] Полный Auth/Guest/Profile этап `v0.6`.
+- [ ] Стабильный пользовательский Voting MVP `v0.7`.
+- [ ] Страница истории `v0.8`.
+- [ ] Production deploy stabilization `v0.9`.
+- [ ] Stable Prompt Arena `v1.0`.
 
 ## Проверка перед каждым commit
 
@@ -61,67 +65,11 @@ npm run lint
 
 npm run build
 # проверяет production-сборку
+
+npm run smoke
+# проверяет /api/health и /api/models
 ```
 
-## Рекомендуемый commit для текущих исправлений
+## Следующий практический фокус
 
-```bash
-git add .
-# добавить все исправленные файлы
-
-git commit -m "fix: stabilize OpenRouter integration and sync docs"
-# зафиксировать исправления v0.4.1
-```
-
-## Следующий этап - v0.5 Supabase Integration
-
-### Шаг 1 - создать Supabase проект
-
-- [ ] Создать новый проект Supabase.
-- [ ] Скопировать `NEXT_PUBLIC_SUPABASE_URL`.
-- [ ] Скопировать `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- [ ] Скопировать `SUPABASE_SERVICE_ROLE_KEY`.
-- [ ] Добавить значения только в `.env.local`.
-
-### Шаг 2 - установить Supabase package
-
-```bash
-npm install @supabase/supabase-js
-# устанавливает официальный клиент Supabase
-```
-
-### Шаг 3 - создать таблицы
-
-- [ ] `models`.
-- [ ] `tasks`.
-- [ ] `model_responses`.
-- [ ] `votes`.
-
-Схема описана в `08-database.md`.
-
-### Шаг 4 - перенести модели в Supabase
-
-- [ ] Добавить текущие модели в таблицу `models`.
-- [ ] Оставить `model_key` только для backend.
-- [ ] Изменить `/api/models`, чтобы он читал модели из Supabase.
-
-### Шаг 5 - изменить `/api/compare`
-
-- [ ] Frontend отправляет `models.id`.
-- [ ] Backend по `models.id` получает `model_key`.
-- [ ] Backend вызывает OpenRouter через `model_key`.
-- [ ] Backend создаёт запись в `tasks`.
-- [ ] Backend сохраняет ответы в `model_responses`.
-- [ ] Backend возвращает `taskId`.
-
-### Шаг 6 - проверить сценарий
-
-Проверить вручную:
-
-- [ ] `/arena` открывается.
-- [ ] модели загружаются из Supabase.
-- [ ] prompt отправляется.
-- [ ] реальные ответы приходят.
-- [ ] task появляется в Supabase.
-- [ ] responses появляются в Supabase.
-- [ ] ошибки OpenRouter не ломают весь запрос.
+Работать по `20-auth-guest-profile-plan.md` и не начинать Code Arena Runner, Judge Mode, Leaderboard или AI Team Mode до стабильной Prompt Arena.

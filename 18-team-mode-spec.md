@@ -1,4 +1,4 @@
-# 18 - AI Team Mode Spec
+﻿# 18 - AI Team Mode Spec
 
 ## Назначение файла
 
@@ -18,7 +18,6 @@ AI Team Mode начинается только с v2.0.
 14-roadmap.md является главным источником порядка версий.
 # если есть конфликт, ориентируемся на roadmap
 ```
-
 ---
 
 # 1. Место AI Team Mode в проекте
@@ -243,7 +242,7 @@ Planner -> Critic -> Editor
 Она нужна, потому что платформа работает с:
 
 - OpenRouter API key;
-- Supabase anon key;
+- Supabase publishable key;
 - Supabase service role key;
 - Next.js API routes;
 - Vercel Environment Variables;

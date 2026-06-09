@@ -1,4 +1,4 @@
-# 12 - Безопасность и переменные окружения
+﻿# 12 - Безопасность и переменные окружения
 
 ## Назначение
 
@@ -131,8 +131,8 @@ ADMIN_SECRET=
 NEXT_PUBLIC_SUPABASE_URL=
 # публичный Supabase project URL
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# публичный Supabase anon key, безопасен только при включённом RLS
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+# публичный Supabase publishable key, безопасен только при включённом RLS
 
 NEXT_PUBLIC_SITE_URL=
 # публичный site URL
@@ -190,8 +190,8 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
 # public Supabase URL
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-# public Supabase anon key, безопасен только при включённом RLS
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+# public Supabase publishable key, безопасен только при включённом RLS
 
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 # server-only Supabase service role key
@@ -261,8 +261,8 @@ OPENROUTER_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 # public Supabase URL
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# public Supabase anon key, безопасен только при включённом RLS
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+# public Supabase publishable key, безопасен только при включённом RLS
 
 SUPABASE_SERVICE_ROLE_KEY=
 # server-only key, не использовать на клиенте
@@ -331,12 +331,12 @@ Backend обязан:
 
 # 6. Supabase безопасность
 
-Supabase подключается с `v0.5 - Supabase Integration`.
+Supabase подключён и стабилизирован в `v0.5.2 - Supabase, migrations and health stabilization`.
 
 Правила:
 
 ```text
-NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 # можно использовать на клиенте только вместе с RLS
 
 SUPABASE_SERVICE_ROLE_KEY

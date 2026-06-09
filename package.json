@@ -1,6 +1,6 @@
 {
   "name": "new-era-ai-platform",
-  "version": "0.5.0",
+  "version": "0.5.2",
   "private": true,
   "description": "AI platform for comparing, evaluating and collaborating with multiple AI models.",
   "engines": {

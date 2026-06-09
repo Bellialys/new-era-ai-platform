@@ -97,6 +97,8 @@ v1.0 - Stable Prompt Arena
 
 # Канонический порядок MVP
 
+Канонический порядок этапов ведётся в `14-roadmap.md`. Таблица ниже является краткой копией и не должна спорить с roadmap.
+
 | Версия | Название | Главный результат |
 |---|---|---|
 | `v0.1` | Project Documentation | Подготовлены основные markdown-файлы проекта |
@@ -104,10 +106,12 @@ v1.0 - Stable Prompt Arena
 | `v0.3` | UI MVP | Создан интерфейс Prompt Arena с mock-ответами |
 | `v0.4` | OpenRouter Integration | Backend отправляет запросы к OpenRouter |
 | `v0.5` | Supabase Integration | Подключена база Supabase PostgreSQL |
-| `v0.6` | Voting MVP | Голос сохраняется через API и Supabase |
-| `v0.7` | History MVP | Можно посмотреть прошлые сравнения |
-| `v0.8` | First Deploy | Проект опубликован на Vercel |
-| `v0.9` | MVP Stabilization | Исправлены ошибки, лимиты и UX-проблемы |
+| `v0.5.1` | Migration Sync | Репозиторий и remote Supabase migrations синхронизированы |
+| `v0.5.2` | Health and Voting Foundation | `/api/health`, smoke-check, исправленная база votes |
+| `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, ограничения моделей |
+| `v0.7` | Voting MVP | `/api/vote` и сохранение выбора лучшего ответа |
+| `v0.8` | History MVP | Можно посмотреть прошлые сравнения |
+| `v0.9` | First Deploy Stabilization | Проверка production, env, smoke, UX |
 | `v1.0` | Stable Prompt Arena | Первая стабильная рабочая версия проекта |
 
 ---
@@ -367,7 +371,7 @@ votes
 История относится к этапу:
 
 ```text
-v0.7 - History MVP
+v0.8 - History MVP
 # пользователь может открыть прошлые сравнения
 ```
 
@@ -450,7 +454,7 @@ Stable Prompt Arena готова, если:
 
 ---
 
-# Актуализация v0.5
+# Актуализация v0.5.2
 
 Текущий проект уже прошёл стадию чистого Static UI MVP.
 
@@ -467,13 +471,17 @@ Stable Prompt Arena готова, если:
 - базовый in-memory rate limit на `/api/compare`;
 - Supabase persistence для `tasks` и `model_responses` с best-effort fallback;
 - сохранение token usage в `model_responses`, когда Supabase настроен;
-- миграции `profiles` и grants.
+- миграции `profiles` и grants;
+- `/api/health`;
+- smoke-check script `npm run smoke`;
+- синхронизированная история Supabase migrations;
+- исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`.
 
 Следующая граница MVP:
 
 ```text
-v0.6 - Voting MVP
-# сохранить выбор победителя в votes
+v0.6 - Auth, Guest Mode and Profile
+# гостевой режим, регистрация, профиль и ограничения доступа к моделям
 ```
 
 Всё ещё не входит в ближайший MVP:

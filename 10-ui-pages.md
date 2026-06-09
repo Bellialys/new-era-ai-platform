@@ -60,15 +60,19 @@
 
 # Порядок страниц по версиям
 
+Канонический порядок этапов ведётся в `14-roadmap.md`.
+
 | Версия | Страница | Путь | Статус | Назначение |
 |---|---|---|---|---|
 | `v0.3` | Home | `/` | MVP | Объяснить проект и отправить в Arena |
 | `v0.3` | Prompt Arena UI | `/arena` | MVP | Форма задачи, выбор 2-3 моделей, mock-ответы |
 | `v0.4` | Prompt Arena Real Responses | `/arena` | MVP | Реальные ответы через backend route |
 | `v0.5` | Saved Arena Results | `/arena` | MVP | Сохранение задач и ответов в Supabase |
-| `v0.6` | Voting MVP | `/arena` | MVP | Сохранение выбора лучшего ответа |
-| `v0.7` | History | `/history` | MVP extension | Список прошлых сравнений |
-| `v0.7` | History Detail | `/history/[taskId]` | MVP extension | Просмотр одного сравнения |
+| `v0.5.2` | Health and voting foundation | `/api/health`, `/arena` | Foundation | Smoke-check и подготовленная votes-схема |
+| `v0.6` | Auth, Guest Mode and Profile | `/login`, `/signup`, future `/profile` | Next | Гости, аккаунты, профиль |
+| `v0.7` | Voting MVP | `/arena` | Later | Сохранение выбора лучшего ответа |
+| `v0.8` | History | `/history` | MVP extension | Список прошлых сравнений |
+| `v0.8` | History Detail | `/history/[taskId]` | MVP extension | Просмотр одного сравнения |
 | `v1.1` | Code Arena Lite | `/code` | После MVP | Сравнение кода без запуска |
 | `v1.2` | Multi Model Battle | `/battle` | После MVP | Формальные бои моделей |
 | `v1.3` | Judge Mode | `/judge` | После MVP | Оценка ответов моделью-судьёй |
@@ -405,8 +409,8 @@ v0.3 - UI winner selection
 # пользователь может визуально выбрать победителя в текущем состоянии страницы
 # выбор не сохраняется в базе
 
-v0.6 - Voting MVP
-# выбор сохраняется через /api/vote и таблицу votes
+v0.7 - Voting MVP
+# выбор сохраняется через /api/vote и таблицу votes по схеме model_response_id + best/like/dislike
 ```
 
 Текущий текст кнопки в UI MVP:
@@ -620,7 +624,7 @@ Result
 
 ---
 
-# Актуализация UI v0.5
+# Актуализация UI v0.5.2
 
 Страница `/arena` сейчас работает с реальным backend API, а не только с mock-данными.
 
@@ -637,12 +641,13 @@ Result
 9. Ответы отображаются в карточках.
 10. Если Supabase persistence прошёл, backend возвращает `taskId`.
 11. Успешный ответ можно выбрать победителем на клиенте.
+12. База `votes` уже выровнена под `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`.
 
 Важно:
 
 ```text
-Выбор победителя в v0.5 пока client-side.
-# сохранение голоса появится в v0.6
+Выбор победителя как стабильный пользовательский Voting MVP относится к v0.7 по `14-roadmap.md`.
+# v0.5.2 уже содержит foundation для votes и smoke-check
 ```
 
 ---

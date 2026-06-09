@@ -7,8 +7,9 @@
 Текущий статус:
 
 ```text
-v0.5.0
-# GET /api/models и POST /api/compare реализованы, Supabase persistence подключён
+v0.5.2
+# GET /api/models, POST /api/compare, GET /api/health и /api/vote foundation реализованы
+# 14-roadmap.md остаётся главным источником статуса этапов
 ```
 
 ## Общие правила API
@@ -24,7 +25,7 @@ API JSON использует camelCase.
 # modelIds, modeSlug, answerText, latencyMs
 
 Database использует snake_case.
-# model_id, mode_slug, prompt_text, response_text, latency_ms
+# model_id, mode_slug, task_text, response_text, latency_ms, model_response_id
 ```
 
 ## Текущие routes
@@ -33,6 +34,8 @@ Database использует snake_case.
 |---|---|---|---|
 | `/api/models` | GET | Реализовано | Получить список разрешённых моделей |
 | `/api/compare` | POST | Реализовано | Отправить prompt нескольким моделям |
+| `/api/health` | GET | Реализовано | Проверить базовое состояние приложения |
+| `/api/vote` | POST | Foundation | Сохранить best vote через backend route |
 
 ## GET /api/models
 
@@ -169,7 +172,7 @@ modelIds = OpenRouter model keys из hardcoded allowlist.
 
 `/api/compare` best-effort сохраняет:
 
-- одну запись в `tasks` с `prompt_text`, `mode_slug`, `selected_models`, `status`;
+- одну запись в `tasks` с `task_text`, `mode_slug`, `selected_models`, `status`;
 - записи в `model_responses` с `task_id`, `model_id`, `model_key`, `response_text`, latency и token usage.
 
 Если Supabase не настроен или insert упал, route продолжает возвращать ответы моделей пользователю, а `taskId` остаётся `null`.
@@ -178,21 +181,39 @@ modelIds = OpenRouter model keys из hardcoded allowlist.
 
 | Route | Метод | Этап | Назначение |
 |---|---|---|---|
-| `/api/vote` | POST | v0.6 | Сохранить выбор лучшего ответа |
-| `/api/history` | GET | v0.7 | Получить историю сравнений |
-| `/api/history/[taskId]` | GET | v0.7 | Открыть одно сравнение |
-| `/api/admin/models` | CRUD | v1.6 | Управление моделями |
-| `/api/image-arena/generate` | POST | v1.8 | Сгенерировать изображения для будущей Image Arena |
+| `/api/history` | GET | v0.8 | Получить историю сравнений |
+| `/api/history/[taskId]` | GET | v0.8 | Открыть одно сравнение |
+| `/api/admin/models` | CRUD | v1.5 | Управление моделями |
+| `/api/image-arena/generate` | POST | v1.7 | Сгенерировать изображения для будущей Image Arena |
 
-## Правильный body для будущего /api/vote
+## POST /api/vote
+
+Контракт должен совпадать с `28-api-contracts.md`.
+
+Актуальная схема базы:
+
+```text
+votes.model_response_id -> model_responses.id
+votes.vote_type = best | like | dislike
+```
+
+Правильный body:
 
 ```json
 {
   "taskId": "uuid-task-id",
   "responseId": "uuid-response-id",
-  "voteType": "winner"
+  "voteType": "best",
+  "anonymousSessionId": "anonymous-session-id"
 }
 ```
+
+Правила:
+
+- `responseId` в API соответствует `votes.model_response_id` в базе;
+- `voteType = "best"` используется для выбора лучшего ответа;
+- старое `voteType = "winner"` не должно использоваться в документации и новом frontend-коде;
+- выбирать можно только successful `model_responses`.
 
 Не использовать:
 

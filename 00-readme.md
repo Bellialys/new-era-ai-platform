@@ -38,7 +38,9 @@
 
 ## Текущий статус
 
-Текущая версия: **v0.5.0 - Supabase Integration**.
+Текущая версия: **v0.5.2 - Supabase, migrations and health stabilization**.
+
+Канонический статус и порядок версий фиксируются в `14-roadmap.md`.
 
 Сейчас проект уже не является чистым mock UI.
 
@@ -52,6 +54,7 @@
 - страница `/arena`;
 - `GET /api/models`;
 - `POST /api/compare`;
+- `GET /api/health`;
 - серверная интеграция OpenRouter;
 - Supabase PostgreSQL migrations для `models`, `tasks`, `model_responses` и `profiles`;
 - server-side Supabase client для сохранения Prompt Arena;
@@ -62,6 +65,9 @@
 - проверка `prompt`, `modelIds`, `modeSlug`;
 - отмена устаревших client-side запросов;
 - best-effort сохранение задач и ответов в Supabase;
+- синхронизированная история Supabase migrations;
+- исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`;
+- smoke-check script `npm run smoke`;
 - `package-lock.json`;
 - успешные проверки `typecheck`, `lint`, `test`, `build`.
 
@@ -114,11 +120,13 @@ Visual Studio Code
 | `v0.3` | UI MVP | Prompt Arena UI без реального AI | Готово |
 | `v0.4` | OpenRouter Integration | Реальные ответы через backend | Готово |
 | `v0.4.1` | OpenRouter Integration Fix | Исправлена валидация, ошибки и документация | Готово |
-| `v0.5` | Supabase Integration | Модели, задачи и ответы через Supabase | Текущий этап |
-| `v0.6` | Voting MVP | Сохранение выбора победителя | Позже |
-| `v0.7` | History MVP | История сравнений | Позже |
-| `v0.8` | First Deploy | Публикация на Vercel | Позже |
-| `v0.9` | MVP Stabilization | Лимиты, ошибки, UX | Позже |
+| `v0.5` | Supabase Integration | Модели, задачи и ответы через Supabase | Готово |
+| `v0.5.1` | Migration Sync | Репозиторий и remote Supabase migrations синхронизированы | Готово |
+| `v0.5.2` | Health and Voting Foundation | `/api/health`, smoke-check, исправленная база votes | Текущий стабильный фундамент |
+| `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, ограничения моделей | Следующий этап |
+| `v0.7` | Voting MVP | `/api/vote` и сохранение выбора лучшего ответа | Позже |
+| `v0.8` | History MVP | История сравнений | Позже |
+| `v0.9` | First Deploy Stabilization | Проверка production, env, smoke, UX | Позже |
 | `v1.0` | Stable Prompt Arena | Первая стабильная версия | Позже |
 | `v1.1+` | Advanced modes | Code Arena, Judge, Leaderboard, Team Mode | Позже |
 

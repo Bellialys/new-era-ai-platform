@@ -7,9 +7,45 @@
 ## Текущая версия
 
 ```text
-v0.5.0 - Supabase Integration
-# текущая рабочая MVP-версия проекта
+v0.5.2 - Supabase, migrations and health stabilization
+# текущий стабильный фундамент проекта по 14-roadmap.md
 ```
+
+## v0.5.2 - Supabase, migrations and health stabilization
+
+Дата: 2026-06-09
+
+### Added
+
+- Добавлен `/api/health`.
+- Добавлен `scripts/smoke-check.mjs` и команда `npm run smoke`.
+- Добавлены миграции выравнивания `tasks`, `votes`, integrity fixes и cleanup `prompt_text`.
+
+### Changed
+
+- История Supabase migrations синхронизирована с репозиторием.
+- `votes` приведены к актуальной схеме `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`.
+- Документация должна считать `14-roadmap.md` главным источником текущей версии и порядка этапов.
+
+### Verified
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm run smoke
+```
+
+## v0.5.1 - Migration Sync
+
+Дата: 2026-06-08
+
+### Changed
+
+- Восстановлены timestamp migrations для Supabase.
+- Репозиторий и remote migration history приведены к одному состоянию.
+- `prompt_text` заменён на каноническое поле `task_text`.
+- `08-database.md` синхронизирован с фактическим состоянием базы.
 
 ## v0.5.0 - Supabase Integration
 
@@ -66,7 +102,7 @@ npm run build
 - Добавлено сохранение OpenRouter token usage в `model_responses`.
 - Добавлен `MODE_SLUG_PROMPT_ARENA` как общий slug Prompt Arena.
 - Добавлен `OPENROUTER_MAX_TOKENS` в `.env.example`.
-- Добавлен audit/action status в `28-action-plan.md`.
+- Добавлен audit/action status в `archive/28-action-plan-v0.4.1.md`.
 
 ### Changed
 

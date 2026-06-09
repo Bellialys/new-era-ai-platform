@@ -1,4 +1,4 @@
-# 07 - Архитектура проекта
+﻿# 07 - Архитектура проекта
 
 ## Назначение файла
 
@@ -557,8 +557,8 @@ OPENROUTER_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 # публичный URL проекта Supabase
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# публичный anon key Supabase, можно использовать на frontend с RLS
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+# публичный publishable key Supabase, можно использовать на frontend с RLS
 
 SUPABASE_SERVICE_ROLE_KEY=
 # секретный ключ Supabase, только backend, нельзя использовать на frontend
@@ -567,7 +567,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 Важно:
 
 ```text
-NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY могут быть доступны frontend.
+NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY могут быть доступны frontend.
 # это нормально при включённом RLS
 
 OPENROUTER_API_KEY и SUPABASE_SERVICE_ROLE_KEY не должны иметь NEXT_PUBLIC.
@@ -665,27 +665,37 @@ Runner запрещён до v1.7.
 # Prompt Arena получает ответы моделей через OpenRouter
 ```
 
-## v0.5 - Supabase Storage
+## v0.5.2 - Supabase, migrations and health stabilization
 
 ```text
 Цель:
-# сохранять задачи и ответы в базу
+# сохранять задачи и ответы в базу, держать migrations и health/smoke checks стабильными
 
 Результат:
-# tasks и model_responses заполняются после сравнения
+# tasks и model_responses заполняются после сравнения, /api/health проверяет базовую готовность
 ```
 
-## v0.6 - Voting
+## v0.6 - Auth, Guest Mode and Profile
+
+```text
+Цель:
+# закрепить владельца задачи за пользователем или anonymous session
+
+Результат:
+# задачи и голоса можно связывать с user_id или anonymous_session_id
+```
+
+## v0.7 - Voting MVP
 
 ```text
 Цель:
 # дать пользователю выбрать лучший ответ
 
 Результат:
-# votes сохраняет голос пользователя
+# votes сохраняет голос пользователя через model_response_id
 ```
 
-## v0.7 - History
+## v0.8 - History
 
 ```text
 Цель:
@@ -695,24 +705,14 @@ Runner запрещён до v1.7.
 # пользователь может открыть прошлые сравнения
 ```
 
-## v0.8 - First Deploy
+## v0.9 - First Deploy Stabilization
 
 ```text
 Цель:
-# опубликовать первую рабочую версию на Vercel
+# опубликовать первую рабочую версию на Vercel и стабилизировать production-путь
 
 Результат:
-# проект доступен по production URL
-```
-
-## v0.9 - Stabilization
-
-```text
-Цель:
-# исправить ошибки, улучшить валидацию и стабильность
-
-Результат:
-# Prompt Arena работает предсказуемо
+# проект доступен по production URL, Prompt Arena работает предсказуемо
 ```
 
 ## v1.0 - Stable Prompt Arena
