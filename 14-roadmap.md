@@ -11,8 +11,8 @@
 ## Текущий статус
 
 ```text
-v0.5.0 - Supabase Integration
-# текущий этап проекта
+v0.5.2 - Supabase, migrations and health stabilization
+# текущий стабильный фундамент проекта
 ```
 
 Сейчас уже есть:
@@ -21,6 +21,7 @@ v0.5.0 - Supabase Integration
 - Prompt Arena UI;
 - `/api/models`;
 - `/api/compare`;
+- `/api/health`;
 - OpenRouter на backend;
 - Supabase PostgreSQL migrations;
 - `/api/models` читает Supabase catalog с hardcoded fallback;
@@ -32,13 +33,22 @@ v0.5.0 - Supabase Integration
 - browser-side Supabase client только с publishable key;
 - best-effort сохранение `tasks` и `model_responses`;
 - profiles/grants migrations;
-- successful `typecheck`, `lint`, `test`, `build`.
+- синхронизированная история Supabase migrations;
+- исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`;
+- smoke-check script `npm run smoke`.
 
 Следующий главный этап:
 
 ```text
-v0.6 - Voting MVP
-# сохранить выбор победителя
+v0.6 - Auth, Guest Mode and Profile
+# гостевой режим, регистрация, профиль и ограничения доступа к моделям
+```
+
+Детальный план этапа v0.6 вынесен в файл:
+
+```text
+20-auth-guest-profile-plan.md
+# главный документ для разработки регистрации, guest mode и профиля
 ```
 
 ## Канонический порядок версий
@@ -50,20 +60,21 @@ v0.6 - Voting MVP
 | `v0.3` | UI MVP | Интерфейс Prompt Arena без реального AI | Готово |
 | `v0.4` | OpenRouter Integration | Реальные AI-ответы через backend | Готово |
 | `v0.4.1` | OpenRouter Integration Fix | Исправлена валидация, ошибки, документация | Готово |
-| `v0.5` | Supabase Integration | Модели, задачи и ответы через Supabase | Текущий этап |
-| `v0.6` | Voting MVP | Сохранение выбора лучшего ответа | Следующий этап |
-| `v0.7` | History MVP | История сравнений | Позже |
-| `v0.8` | First Deploy | Рабочая версия опубликована на Vercel | Позже |
-| `v0.9` | MVP Stabilization | Лимиты, UX, обработка ошибок | Позже |
+| `v0.5` | Supabase Integration | Модели, задачи и ответы через Supabase | Готово |
+| `v0.5.1` | Migration Sync | Репозиторий и remote Supabase migrations синхронизированы | Готово |
+| `v0.5.2` | Health and Voting Foundation | `/api/health`, smoke-check, исправленная база votes | Готово |
+| `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, ограничения моделей | Следующий этап |
+| `v0.7` | Voting MVP | `/api/vote` и сохранение выбора лучшего ответа | Позже |
+| `v0.8` | History MVP | История сравнений | Позже |
+| `v0.9` | First Deploy Stabilization | Проверка production, env, smoke, UX | Позже |
 | `v1.0` | Stable Prompt Arena | Первая стабильная версия MVP | Позже |
 | `v1.1` | Code Arena Lite | Сравнение решений по коду без запуска кода | Позже |
 | `v1.2` | Multi Model Battle | Формальные бои моделей | Позже |
 | `v1.3` | Judge Mode | Модель-судья оценивает ответы | Позже |
 | `v1.4` | Leaderboard | Рейтинг моделей | Позже |
-| `v1.5` | Accounts and Profiles | Авторизация, профили, личная история | Позже |
-| `v1.6` | Admin Panel and Limits | Управление моделями и лимитами | Позже |
-| `v1.7` | Code Arena Runner | Безопасный запуск кода в sandbox | Позже |
-| `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | Позже |
+| `v1.5` | Admin Panel and Limits | Управление моделями, лимитами и тарифами | Позже |
+| `v1.6` | Code Arena Runner | Безопасный запуск кода в sandbox | Позже |
+| `v1.7` | Image Arena MVP | Сравнение изображений от image-моделей | Позже |
 | `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей | Позже |
 
 ## v0.1 - Project Documentation
@@ -129,8 +140,6 @@ v0.6 - Voting MVP
 
 Готово:
 
-- `package.json` обновлён до `0.4.1`;
-- `package-lock.json` обновлён до `0.4.1`;
 - `modeSlug` валидируется на backend;
 - обычные validation errors больше не превращаются в `INTERNAL_ERROR`;
 - `MODEL_NOT_ALLOWED` возвращается как контролируемая ошибка;
@@ -175,32 +184,161 @@ npm run build
 - `/api/compare` сохраняет ответы в `model_responses`;
 - ответ `/api/compare` возвращает `taskId` или `null`, если persistence недоступен.
 
-Что всё ещё отличает проект от полноценного v0.5:
+## v0.5.1 - Migration Sync
 
-- нужно регулярно сверять remote migration status через Supabase CLI;
-- нужно проверить production env на Vercel без вывода секретов;
-- `votes` ещё не сохраняются.
+Цель: привести remote Supabase и GitHub migrations к одному состоянию.
 
-Что не делать в v0.5:
+Готово:
 
-- не добавлять аккаунты, если это тормозит MVP;
-- не добавлять Leaderboard;
-- не добавлять Code Arena;
-- не добавлять Team Mode.
+- восстановлены отсутствующие timestamp migrations;
+- удалены устаревшие `0007` и `0008` миграции;
+- `prompt_text` окончательно заменён на `task_text`;
+- `08-database.md` синхронизирован с фактическим состоянием базы.
 
-## v0.6 - Voting MVP
+## v0.5.2 - Health and Voting Foundation
 
-Цель: сохранять выбор лучшего ответа.
+Цель: добавить диагностику production и подготовить базу под будущее голосование.
+
+Готово:
+
+- добавлен `/api/health`;
+- добавлен `scripts/smoke-check.mjs`;
+- добавлен `npm run smoke`;
+- исправлена структура `votes`;
+- `src/lib/server/votes.ts` переведён на `model_response_id` и `best`;
+- добавлена миграция `20260609095422_align_votes_indexes.sql`;
+- старые широкие индексы votes удалены;
+- новые индексы разделяют `best` и `like/dislike` reactions.
+
+## v0.6 - Auth, Guest Mode and Profile
+
+Цель: сделать пользователей и гостевой режим фундаментом дальнейшего проекта.
+
+Подробное ТЗ: `20-auth-guest-profile-plan.md`.
+
+### v0.6.1 - Guest Mode
+
+Главный результат: при нажатии на гостевой режим автоматически создаётся карточка вида `Анонимус #4827`.
+
+Что сделать:
+
+- создать таблицу `anonymous_sessions`;
+- добавить генератор `Анонимус #1234`;
+- добавить `avatarSeed` и `colorSeed`;
+- хранить `anonymousSessionId` в `localStorage`;
+- показывать guest card в UI;
+- передавать `anonymousSessionId` в `/api/compare`;
+- сохранять `tasks.anonymous_session_id`.
+
+### v0.6.2 - Model Access Levels
+
+Главный результат: гости используют только бесплатные модели.
+
+Что сделать:
+
+- добавить `models.access_level`;
+- значения: `anonymous`, `registered`, `premium`;
+- `/api/models` фильтрует модели по user/guest режиму;
+- `/api/compare` повторно проверяет доступ на backend;
+- при нарушении возвращать `403 MODEL_NOT_ALLOWED`.
+
+### v0.6.3 - Auth SSR
+
+Главный результат: пользователь может зарегистрироваться, войти и выйти.
+
+Что сделать:
+
+- добавить `@supabase/ssr`;
+- создать Supabase browser/server clients;
+- добавить proxy/cookies session refresh;
+- создать `/auth`;
+- создать `/auth/callback`;
+- добавить login/signup/logout.
+
+### v0.6.4 - Profile MVP
+
+Главный результат: функциональная страница `/profile`.
+
+Что сделать:
+
+- расширить `profiles`;
+- добавить `first_name`, `last_name`, `display_name`, `avatar_url`, `role`, `plan`;
+- редактировать имя, фамилию и отображаемое имя;
+- показывать email, роль, план и дату регистрации;
+- добавить базовую статистику.
+
+### v0.6.5 - Avatar Upload
+
+Главный результат: пользователь может загрузить фото профиля.
+
+Что сделать:
+
+- создать Supabase Storage bucket `avatars`;
+- добавить Storage RLS policies;
+- разрешить upload/update/delete только владельцу;
+- сохранить `profiles.avatar_url`.
+
+### v0.6.6 - Email and Password Management
+
+Главный результат: пользователь может менять email и пароль безопасным способом.
+
+Что сделать:
+
+- change email через Supabase Auth;
+- forgot password;
+- update password;
+- нейтральные сообщения безопасности.
+
+### v0.6.7 - User-linked Arena
+
+Главный результат: Prompt Arena понимает user/guest.
+
+Что сделать:
+
+- `/api/compare` определяет user или guest;
+- для аккаунта сохраняет `tasks.user_id`;
+- для гостя сохраняет `tasks.anonymous_session_id`;
+- профиль показывает статистику по задачам, ответам и голосам.
+
+### v0.6.8 - Testing and Deployment
+
+Главный результат: Auth/Guest/Profile не ломают текущий production.
+
+Команды:
+
+```bash
+npm run typecheck
+# проверить TypeScript
+
+npm run lint
+# проверить ESLint
+
+npm run build
+# проверить production build
+
+npm run smoke
+# проверить /api/health и /api/models
+
+supabase db reset
+# проверить чистый локальный клон миграций
+
+supabase db push
+# проверить remote sync
+```
+
+## v0.7 - Voting MVP
+
+Цель: сохранить выбор лучшего ответа через backend.
 
 Что сделать:
 
 - создать `/api/vote`;
-- принимать `taskId`, `responseId`, `voteType`;
-- сохранять winner vote в таблицу `votes`;
+- принимать `taskId`, `modelResponseId`, `voteType`;
+- сохранять `best` vote в таблицу `votes`;
 - не давать голосовать за error response;
 - показывать выбранного победителя после сохранения.
 
-## v0.7 - History MVP
+## v0.8 - History MVP
 
 Цель: дать пользователю открыть прошлые сравнения.
 
@@ -211,30 +349,18 @@ npm run build
 - создать `/api/history/[taskId]`;
 - показывать task, responses, vote.
 
-## v0.8 - First Deploy
+## v0.9 - First Deploy Stabilization
 
-Цель: опубликовать рабочую Prompt Arena на Vercel.
+Цель: стабилизировать production после добавления аккаунтов.
 
 Что сделать:
 
-- добавить переменные окружения в Vercel;
+- проверить Vercel env;
 - проверить production build;
 - проверить реальные OpenRouter calls;
 - проверить Supabase connection;
+- проверить регистрацию, guest mode и profile;
 - проверить базовый сценарий пользователя.
-
-## v0.9 - MVP Stabilization
-
-Цель: стабилизировать MVP.
-
-Что сделать:
-
-- заменить базовый in-memory rate limit на устойчивый production-ready лимит;
-- улучшить ошибки;
-- улучшить mobile UX;
-- проверить edge cases;
-- обновить документацию;
-- подготовить `v1.0`.
 
 ## v1.0 - Stable Prompt Arena
 
@@ -248,6 +374,9 @@ npm run build
 - выбирает победителя;
 - данные сохраняются;
 - история работает;
+- guest mode работает;
+- регистрация работает;
+- профиль работает;
 - проект опубликован;
 - секреты не попали в GitHub.
 
@@ -259,13 +388,12 @@ npm run build
 - Multi Model Battle;
 - Judge Mode;
 - Leaderboard;
-- Accounts and Profiles;
 - Admin Panel and Limits;
 - Code Arena Runner;
 - Image Arena MVP;
 - AI Team Mode.
 
-## v1.8 - Image Arena MVP
+## Image Arena MVP
 
 Цель: добавить будущий визуальный режим только после стабильной Prompt Arena, Storage, лимитов и safety-контролей.
 
