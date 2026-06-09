@@ -7,9 +7,10 @@
 Текущий статус документа:
 
 ```text
-v0.5.1
+v0.5.2
 # Supabase MVP: models, tasks, model_responses, profiles, votes
 # task_text является каноническим полем текста задачи
+# votes использует model_response_id и vote_type: best, like, dislike
 ```
 
 ## Главная идея базы
@@ -215,6 +216,13 @@ like/dislike ограничиваются по model_response_id + voter + vote_
 # защита от дублей реакций
 ```
 
+Важно по старой схеме:
+
+```text
+response_id и vote_type = winner не используются.
+# актуальная схема использует model_response_id и vote_type = best
+```
+
 ## Текущий SQL-скелет целевого состояния
 
 ```sql
@@ -302,6 +310,17 @@ create table public.votes (
 | `20260608041610_align_mvp_tasks_and_votes.sql` | Выравнивание tasks/votes под MVP и временная совместимость task_text/prompt_text |
 | `20260609054344_db_integrity_fixes.sql` | Integrity/security fixes: search_path, updated_at triggers, unique vote indexes |
 | `20260609082216_drop_prompt_text.sql` | Финальное удаление старого `prompt_text` после перехода к `task_text` |
+| `20260609095422_align_votes_indexes.sql` | Очистка старых votes indexes и финальное выравнивание best/reaction indexes |
+
+Удалённые устаревшие локальные миграции:
+
+```text
+0007_harden_profiles_and_indexes.sql
+# дубль timestamp-миграции 20260607212653, в remote-истории не применён
+
+0008_votes_mvp.sql
+# старая несовместимая votes-схема через response_id/winner, в remote-истории не применена
+```
 
 Важно:
 
@@ -311,9 +330,12 @@ create table public.votes (
 
 20260609082216_drop_prompt_text.sql уже применён в Supabase.
 # это финальный cleanup после деплоя кода, который пишет tasks.task_text
+
+20260609095422_align_votes_indexes.sql уже применён в Supabase.
+# это финальное выравнивание индексов votes под best/like/dislike
 ```
 
-## Что уже сделано в v0.5.1
+## Что уже сделано в v0.5.2
 
 1. Созданы таблицы `models`, `tasks`, `model_responses`, `profiles`, `votes`.
 2. Включён RLS на основных публичных таблицах.
@@ -325,13 +347,15 @@ create table public.votes (
 8. `/api/compare` best-effort сохраняет `tasks` и `model_responses`.
 9. `votes` подготовлена для выбора лучшего ответа и реакций.
 10. Добавлены индексы и constraints для целостности данных.
-11. Добавлены triggers для автоматического обновления `updated_at` в `tasks` и `models`.
+11. Добавлены triggers для автоматического обновления `updated_at` в `tasks`, `models` и `votes`.
 12. Код Prompt Arena переведён с `prompt_text` на `task_text`.
 13. История миграций Supabase синхронизирована с репозиторием.
+14. Старые локальные миграции `0007` и `0008` удалены из репозитория.
+15. Server-side voting helper переведён на актуальную схему `model_response_id` и `best`.
 
 ## Будущие сущности Image Arena / Visual Arena
 
-Image Arena не входит в текущий обязательный scope Prompt Arena MVP. Нельзя менять scope `v0.5.1` так, будто визуальная генерация уже нужна сейчас.
+Image Arena не входит в текущий обязательный scope Prompt Arena MVP. Нельзя менять scope `v0.5.2` так, будто визуальная генерация уже нужна сейчас.
 
 После стабильной Prompt Arena можно добавить отдельные сущности:
 
@@ -346,7 +370,7 @@ artifacts
 Минимальная будущая структура `image_generations`:
 
 | Поле | Тип | Назначение |
-|---|---|---|
+|---|---|
 | `id` | uuid | ID генерации |
 | `task_id` | uuid | Связь с задачей Image Arena |
 | `model_id` | uuid | Модель, которая создала изображение |
