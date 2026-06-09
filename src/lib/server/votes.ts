@@ -1,17 +1,18 @@
 import { ApiError } from "./utils";
 import { getSupabaseServerClient } from "./supabase";
 
-type SaveWinnerVoteInput = {
+type SaveBestVoteInput = {
   taskId: string;
   responseId: string;
+  userId?: string | null;
   anonymousSessionId?: string | null;
 };
 
-type SaveWinnerVoteResult = {
+type SaveBestVoteResult = {
   voteId: string;
   taskId: string;
   responseId: string;
-  voteType: "winner";
+  voteType: "best";
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -28,15 +29,55 @@ export function validateVoteIds(taskId: unknown, responseId: unknown): { taskId:
   return { taskId, responseId };
 }
 
-export async function saveWinnerVote({
+function validateUserId(userId: string | null): string | null {
+  if (userId === null) return null;
+
+  if (!UUID_PATTERN.test(userId)) {
+    throw new ApiError(400, "VALIDATION_ERROR", "userId must be a valid UUID.");
+  }
+
+  return userId;
+}
+
+function normalizeAnonymousSessionId(anonymousSessionId: string | null): string | null {
+  if (!anonymousSessionId) return null;
+
+  const normalized = anonymousSessionId.trim();
+
+  if (normalized.length === 0) return null;
+
+  if (normalized.length > 128) {
+    throw new ApiError(
+      400,
+      "VALIDATION_ERROR",
+      "anonymousSessionId must be 128 characters or less."
+    );
+  }
+
+  return normalized;
+}
+
+export async function saveBestVote({
   taskId,
   responseId,
+  userId = null,
   anonymousSessionId = null,
-}: SaveWinnerVoteInput): Promise<SaveWinnerVoteResult> {
+}: SaveBestVoteInput): Promise<SaveBestVoteResult> {
   const supabase = getSupabaseServerClient();
 
   if (!supabase) {
     throw new ApiError(503, "DATABASE_NOT_CONFIGURED", "Voting is not available yet.");
+  }
+
+  const normalizedUserId = validateUserId(userId);
+  const normalizedAnonymousSessionId = normalizeAnonymousSessionId(anonymousSessionId);
+
+  if (!normalizedUserId && !normalizedAnonymousSessionId) {
+    throw new ApiError(
+      400,
+      "VOTER_REQUIRED",
+      "Voting requires either userId or anonymousSessionId."
+    );
   }
 
   const { data: response, error: responseError } = await supabase
@@ -51,31 +92,49 @@ export async function saveWinnerVote({
   }
 
   if (response.status !== "success") {
-    throw new ApiError(400, "INVALID_VOTE_TARGET", "Only successful responses can be selected as winner.");
+    throw new ApiError(400, "INVALID_VOTE_TARGET", "Only successful responses can be selected as best.");
+  }
+
+  let deleteQuery = supabase
+    .from("votes")
+    .delete()
+    .eq("task_id", taskId)
+    .eq("vote_type", "best");
+
+  if (normalizedUserId) {
+    deleteQuery = deleteQuery.eq("user_id", normalizedUserId);
+  } else {
+    deleteQuery = deleteQuery.eq("anonymous_session_id", normalizedAnonymousSessionId);
+  }
+
+  const { error: deleteError } = await deleteQuery;
+
+  if (deleteError) {
+    throw new ApiError(500, "VOTE_SAVE_FAILED", "Could not replace previous best vote.");
   }
 
   const { data: vote, error: voteError } = await supabase
     .from("votes")
-    .upsert(
-      {
-        task_id: taskId,
-        response_id: responseId,
-        anonymous_session_id: anonymousSessionId,
-        vote_type: "winner",
-      },
-      { onConflict: "task_id,vote_type" }
-    )
-    .select("id, task_id, response_id, vote_type")
+    .insert({
+      task_id: taskId,
+      model_response_id: responseId,
+      user_id: normalizedUserId,
+      anonymous_session_id: normalizedAnonymousSessionId,
+      vote_type: "best",
+    })
+    .select("id, task_id, model_response_id, vote_type")
     .single();
 
   if (voteError || !vote) {
-    throw new ApiError(500, "VOTE_SAVE_FAILED", "Could not save winner vote. Please try again.");
+    throw new ApiError(500, "VOTE_SAVE_FAILED", "Could not save best vote. Please try again.");
   }
 
   return {
     voteId: vote.id,
     taskId: vote.task_id,
-    responseId: vote.response_id,
-    voteType: "winner",
+    responseId: vote.model_response_id,
+    voteType: "best",
   };
 }
+
+export const saveWinnerVote = saveBestVote;
