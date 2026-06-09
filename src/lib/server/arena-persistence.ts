@@ -54,7 +54,7 @@ export async function savePromptArenaRun({
     .from("tasks")
     .insert({
       mode_slug: MODE_SLUG_PROMPT_ARENA,
-      prompt_text: prompt,
+      task_text: prompt,
       status: taskStatus,
       selected_models: modelKeys,
       settings: {},
