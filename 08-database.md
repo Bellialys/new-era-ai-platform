@@ -66,7 +66,7 @@ prompt_text
 Переход был сделан через две стадии:
 
 1. Добавить `task_text`, синхронизировать его с `prompt_text` и сохранить обратную совместимость.
-2. Перевести код на `task_text`, затем удалить `prompt_text` миграцией `20260609055000_drop_prompt_text.sql`.
+2. Перевести код на `task_text`, затем удалить `prompt_text` миграцией `20260609082216_drop_prompt_text.sql`.
 
 ## Основные таблицы
 
@@ -298,10 +298,10 @@ create table public.votes (
 | `0004_profiles_grants.sql` | Grants для profiles |
 | `0005_service_role_models_select.sql` | Доступ service role к models |
 | `0006_service_role_profiles_grants.sql` | Grants для profiles/service role |
-| `20260607212653_harden_profiles_and_indexes.sql` | Усиление profiles и индексов |
-| `20260608041610_align_mvp_tasks_and_votes.sql` | Выравнивание tasks/votes под MVP |
+| `20260607212653_harden_profiles_and_indexes.sql` | Усиление profiles, RLS policies и индексов |
+| `20260608041610_align_mvp_tasks_and_votes.sql` | Выравнивание tasks/votes под MVP и временная совместимость task_text/prompt_text |
 | `20260609054344_db_integrity_fixes.sql` | Integrity/security fixes: search_path, updated_at triggers, unique vote indexes |
-| `20260609055000_drop_prompt_text.sql` | Финальное удаление старого `prompt_text` после перехода к `task_text` |
+| `20260609082216_drop_prompt_text.sql` | Финальное удаление старого `prompt_text` после перехода к `task_text` |
 
 Важно:
 
@@ -309,8 +309,8 @@ create table public.votes (
 20260609054344_db_integrity_fixes.sql уже применён в Supabase.
 # файл нужен в репозитории для истории миграций
 
-20260609055000_drop_prompt_text.sql фиксирует финальный cleanup.
-# применять после деплоя кода, который пишет tasks.task_text
+20260609082216_drop_prompt_text.sql уже применён в Supabase.
+# это финальный cleanup после деплоя кода, который пишет tasks.task_text
 ```
 
 ## Что уже сделано в v0.5.1
@@ -327,6 +327,7 @@ create table public.votes (
 10. Добавлены индексы и constraints для целостности данных.
 11. Добавлены triggers для автоматического обновления `updated_at` в `tasks` и `models`.
 12. Код Prompt Arena переведён с `prompt_text` на `task_text`.
+13. История миграций Supabase синхронизирована с репозиторием.
 
 ## Будущие сущности Image Arena / Visual Arena
 
