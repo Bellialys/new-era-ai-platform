@@ -1,0 +1,80 @@
+{
+  "description": "Map of project documents and how each relates to the Single Source of Truth (.project/state.json + .project/tasks/*.json). Consumed by `npm run docs:check`.",
+  "sourcesOfTruth": [
+    ".project/state.json",
+    ".project/tasks/"
+  ],
+  "syncedDocuments": [
+    {
+      "path": "README.md",
+      "plugin": "readme",
+      "requiredMarkers": ["PROJECT_VERSION", "PROJECT_STATUS", "CURRENT_PHASE"]
+    },
+    {
+      "path": "14-roadmap.md",
+      "plugin": "roadmap",
+      "requiredMarkers": ["PROJECT_VERSION", "PROJECT_STATUS", "CURRENT_PHASE"]
+    },
+    {
+      "path": "15-changelog.md",
+      "plugin": "changelog",
+      "requiredMarkers": ["PROJECT_VERSION"]
+    },
+    {
+      "path": "AGENTS.md",
+      "plugin": "agents",
+      "requiredMarkers": ["PROJECT_VERSION", "CURRENT_PHASE"]
+    },
+    {
+      "path": "package.json",
+      "plugin": "package-json",
+      "requiredMarkers": []
+    }
+  ],
+  "activeDocuments": [
+    "README.md",
+    "AGENTS.md",
+    "00-readme.md",
+    "01-idea.md",
+    "02-project-plan.md",
+    "03-tools-and-sites.md",
+    "04-mvp-scope.md",
+    "05-user-roles.md",
+    "06-project-modes.md",
+    "07-architecture.md",
+    "08-database.md",
+    "09-api-structure.md",
+    "10-ui-pages.md",
+    "11-ai-models.md",
+    "12-security-and-env.md",
+    "13-deployment.md",
+    "14-roadmap.md",
+    "15-changelog.md",
+    "16-decisions.md",
+    "17-code-arena-spec.md",
+    "18-team-mode-spec.md",
+    "19-development-checklist.md",
+    "20-auth-guest-profile-plan.md",
+    "21-access-gate-policy.md",
+    "23-codex-quality-rules.md",
+    "24-codex-active-rule-set.md",
+    "25-definition-of-done.md",
+    "27-environments.md",
+    "28-api-contracts.md",
+    "29-database-ownership.md",
+    "30-data-retention-policy.md",
+    "31-image-arena-spec.md",
+    "32-model-catalog-governance.md",
+    "33-feature-flags.md",
+    "34-document-sync-policy.md"
+  ],
+  "deprecatedPatterns": [
+    "*-addendum.md",
+    "README-status-*.md",
+    "*-override.md"
+  ],
+  "deprecatedDocuments": [
+    "22-codex-action-backlog.md"
+  ],
+  "archiveDir": "archive"
+}

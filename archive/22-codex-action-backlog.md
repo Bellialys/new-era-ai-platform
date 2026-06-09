@@ -1,4 +1,24 @@
-# 22 - Codex Action Backlog
+# 22 - Codex Action Backlog (DEPRECATED)
+
+> **DEPRECATED — заменён Project State Sync System.**
+>
+> Этот файл больше не является источником активных задач. Активные задачи
+> перенесены в `.project/tasks/*.json` и управляются через `npm run state:*`.
+> Соответствие старых backlog-задач новым task-файлам:
+>
+> | Backlog | Task file |
+> |---|---|
+> | Task 1 — миграции на чистой БД | `.project/tasks/V060-01.json` |
+> | Task 2 — Access Gate / Guest Mode | `.project/tasks/V061-01.json` |
+> | Task 3 — Model Access Levels | `.project/tasks/V062-01.json` |
+> | Task 4 — Auth SSR | `.project/tasks/V063-01.json` |
+> | Task 5 — Profile MVP | `.project/tasks/V064-01.json` |
+> | Task 6 — Avatar Upload | `.project/tasks/V065-01.json` |
+> | Task 7 — Email/Password Management | `.project/tasks/V066-01.json` |
+> | Task 8 — User-linked Arena | `.project/tasks/V067-01.json` |
+>
+> Содержимое ниже сохранено как исторический контекст (правила и стоп-условия
+> для Codex). См. `34-document-sync-policy.md`.
 
 ## Назначение файла
 

@@ -1,0 +1,35 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V053-01",
+  "title": "Implement Project State Sync System",
+  "status": "verify",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/state.schema.json",
+    ".project/task.schema.json",
+    ".project/document-map.json",
+    ".project/history.json",
+    ".project/tasks/",
+    "scripts/state/index.mjs",
+    "scripts/sync/index.mjs",
+    "scripts/sync/utils.mjs",
+    "scripts/sync/plugins/readme.mjs",
+    "scripts/sync/plugins/roadmap.mjs",
+    "scripts/sync/plugins/changelog.mjs",
+    "scripts/sync/plugins/package-json.mjs",
+    "scripts/sync/plugins/agents.mjs",
+    "34-document-sync-policy.md",
+    ".github/workflows/ci.yml"
+  ],
+  "checksRequired": ["typecheck", "lint", "build", "docs:check"],
+  "checksPassed": ["typecheck", "lint", "build", "docs:check"],
+  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "commitHash": null,
+  "transitions": [
+    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z" },
+    { "from": "planned", "to": "in_progress", "at": "2026-06-10T00:00:00.000Z" },
+    { "from": "in_progress", "to": "verify", "at": "2026-06-10T00:00:00.000Z", "note": "All required checks passed; awaiting commit and Definition of Done sign-off." }
+  ],
+  "notes": "Infrastructure-only developer feature; no product features added. Move to 'done' only after the commit exists: `npm run state:task -- V053-01 done --commit <hash>`."
+}

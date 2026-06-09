@@ -1,0 +1,20 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V064-01",
+  "title": "v0.6.4 Profile MVP",
+  "status": "planned",
+  "priority": "medium",
+  "files": [
+    "20-auth-guest-profile-plan.md",
+    "supabase/migrations/",
+    "src/app/profile/page.tsx"
+  ],
+  "checksRequired": ["typecheck", "lint", "build"],
+  "checksPassed": [],
+  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "commitHash": null,
+  "transitions": [
+    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z", "note": "Migrated from 22-codex-action-backlog.md (Backlog task 5)." }
+  ],
+  "notes": "Extend profiles (first_name, last_name, display_name, avatar_url, role, plan, updated_at). /profile shows identity + plan + role + basic stats (tasks/responses/votes). Owner can edit names; other profiles are not accessible."
+}

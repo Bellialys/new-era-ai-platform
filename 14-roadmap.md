@@ -10,6 +10,19 @@
 
 ## Текущий статус
 
+<!-- SYNC:CURRENT_PHASE_START -->
+**Текущая фаза:** v0.5.3 - Voting MVP Stabilization
+<!-- SYNC:CURRENT_PHASE_END -->
+
+<!-- SYNC:PROJECT_STATUS_START -->
+**Статус проекта:** `stable`
+<!-- SYNC:PROJECT_STATUS_END -->
+
+<!-- SYNC:PROJECT_VERSION_START -->
+**Текущая версия:** `v0.5.3`
+<!-- SYNC:PROJECT_VERSION_END -->
+
+
 ```text
 v0.5.3 - Voting MVP stabilization
 # текущий стабильный MVP-релиз перед v0.6

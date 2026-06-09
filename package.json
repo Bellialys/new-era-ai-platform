@@ -15,7 +15,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke": "node scripts/smoke-check.mjs"
+    "smoke": "node scripts/smoke-check.mjs",
+    "state:context": "node scripts/state/index.mjs context",
+    "state:check": "node scripts/state/index.mjs check",
+    "state:task": "node scripts/state/index.mjs task",
+    "state:archive": "node scripts/state/index.mjs archive",
+    "state:version": "node scripts/state/index.mjs version",
+    "docs:sync": "node scripts/sync/index.mjs",
+    "docs:check": "node scripts/sync/index.mjs check",
+    "docs:restore": "node scripts/sync/index.mjs restore",
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run docs:check"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",

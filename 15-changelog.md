@@ -6,6 +6,11 @@
 
 ## Текущая версия
 
+<!-- SYNC:PROJECT_VERSION_START -->
+**Текущая версия:** `v0.5.3`
+<!-- SYNC:PROJECT_VERSION_END -->
+
+
 ```text
 v0.5.3 - Voting MVP stabilization
 # текущий стабильный MVP-релиз по 14-roadmap.md

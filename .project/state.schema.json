@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "new-era-ai-platform/.project/state.schema.json",
+  "title": "Project State",
+  "description": "Single source of truth for the overall project state. Tasks live in .project/tasks/*.json, not here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project",
+    "currentVersion",
+    "currentPhase",
+    "status",
+    "activeTaskIds",
+    "lastSyncedAt",
+    "baseBranch"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1
+    },
+    "currentVersion": {
+      "type": "string",
+      "description": "semver, kept in lockstep with package.json version.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "currentPhase": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["planning", "in_development", "stabilizing", "stable", "released", "blocked"]
+    },
+    "activeTaskIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^V\\d{3}-\\d{2}$"
+      }
+    },
+    "lastSyncedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "baseBranch": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

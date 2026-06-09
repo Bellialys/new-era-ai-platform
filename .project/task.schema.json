@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "new-era-ai-platform/.project/task.schema.json",
+  "title": "Project Task",
+  "description": "A single tracked task. status 'done' is only valid when checksPassed contains every entry of checksRequired and commitHash is set.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "status",
+    "priority",
+    "files",
+    "checksRequired",
+    "checksPassed",
+    "lastUpdated",
+    "transitions"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^V\\d{3}-\\d{2}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["planned", "in_progress", "verify", "done", "blocked", "archived"]
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checksRequired": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checksPassed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lastUpdated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "commitHash": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "transitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["to", "at"],
+        "properties": {
+          "from": {
+            "type": ["string", "null"]
+          },
+          "to": {
+            "type": "string",
+            "enum": ["planned", "in_progress", "verify", "done", "blocked", "archived"]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "done"
+          }
+        }
+      },
+      "then": {
+        "required": ["commitHash"],
+        "properties": {
+          "commitHash": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

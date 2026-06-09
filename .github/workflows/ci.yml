@@ -10,7 +10,7 @@ on:
 
 jobs:
   validate:
-    name: Typecheck, lint, test, build, smoke
+    name: Typecheck, lint, test, build, docs, smoke
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +37,11 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Project state and docs sync check
+        run: |
+          npm run state:check
+          npm run docs:check
 
       - name: Smoke
         env:

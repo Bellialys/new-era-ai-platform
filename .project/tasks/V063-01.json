@@ -1,0 +1,22 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V063-01",
+  "title": "v0.6.3 Auth SSR",
+  "status": "planned",
+  "priority": "high",
+  "files": [
+    "20-auth-guest-profile-plan.md",
+    "src/lib/supabase.ts",
+    "src/lib/server/supabase.ts",
+    "src/app/login/page.tsx",
+    "src/app/signup/page.tsx"
+  ],
+  "checksRequired": ["typecheck", "lint", "build"],
+  "checksPassed": [],
+  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "commitHash": null,
+  "transitions": [
+    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z", "note": "Migrated from 22-codex-action-backlog.md (Backlog task 4)." }
+  ],
+  "notes": "Install @supabase/ssr; browser + server clients; cookie session refresh; /auth and /auth/callback; email/password login/signup/logout. OAuth (Google/GitHub) later."
+}

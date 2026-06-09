@@ -1,0 +1,19 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V066-01",
+  "title": "v0.6.6 Email and Password Management",
+  "status": "planned",
+  "priority": "medium",
+  "files": [
+    "20-auth-guest-profile-plan.md",
+    "12-security-and-env.md"
+  ],
+  "checksRequired": ["typecheck", "lint", "build"],
+  "checksPassed": [],
+  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "commitHash": null,
+  "transitions": [
+    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z", "note": "Migrated from 22-codex-action-backlog.md (Backlog task 7)." }
+  ],
+  "notes": "Change email (with confirmation), forgot/update password via Supabase Auth. Neutral security messages: never reveal whether an email exists or the exact login-failure reason. Keep profiles.email in sync with Auth email."
+}

@@ -46,6 +46,9 @@ Thumbs.db
 .cache/
 .turbo/
 
+# project state sync (local backups only; state/tasks ARE committed)
+.project/backups/
+
 # temporary files
 *.tmp
 *.temp

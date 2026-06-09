@@ -1,0 +1,5 @@
+{
+  "description": "Append-only archive of completed work. `npm run state:archive` moves done tasks here.",
+  "archivedTasks": [],
+  "versions": []
+}

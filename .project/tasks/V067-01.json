@@ -1,0 +1,20 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V067-01",
+  "title": "v0.6.7 User-linked Arena",
+  "status": "planned",
+  "priority": "medium",
+  "files": [
+    "src/app/api/compare/route.ts",
+    "src/lib/server/arena-persistence.ts",
+    "29-database-ownership.md"
+  ],
+  "checksRequired": ["typecheck", "lint", "build"],
+  "checksPassed": [],
+  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "commitHash": null,
+  "transitions": [
+    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z", "note": "Migrated from 22-codex-action-backlog.md (Backlog task 8)." }
+  ],
+  "notes": "/api/compare resolves user vs guest: account runs save tasks.user_id, guest runs save tasks.anonymous_session_id. Profile statistics count real tasks/responses/votes; prepares future user history."
+}
