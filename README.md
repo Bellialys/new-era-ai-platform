@@ -4,11 +4,15 @@
 
 Пользователь вводит одну задачу, выбирает несколько AI-моделей, получает ответы рядом, сравнивает качество и выбирает лучший результат.
 
+Главный источник порядка версий - `14-roadmap.md`.
+
 ## Текущий статус
 
-Текущая версия проекта: **v0.4.1 - OpenRouter Integration Fix**.
+Текущая версия проекта: **v0.5.0 - Supabase Integration**.
 
-Готово сейчас:
+Статус синхронизирован с `00-readme.md`.
+
+Реально готово:
 
 - Next.js App Router проект;
 - главная страница `/`;
@@ -16,21 +20,25 @@
 - backend route `GET /api/models`;
 - backend route `POST /api/compare`;
 - серверная интеграция OpenRouter;
-- server-side allowlist моделей;
+- Supabase PostgreSQL migrations для `models`, `tasks`, `model_responses` и `profiles`;
+- server-side Supabase client для сохранения Prompt Arena;
+- browser-side Supabase client только с publishable key;
+- чтение моделей из Supabase с fallback на hardcoded allowlist;
+- server-side allowlist моделей как аварийный fallback;
 - проверка `prompt`, `modelIds`, `modeSlug`;
 - безопасные API-ошибки через `ApiError`;
 - отмена устаревших запросов на клиенте через `AbortController`;
+- best-effort сохранение задач и ответов в Supabase;
 - `package-lock.json`;
-- успешные проверки `typecheck`, `lint`, `build`.
+- успешные проверки `typecheck`, `lint`, `test`, `build`.
 
-Ещё не готово:
+Пока не готово как стабильный пользовательский этап:
 
-- Supabase integration;
-- сохранение задач и ответов;
-- сохранение голоса победителя;
+- сохранение голосов как завершённый Voting MVP;
 - история сравнений;
-- Vercel deploy;
-- аккаунты пользователей;
+- production deploy на Vercel;
+- полноценные пользовательские аккаунты и личная история;
+- админ-панель;
 - Code Arena, Judge Mode, Leaderboard и AI Team Mode.
 
 ## Главная цель
@@ -53,6 +61,7 @@
 | Frontend | Next.js, React, TypeScript |
 | Backend | Next.js Route Handlers |
 | Database | Supabase PostgreSQL |
+| Auth | Supabase Auth |
 | AI API | OpenRouter API |
 | Deploy | Vercel |
 | Repository | GitHub |
@@ -93,6 +102,14 @@ OPENROUTER_API_KEY=your_real_openrouter_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
+Минимум для Supabase persistence:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+```
+
 Нельзя добавлять в GitHub:
 
 - `.env.local`;
@@ -104,34 +121,45 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 ### `GET /api/models`
 
-Возвращает список разрешённых моделей из server-side allowlist.
+Возвращает список разрешённых моделей.
+
+Основной режим:
+
+```text
+Supabase models catalog
+# frontend получает публичные model ids
+```
+
+Fallback режим:
+
+```text
+server-side hardcoded allowlist
+# используется, если Supabase недоступен или каталог пуст
+```
 
 ### `POST /api/compare`
 
-Текущий запрос `v0.4.1`:
+Текущий запрос `v0.5.0`:
 
 ```json
 {
   "prompt": "Сравни Next.js и Nuxt для MVP AI-платформы",
-  "modelIds": [
-    "google/gemini-flash-1.5",
-    "mistralai/mistral-small-3.1-24b-instruct"
-  ],
+  "modelIds": ["model-selection-id-1", "model-selection-id-2"],
   "modeSlug": "prompt-arena"
 }
 ```
 
-Текущий ответ `v0.4.1`:
+Текущий ответ `v0.5.0`:
 
 ```json
 {
   "status": "success",
-  "modeSlug": "prompt-arena",
+  "taskId": "saved-task-uuid-or-null",
   "responses": [
     {
-      "id": "generated-response-id",
-      "modelId": "google/gemini-flash-1.5",
-      "modelName": "Gemini Flash 1.5",
+      "id": "response-uuid-or-generated-id",
+      "modelId": "model-selection-id-1",
+      "modelName": "Model display name",
       "status": "success",
       "answerText": "Ответ модели",
       "latencyMs": 1234
@@ -142,8 +170,12 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 Важное правило:
 
-- в `v0.4.1` поле `modelIds` содержит OpenRouter model keys из allowlist;
-- в `v0.5+` после Supabase поле `modelIds` должно перейти на UUID из таблицы `models`, а OpenRouter `model_key` должен остаться только на backend.
+- в Supabase mode `modelIds` равны UUID из таблицы `models`;
+- в fallback mode `modelIds` могут временно совпадать с server-side OpenRouter model keys;
+- OpenRouter `model_key` не должен приходить с frontend как доверенное значение;
+- backend всегда повторно проверяет выбранные модели.
+
+Подробный контракт API описан в `28-api-contracts.md`.
 
 ## Документация проекта
 
@@ -169,9 +201,23 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 | `17-code-arena-spec.md` | Code Arena |
 | `18-team-mode-spec.md` | AI Team Mode |
 | `19-development-checklist.md` | Чек-лист разработки |
-| `27-environments.md` | Матрица окружений Local / Preview / Staging / Production |
-| `27-final-documentation-review.md` | Текущая финальная проверка документации |
+| `20-auth-guest-profile-plan.md` | План Auth, Guest Mode и Profile |
+| `21-access-gate-policy.md` | Политика доступа |
+| `22-codex-action-backlog.md` | Backlog задач для Codex |
+| `23-codex-quality-rules.md` | Правила качества для Codex |
+| `24-codex-active-rule-set.md` | Активный rule set |
+| `25-definition-of-done.md` | Definition of Done |
+| `27-environments.md` | Главный документ по окружениям Local / Preview / Staging / Production |
+| `28-api-contracts.md` | API contracts |
+| `29-database-ownership.md` | Владение данными и связи таблиц |
+| `30-data-retention-policy.md` | Политика хранения и удаления данных |
+| `31-image-arena-spec.md` | Будущая Image Arena |
+| `32-model-catalog-governance.md` | Управление каталогом AI-моделей |
+| `33-feature-flags.md` | Feature flags |
+| `34-manual-qa-checklist.md` | Manual QA checklist |
 | `AGENTS.md` | Правила для AI-агентов и разработчиков |
+
+Дополнительные audit/addendum документы в корне репозитория сохраняются как исторические или вспомогательные материалы. Основным документом по окружениям является только `27-environments.md`.
 
 ## Главные правила разработки
 

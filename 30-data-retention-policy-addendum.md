@@ -1,6 +1,8 @@
 # 30 - Data Retention Policy Addendum
 
-This file extends `30-data-retention-policy.md` until the placeholder can be replaced.
+This file is a temporary addendum for `30-data-retention-policy.md`.
+
+The main policy document now contains the MVP baseline. Keep this addendum only for short-lived notes that still need to be folded into the main document.
 
 ## Retention rules
 

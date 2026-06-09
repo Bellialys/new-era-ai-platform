@@ -1,6 +1,8 @@
 # 28 - API Contracts Addendum
 
-This file extends `28-api-contracts.md` until the placeholder can be replaced.
+This file is a temporary addendum for `28-api-contracts.md`.
+
+The main contract document now contains the MVP baseline. Keep this addendum only for short-lived notes that still need to be folded into the main document.
 
 ## Current MVP endpoints
 

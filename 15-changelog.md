@@ -15,6 +15,12 @@ v0.5.0 - Supabase Integration
 
 Дата: 2026-06-07
 
+### Documentation
+
+- `27-environments.md` закреплён как основной документ по Local / Preview / Staging / Production окружениям.
+- Устаревший отчёт `27-final-documentation-review.md` относился к `v0.4.1` и больше не является отдельным документом документационного индекса.
+- Итоги старого `v0.4.1` documentation review сохранены в changelog: документация была синхронизирована после OpenRouter Integration Fix, следующий этап был обозначен как Supabase Integration, а проверки `typecheck`, `lint`, `build` проходили.
+
 ### Added
 
 - Добавлены Supabase migrations для `models`, `tasks`, `model_responses`, `profiles` и grants.
