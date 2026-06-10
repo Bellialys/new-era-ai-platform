@@ -29,15 +29,17 @@
 - `models.provider`
 - `models.status`
 
-`models.status` добавлен отдельной миграцией как generated-колонка,
-производная от `models.is_active`:
+`models.status` добавлен отдельной миграцией как обычная текстовая колонка:
 
-- `is_active = true` → `status = 'active'`
-- `is_active = false` → `status = 'inactive'`
+- тип: `text`
+- `NOT NULL`
+- значение по умолчанию: `active`
 
-Так проект сохраняет старую логику выборки через `is_active` / `is_public`, но
-получает явное поле `status` для Model Catalog Governance и автоматической
-проверки схемы.
+На текущем MVP выбор доступных моделей по-прежнему должен опираться на
+`models.is_active` / `models.is_public`. Поле `models.status` нужно для Model
+Catalog Governance и автоматической проверки схемы. Если позже потребуется
+полноценный lifecycle (`active`, `inactive`, `deprecated`, `blocked`), это нужно
+оформить отдельной миграцией с backfill-правилами и ограничениями.
 
 ## Подключение и переменная окружения
 
