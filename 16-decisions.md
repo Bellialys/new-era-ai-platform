@@ -70,8 +70,8 @@ root repository
 16-decisions.md
 # журнал решений
 
-23-documentation-audit-deep.md
-# углублённый аудит документации
+archive/23-documentation-audit-deep.md
+# углублённый аудит документации (перенесён в archive/)
 ```
 
 Папку `docs/` не использовать как обязательную структуру на текущем этапе.

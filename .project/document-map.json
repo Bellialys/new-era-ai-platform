@@ -62,6 +62,7 @@
     "27-environments.md",
     "28-api-contracts.md",
     "29-database-ownership.md",
+    "29-database-ownership-policy.md",
     "30-data-retention-policy.md",
     "31-image-arena-spec.md",
     "32-model-catalog-governance.md",
