@@ -29,13 +29,15 @@
 - `models.provider`
 - `models.status`
 
-> **Известный дрейф: `models.status`.** Текущие миграции описывают таблицу
-> `models` с полями `is_active` / `is_public`, а **не** `status`
-> (см. `supabase/migrations/0001_prompt_arena_mvp.sql`). Поэтому при запуске на
-> текущей схеме `schema:check` может отметить `models.status` как `MISSING` —
-> это **корректная** работа проверки: она показывает реальное расхождение.
-> Нужно либо добавить колонку `models.status`, либо обновить список проверок и
-> документацию. Это решение остаётся за владельцем проекта.
+`models.status` добавлен отдельной миграцией как generated-колонка,
+производная от `models.is_active`:
+
+- `is_active = true` → `status = 'active'`
+- `is_active = false` → `status = 'inactive'`
+
+Так проект сохраняет старую логику выборки через `is_active` / `is_public`, но
+получает явное поле `status` для Model Catalog Governance и автоматической
+проверки схемы.
 
 ## Подключение и переменная окружения
 
@@ -67,9 +69,10 @@ npm run schema:check
 # подключается к Supabase Postgres и проверяет таблицы/колонки
 ```
 
-Требует Node ≥ 22.6 (нативный TypeScript stripping). Dev и CI используют Node 24.
-При первом запуске Node может вывести безвредное предупреждение
-`MODULE_TYPELESS_PACKAGE_JSON` — на результат и exit code оно не влияет.
+Файл скрипта имеет расширение `.ts`, но намеренно написан как plain JS/CommonJS
+без TypeScript-only синтаксиса. Это нужно, потому что `package.json` запускает его
+напрямую через Node. Такой формат совместим с проектным требованием Node ≥ 20.9
+без `tsx`, `ts-node` и экспериментального TypeScript stripping.
 
 ## Exit codes
 
