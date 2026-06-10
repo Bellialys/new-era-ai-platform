@@ -23,6 +23,7 @@
     "env:check:full": "node scripts/check-env.mjs --mode=full",
     "env:check:json": "node scripts/check-env.mjs --mode=full --json",
     "env:check:example": "node scripts/check-env.mjs --generate-example",
+    "schema:check": "node scripts/check-schema-sync.ts",
     "state:context": "node scripts/state/index.mjs context",
     "state:check": "node scripts/state/index.mjs check",
     "state:task": "node scripts/state/index.mjs task",
@@ -36,12 +37,14 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",
     "next": "^16.2.6",
+    "pg": "^8.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",

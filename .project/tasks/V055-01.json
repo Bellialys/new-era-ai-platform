@@ -1,0 +1,22 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V055-01",
+  "title": "Supabase Schema Sync Check",
+  "status": "verify",
+  "priority": "medium",
+  "files": [
+    "scripts/check-schema-sync.ts",
+    "35-database-schema-sync.md",
+    "package.json"
+  ],
+  "checksRequired": ["typecheck", "lint", "build", "docs:check"],
+  "checksPassed": ["typecheck", "lint", "build", "docs:check"],
+  "lastUpdated": "2026-06-10T02:30:00.000Z",
+  "commitHash": null,
+  "transitions": [
+    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z" },
+    { "from": "planned", "to": "in_progress", "at": "2026-06-10T00:00:00.000Z", "note": "Add pg-based schema sync check for Supabase tables/columns." },
+    { "from": "in_progress", "to": "verify", "at": "2026-06-10T02:30:00.000Z", "note": "typecheck, lint, build, docs:check passed. schema:check exits 2 here (no SUPABASE_DB_URL); run against the real DB to validate schema." }
+  ],
+  "notes": "schema:check needs SUPABASE_DB_URL + network, so it is NOT in verify/CI/build and is not part of checksRequired. It cannot be run to green in this environment (no DB credentials, and real connection strings must not be added). Known drift: models.status is not in current migrations."
+}

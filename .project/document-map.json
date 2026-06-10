@@ -67,6 +67,7 @@
     "32-model-catalog-governance.md",
     "33-feature-flags.md",
     "34-document-sync-policy.md",
+    "35-database-schema-sync.md",
     "docs/34-env-check-policy.md",
     "docs/34-env-check-implementation.md"
   ],
