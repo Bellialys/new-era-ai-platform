@@ -63,16 +63,17 @@
       "example": "http://localhost:3000"
     },
     {
-      "name": "DATABASE_URL",
+      "name": "SUPABASE_DB_URL",
+      "aliases": ["DATABASE_URL"],
       "required": true,
       "category": "secret",
       "groups": ["migrations", "full"],
       "validation": {
         "type": "regex",
         "pattern": "^postgresql://",
-        "message": "must start with postgresql://"
+        "message": "must start with postgresql:// (Supabase database connection string)"
       },
-      "example": "postgresql://user:password@host:5432/database"
+      "example": "postgresql://user:password@host:5432/postgres"
     },
     {
       "name": "SUPABASE_ACCESS_TOKEN",
@@ -84,6 +85,76 @@
         "message": "must be a Supabase CLI / account access token"
       },
       "example": "your-supabase-access-token"
+    },
+    {
+      "name": "UPSTASH_REDIS_REST_URL",
+      "required": false,
+      "category": "secret",
+      "groups": ["full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^https://",
+        "message": "must be an Upstash REST URL (https://...)"
+      },
+      "example": "https://your-redis.upstash.io"
+    },
+    {
+      "name": "UPSTASH_REDIS_REST_TOKEN",
+      "required": false,
+      "category": "secret",
+      "groups": ["full"],
+      "validation": {
+        "type": "nonEmptyString",
+        "message": "must be an Upstash REST token"
+      },
+      "example": "your-upstash-rest-token"
+    },
+    {
+      "name": "APP_ENV",
+      "required": false,
+      "category": "config",
+      "groups": ["full"],
+      "validation": {
+        "type": "nonEmptyString",
+        "message": "optional app environment label"
+      },
+      "example": "development"
+    },
+    {
+      "name": "APP_URL",
+      "required": false,
+      "category": "config",
+      "groups": ["full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^https?://.+",
+        "message": "must be a valid http(s) URL"
+      },
+      "example": "http://localhost:3000"
+    },
+    {
+      "name": "MODEL_TIMEOUT_MS",
+      "required": false,
+      "category": "config",
+      "groups": ["full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^[0-9]+$",
+        "message": "must be a positive integer (milliseconds)"
+      },
+      "example": "60000"
+    },
+    {
+      "name": "OPENROUTER_MAX_TOKENS",
+      "required": false,
+      "category": "config",
+      "groups": ["full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^[0-9]+$",
+        "message": "must be a positive integer"
+      },
+      "example": "1000"
     }
   ]
 }

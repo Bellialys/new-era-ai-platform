@@ -19,7 +19,7 @@
     "scripts/sync/plugins/changelog.mjs",
     "scripts/sync/plugins/package-json.mjs",
     "scripts/sync/plugins/agents.mjs",
-    "34-document-sync-policy.md",
+    "36-document-sync-policy.md",
     ".github/workflows/ci.yml"
   ],
   "checksRequired": [

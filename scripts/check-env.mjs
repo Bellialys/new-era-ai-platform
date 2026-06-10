@@ -2,7 +2,7 @@
 /**
  * Environment Variables Checker for New Era AI Platform.
  *
- * SECURITY CONTRACT (see docs/34-env-check-policy.md):
+ * SECURITY CONTRACT (see docs/37-env-check-policy.md):
  *   - never prints a variable value, not even partially;
  *   - never prints the length of a value;
  *   - never prints a JWT payload or claims;
@@ -237,14 +237,15 @@ function generateExample(config) {
     "# Copy to .env.local and replace placeholders with real values locally.",
     "",
   ];
-  let lastCategory = null;
-  for (const variable of config.variables) {
-    if (variable.category !== lastCategory) {
-      lines.push(`# ${variable.category} variables`);
-      lastCategory = variable.category;
+  const categories = [...new Set(config.variables.map((variable) => variable.category))];
+  for (const category of categories) {
+    lines.push(`# ${category} variables`);
+    for (const variable of config.variables.filter((variable) => variable.category === category)) {
+      lines.push(`${variable.name}=${variable.example ?? ""}`);
     }
-    lines.push(`${variable.name}=${variable.example ?? ""}`);
+    lines.push("");
   }
+  if (lines[lines.length - 1] === "") lines.pop();
   const outPath = join(BASE_DIR, ".env.local.example");
   writeFileSync(outPath, lines.join("\n") + "\n", "utf8");
   return outPath;

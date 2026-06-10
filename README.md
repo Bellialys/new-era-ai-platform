@@ -127,8 +127,8 @@ npm run env:check:example
 # генерирует .env.local.example только из placeholder-значений
 ```
 
-Политика и детали: `docs/34-env-check-policy.md` и
-`docs/34-env-check-implementation.md`.
+Политика и детали: `docs/37-env-check-policy.md` и
+`docs/38-env-check-implementation.md`.
 
 ```bash
 cp .env.example .env.local
@@ -270,6 +270,10 @@ server-side hardcoded allowlist
 | `32-model-catalog-governance.md` | Управление каталогом AI-моделей |
 | `33-feature-flags.md` | Feature flags |
 | `34-manual-qa-checklist.md` | Manual QA checklist |
+| `35-database-schema-sync.md` | Проверка соответствия Supabase-схемы (`npm run schema:check`) |
+| `36-document-sync-policy.md` | Project State Sync System и политика синхронизации документов |
+| `docs/37-env-check-policy.md` | Политика Environment Variables Checker (`npm run env:check`) |
+| `docs/38-env-check-implementation.md` | Реализация Environment Variables Checker |
 | `AGENTS.md` | Правила для AI-агентов и разработчиков |
 
 Дополнительные audit/addendum документы в корне репозитория сохраняются как исторические или вспомогательные материалы. Основным документом по окружениям является только `27-environments.md`.

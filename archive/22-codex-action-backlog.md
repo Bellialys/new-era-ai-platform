@@ -18,7 +18,7 @@
 > | Task 8 — User-linked Arena | `.project/tasks/V067-01.json` |
 >
 > Содержимое ниже сохранено как исторический контекст (правила и стоп-условия
-> для Codex). См. `34-document-sync-policy.md`.
+> для Codex). См. `36-document-sync-policy.md`.
 
 ## Назначение файла
 

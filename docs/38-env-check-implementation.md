@@ -1,7 +1,7 @@
-# 34 - Environment Variables Check Implementation
+# 38 - Environment Variables Check Implementation
 
 Техническое описание Environment Variables Checker. Политика и правила —
-в `docs/34-env-check-policy.md`.
+в `docs/37-env-check-policy.md`.
 
 ## 1. Добавленные файлы
 
@@ -11,8 +11,8 @@
 | `scripts/check-env.mjs` | сам чекер (загрузка env, валидация, leak detection, репортеры) |
 | `scripts/check-env.test.mjs` | тесты на `node:test` (изолированы через `ENV_CHECK_DIR`) |
 | `.env.local.example` | генерируется командой `env:check:example` (только placeholders) |
-| `docs/34-env-check-policy.md` | политика и правила безопасности |
-| `docs/34-env-check-implementation.md` | этот документ |
+| `docs/37-env-check-policy.md` | политика и правила безопасности |
+| `docs/38-env-check-implementation.md` | этот документ |
 
 ## 2. Добавленные npm-команды
 
@@ -33,7 +33,7 @@ npm run test:env-check       # тесты самого чекера
 ```
 
 `prebuild` намеренно запускает `basic`, а не `migrations`/`full`, чтобы обычный
-`npm run build` не требовал `DATABASE_URL` и `SUPABASE_ACCESS_TOKEN`.
+`npm run build` не требовал `SUPABASE_DB_URL` и `SUPABASE_ACCESS_TOKEN`.
 
 ## 3. Как работает загрузка переменных
 
@@ -127,7 +127,7 @@ placeholder-значений** поля `example` в `env-check.config.json`.
 
 Локально `.env.local` обычно содержит только `basic`-переменные, поэтому
 `npm run env:check:full` и `npm run env:check:migrations` будут сообщать
-`MISSING: DATABASE_URL` / `MISSING: SUPABASE_ACCESS_TOKEN` и завершаться с
+`MISSING: SUPABASE_DB_URL` / `MISSING: SUPABASE_ACCESS_TOKEN` и завершаться с
 exit code 1. Это **корректное** поведение: миграционные секреты задаются только
 в окружении, где реально выполняются миграции. На обычный `build` это не влияет,
 так как `prebuild` запускает только `basic`.

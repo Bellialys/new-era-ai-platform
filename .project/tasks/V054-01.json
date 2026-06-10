@@ -9,8 +9,8 @@
     "scripts/check-env.mjs",
     "scripts/check-env.test.mjs",
     ".env.local.example",
-    "docs/34-env-check-policy.md",
-    "docs/34-env-check-implementation.md",
+    "docs/37-env-check-policy.md",
+    "docs/38-env-check-implementation.md",
     "package.json",
     ".github/workflows/ci.yml",
     "README.md"
