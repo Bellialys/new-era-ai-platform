@@ -26,14 +26,16 @@ Feature Flags нужны, чтобы:
 
 ## 3. Примеры feature flags
 
-Базовые флаги MVP:
+Базовые флаги текущего MVP `v0.5.3`:
 
 ```env
-NEXT_PUBLIC_ENABLE_GUEST_MODE=true
-NEXT_PUBLIC_ENABLE_AUTH=true
-NEXT_PUBLIC_ENABLE_VOTING=false
+NEXT_PUBLIC_ENABLE_GUEST_MODE=false
+NEXT_PUBLIC_ENABLE_AUTH=false
+NEXT_PUBLIC_ENABLE_VOTING=true
 NEXT_PUBLIC_ENABLE_HISTORY=false
 ```
+
+Auth, Guest Mode и History остаются выключенными до своих этапов roadmap. Voting уже входит в `v0.5.3 - Voting MVP Stabilization`, поэтому для текущего MVP его безопасное значение по умолчанию - `true`.
 
 Дополнительные флаги для будущих режимов:
 
@@ -218,17 +220,17 @@ Project Settings -> Environment Variables
 ### Development
 
 ```env
-NEXT_PUBLIC_ENABLE_GUEST_MODE=true
-NEXT_PUBLIC_ENABLE_AUTH=true
+NEXT_PUBLIC_ENABLE_GUEST_MODE=false
+NEXT_PUBLIC_ENABLE_AUTH=false
 NEXT_PUBLIC_ENABLE_VOTING=true
-NEXT_PUBLIC_ENABLE_HISTORY=true
+NEXT_PUBLIC_ENABLE_HISTORY=false
 ```
 
 ### Preview
 
 ```env
-NEXT_PUBLIC_ENABLE_GUEST_MODE=true
-NEXT_PUBLIC_ENABLE_AUTH=true
+NEXT_PUBLIC_ENABLE_GUEST_MODE=false
+NEXT_PUBLIC_ENABLE_AUTH=false
 NEXT_PUBLIC_ENABLE_VOTING=true
 NEXT_PUBLIC_ENABLE_HISTORY=false
 ```
@@ -236,11 +238,13 @@ NEXT_PUBLIC_ENABLE_HISTORY=false
 ### Production
 
 ```env
-NEXT_PUBLIC_ENABLE_GUEST_MODE=true
-NEXT_PUBLIC_ENABLE_AUTH=true
-NEXT_PUBLIC_ENABLE_VOTING=false
+NEXT_PUBLIC_ENABLE_GUEST_MODE=false
+NEXT_PUBLIC_ENABLE_AUTH=false
+NEXT_PUBLIC_ENABLE_VOTING=true
 NEXT_PUBLIC_ENABLE_HISTORY=false
 ```
+
+Когда начнётся разработка `v0.6 - Auth, Guest Mode and Profile`, значения `NEXT_PUBLIC_ENABLE_GUEST_MODE` и `NEXT_PUBLIC_ENABLE_AUTH` можно включать в Development/Preview, но не считать production-ready без отдельной проверки.
 
 ---
 
@@ -353,9 +357,9 @@ Feature flag обычно не нужен для:
 Для текущего MVP рекомендуется использовать:
 
 ```env
-NEXT_PUBLIC_ENABLE_GUEST_MODE=true
-NEXT_PUBLIC_ENABLE_AUTH=true
-NEXT_PUBLIC_ENABLE_VOTING=false
+NEXT_PUBLIC_ENABLE_GUEST_MODE=false
+NEXT_PUBLIC_ENABLE_AUTH=false
+NEXT_PUBLIC_ENABLE_VOTING=true
 NEXT_PUBLIC_ENABLE_HISTORY=false
 NEXT_PUBLIC_ENABLE_PROMPT_ARENA=true
 NEXT_PUBLIC_ENABLE_CODE_ARENA=false
