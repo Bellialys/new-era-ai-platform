@@ -14,24 +14,25 @@
  *   1  one or more required tables/columns are missing (schema drift)
  *   2  cannot run (no connection string, or the database is unreachable)
  *
- * Requires Node >= 22.6 (native TypeScript stripping). Run via `npm run schema:check`.
+ * Run via `npm run schema:check`.
+ *
+ * NOTE:
+ * This file intentionally uses Node-compatible CommonJS and no TypeScript-only
+ * syntax. package.json runs it directly with Node, so keeping it plain JS makes
+ * the check work on the project-supported Node >= 20.9 runtime without tsx,
+ * ts-node or Node's experimental TypeScript stripping.
  */
 
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import nextEnv from "@next/env";
-import pg from "pg";
+const { join, dirname } = require("node:path");
+const { loadEnvConfig } = require("@next/env");
+const pg = require("pg");
 
-const { loadEnvConfig } = nextEnv;
 const { Client } = pg;
+const ROOT = join(dirname(__dirname), ".");
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const REQUIRED_TABLES = ["profiles", "models", "tasks", "model_responses", "votes"];
 
-type ColumnCheck = { table: string; column: string };
-
-const REQUIRED_TABLES: string[] = ["profiles", "models", "tasks", "model_responses", "votes"];
-
-const REQUIRED_COLUMNS: ColumnCheck[] = [
+const REQUIRED_COLUMNS = [
   { table: "tasks", column: "task_text" },
   { table: "tasks", column: "mode_slug" },
   { table: "model_responses", column: "task_id" },
@@ -41,42 +42,39 @@ const REQUIRED_COLUMNS: ColumnCheck[] = [
   { table: "models", column: "status" },
 ];
 
-function getConnectionString(): string | null {
+function getConnectionString() {
   // Never log these values.
   const value = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
   if (!value || value.trim() === "") return null;
   return value;
 }
 
-async function introspect(client: pg.Client): Promise<{
-  tables: Set<string>;
-  columns: Map<string, Set<string>>;
-}> {
-  const tablesResult = await client.query<{ table_name: string }>(
+async function introspect(client) {
+  const tablesResult = await client.query(
     `select table_name
        from information_schema.tables
       where table_schema = 'public'
         and table_type = 'BASE TABLE'`
   );
-  const columnsResult = await client.query<{ table_name: string; column_name: string }>(
+  const columnsResult = await client.query(
     `select table_name, column_name
        from information_schema.columns
       where table_schema = 'public'`
   );
 
-  const tables = new Set<string>();
+  const tables = new Set();
   for (const row of tablesResult.rows) tables.add(row.table_name);
 
-  const columns = new Map<string, Set<string>>();
+  const columns = new Map();
   for (const row of columnsResult.rows) {
-    if (!columns.has(row.table_name)) columns.set(row.table_name, new Set<string>());
-    columns.get(row.table_name)!.add(row.column_name);
+    if (!columns.has(row.table_name)) columns.set(row.table_name, new Set());
+    columns.get(row.table_name).add(row.column_name);
   }
 
   return { tables, columns };
 }
 
-function report(tables: Set<string>, columns: Map<string, Set<string>>): number {
+function report(tables, columns) {
   let missing = 0;
 
   console.log("Supabase schema sync check (schema: public)");
@@ -115,7 +113,7 @@ function report(tables: Set<string>, columns: Map<string, Set<string>>): number 
   return 1;
 }
 
-async function main(): Promise<number> {
+async function main() {
   loadEnvConfig(ROOT, true, { info: () => {}, error: () => {} });
 
   const connectionString = getConnectionString();
@@ -136,7 +134,7 @@ async function main(): Promise<number> {
     await client.connect();
   } catch (error) {
     // Print only a safe error code — never the connection string or raw message.
-    const code = (error as { code?: string }).code ?? "CONNECTION_ERROR";
+    const code = error?.code ?? "CONNECTION_ERROR";
     console.error(`Could not connect to Supabase Postgres (${code}). Check SUPABASE_DB_URL.`);
     return 2;
   }
@@ -145,7 +143,7 @@ async function main(): Promise<number> {
     const { tables, columns } = await introspect(client);
     return report(tables, columns);
   } catch (error) {
-    const code = (error as { code?: string }).code ?? "QUERY_ERROR";
+    const code = error?.code ?? "QUERY_ERROR";
     console.error(`Schema introspection failed (${code}).`);
     return 2;
   } finally {
@@ -156,7 +154,7 @@ async function main(): Promise<number> {
 main()
   .then((code) => process.exit(code))
   .catch((error) => {
-    const code = (error as { code?: string }).code ?? "UNEXPECTED_ERROR";
+    const code = error?.code ?? "UNEXPECTED_ERROR";
     console.error(`Schema sync check could not run (${code}).`);
     process.exit(2);
   });
