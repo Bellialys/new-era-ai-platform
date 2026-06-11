@@ -29,11 +29,15 @@ Codex должен прочитать:
    - правило блокировки использования Prompt Arena без аккаунта или гостевой карточки;
    - определяет `AUTH_REQUIRED` и guest access.
 
-4. `22-codex-action-backlog.md`
-   - накопительный список задач Codex;
-   - из него позже формируется большой prompt для выполнения.
+4. `.project/state.json`
+   - текущее состояние проекта;
+   - список активных task ids.
 
-5. `23-codex-quality-rules.md`
+5. `.project/tasks/*.json`
+   - канонический список задач Codex;
+   - статусы, проверки и commit hash выполненных задач.
+
+6. `23-codex-quality-rules.md`
    - активные правила качества кода;
    - self-review, документация, security, performance, accessibility, API validation, Git workflow.
 
@@ -45,7 +49,7 @@ Codex должен прочитать:
 2. `14-roadmap.md` определяет порядок этапов.
 3. `21-access-gate-policy.md` определяет обязательные правила доступа.
 4. `23-codex-quality-rules.md` определяет качество реализации.
-5. `22-codex-action-backlog.md` определяет список задач для выполнения.
+5. `.project/state.json` и `.project/tasks/*.json` определяют список задач для выполнения.
 6. Старые документы нельзя считать выше новых, если они конфликтуют с этим индексом.
 
 ## Главный алгоритм Codex

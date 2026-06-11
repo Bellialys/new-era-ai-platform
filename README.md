@@ -112,7 +112,9 @@ npm run env:check
 
 ## Переменные окружения
 
-Создай `.env.local` на основе `.env.example`.
+Создай `.env.local` на основе `.env.local.example`. Файл `.env.example`
+остаётся справочным каталогом переменных; основной локальный пример -
+`.env.local.example`.
 
 Проверить окружение можно безопасным чекером (не выводит значения секретов):
 
@@ -131,7 +133,7 @@ npm run env:check:example
 `docs/38-env-check-implementation.md`.
 
 ```bash
-cp .env.example .env.local
+cp .env.local.example .env.local
 # создаёт локальный файл переменных окружения
 ```
 
@@ -258,7 +260,8 @@ server-side hardcoded allowlist
 | `19-development-checklist.md` | Чек-лист разработки |
 | `20-auth-guest-profile-plan.md` | План Auth, Guest Mode и Profile |
 | `21-access-gate-policy.md` | Политика доступа |
-| `22-codex-action-backlog.md` | Backlog задач для Codex |
+| `.project/state.json` | Текущее состояние проекта и активные task ids |
+| `.project/tasks/*.json` | Канонический список задач для Codex |
 | `23-codex-quality-rules.md` | Правила качества для Codex |
 | `24-codex-active-rule-set.md` | Активный rule set |
 | `25-definition-of-done.md` | Definition of Done |

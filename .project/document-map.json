@@ -78,8 +78,6 @@
     "README-status-*.md",
     "*-override.md"
   ],
-  "deprecatedDocuments": [
-    "22-codex-action-backlog.md"
-  ],
+  "deprecatedDocuments": [],
   "archiveDir": "archive"
 }

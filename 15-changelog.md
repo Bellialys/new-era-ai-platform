@@ -33,6 +33,10 @@ v0.5.3 - Voting MVP stabilization
 - `README-status-v0-5-3.md` перенесён в `archive/`.
 - Смысл `15-changelog-addendum.md` и `32-model-catalog-governance-addendum.md` перенесён в основные документы.
 
+### Documentation Cleanup - 2026-06-11
+
+- Зафиксировано, что `/arena-voting` удалён как дубль `/arena`; историю старой совместимой записи выше не переписываем.
+
 ### Fixed
 
 - Убрано состояние, где Winner-кнопка была видимой, но сохраняла выбор только локально.

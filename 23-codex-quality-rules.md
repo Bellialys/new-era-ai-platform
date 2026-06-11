@@ -9,7 +9,7 @@ Status: active
 
 ## Назначение файла
 
-Этот файл усиливает `22-codex-action-backlog.md` и задаёт правила качества для Codex.
+Этот файл дополняет project state (`.project/state.json` и `.project/tasks/*.json`) и задаёт правила качества для Codex.
 
 Codex должен считать этот документ обязательным перед выполнением любых задач, особенно если меняются:
 
@@ -69,7 +69,8 @@ Codex должен работать по расширенной схеме:
 
 Если изменения затрагивают env variables, Codex должен обновить:
 
-- `.env.example`;
+- `.env.local.example` как основной локальный пример;
+- `.env.example` как справочный каталог переменных, если он остаётся применимым;
 - deployment documentation;
 - Vercel/Supabase setup notes, если применимо.
 
@@ -78,7 +79,7 @@ Codex должен работать по расширенной схеме:
 - `14-roadmap.md`;
 - `20-auth-guest-profile-plan.md`;
 - `21-access-gate-policy.md`;
-- `22-codex-action-backlog.md`;
+- `.project/state.json` и `.project/tasks/*.json`;
 - `23-codex-quality-rules.md`, если меняются правила качества.
 
 Если есть breaking change, Codex должен обновить changelog-документ проекта.

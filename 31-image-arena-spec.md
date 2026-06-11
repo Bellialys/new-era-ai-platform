@@ -1,5 +1,7 @@
 # 31 - Image Arena / Visual Arena Spec
 
+> future-only: Этот документ описывает будущую Image Arena / Visual Arena и не является задачей на реализацию в `v0.5.3`.
+
 ## Назначение файла
 
 Этот документ описывает будущий режим **Image Arena / Visual Arena** для проекта **Новая эпоха**.
