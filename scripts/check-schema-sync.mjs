@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Supabase Schema Sync Check.
  *
@@ -16,19 +15,16 @@
  *   2  cannot run (no connection string, or the database is unreachable)
  *
  * Run via `npm run schema:check`.
- *
- * NOTE:
- * This file intentionally uses Node-compatible CommonJS and no TypeScript-only
- * syntax. package.json runs it directly with Node, so keeping it plain JS makes
- * the check work on the project-supported Node >= 20.9 runtime without tsx,
- * ts-node or Node's experimental TypeScript stripping.
  */
 
-const { join, dirname } = require("node:path");
-const { loadEnvConfig } = require("@next/env");
-const pg = require("pg");
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import nextEnv from "@next/env";
+import pg from "pg";
 
+const { loadEnvConfig } = nextEnv;
 const { Client } = pg;
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(dirname(__dirname), ".");
 
 const REQUIRED_TABLES = ["profiles", "models", "tasks", "model_responses", "votes"];

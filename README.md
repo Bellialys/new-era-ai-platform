@@ -106,6 +106,15 @@ npm run build
 npm run smoke
 # проверяет базовый health/models smoke-check
 
+npm run health
+# запускает общий health-check без live Supabase/OpenRouter проверок
+
+npm run health:local
+# общий health-check + schema:check, если задан SUPABASE_DB_URL
+
+npm run health:production
+# production-проверка с full env, models:verify и smoke
+
 npm run env:check
 # проверяет обязательные переменные окружения (без вывода значений секретов)
 ```
@@ -149,6 +158,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+# NEXT_PUBLIC_SUPABASE_ANON_KEY можно использовать как fallback alias для публичного ключа
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
@@ -277,6 +287,7 @@ server-side hardcoded allowlist
 | `36-document-sync-policy.md` | Project State Sync System и политика синхронизации документов |
 | `docs/37-env-check-policy.md` | Политика Environment Variables Checker (`npm run env:check`) |
 | `docs/38-env-check-implementation.md` | Реализация Environment Variables Checker |
+| `40-project-health-check.md` | Команды `health`, `health:local`, `health:production` и live-проверка моделей |
 | `AGENTS.md` | Правила для AI-агентов и разработчиков |
 
 Дополнительные audit/addendum документы в корне репозитория сохраняются как исторические или вспомогательные материалы. Основным документом по окружениям является только `27-environments.md`.

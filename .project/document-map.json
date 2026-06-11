@@ -71,7 +71,8 @@
     "35-database-schema-sync.md",
     "36-document-sync-policy.md",
     "docs/37-env-check-policy.md",
-    "docs/38-env-check-implementation.md"
+    "docs/38-env-check-implementation.md",
+    "40-project-health-check.md"
   ],
   "deprecatedPatterns": [
     "*-addendum.md",

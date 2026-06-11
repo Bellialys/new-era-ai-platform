@@ -37,6 +37,14 @@ v0.5.3 - Voting MVP stabilization
 
 - Зафиксировано, что `/arena-voting` удалён как дубль `/arena`; историю старой совместимой записи выше не переписываем.
 
+### Health Check Cleanup - 2026-06-11
+
+- Добавлены `health`, `health:local` и `health:production` scripts для общей проверки проекта.
+- Добавлена live-проверка OpenRouter model ids через `npm run models:verify`.
+- Browser Supabase client теперь поддерживает fallback `NEXT_PUBLIC_SUPABASE_ANON_KEY` после `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- `npm run test:env-check` подключён к GitHub Actions CI.
+- Из fallback allowlist удалены два устаревших free model id, которых больше нет в live OpenRouter catalog.
+
 ### Fixed
 
 - Убрано состояние, где Winner-кнопка была видимой, но сохраняла выбор только локально.

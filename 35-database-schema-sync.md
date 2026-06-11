@@ -7,7 +7,7 @@
 дрейф схемы (расхождение между миграциями/документацией и фактической базой)
 до того, как он сломает API.
 
-Скрипт: `scripts/check-schema-sync.ts`. Команда: `npm run schema:check`.
+Скрипт: `scripts/check-schema-sync.mjs`. Команда: `npm run schema:check`.
 
 ## Что проверяется
 
@@ -74,10 +74,9 @@ npm run schema:check
 # подключается к Supabase Postgres и проверяет таблицы/колонки
 ```
 
-Файл скрипта имеет расширение `.ts`, но намеренно написан как plain JS/CommonJS
-без TypeScript-only синтаксиса. Это нужно, потому что `package.json` запускает его
-напрямую через Node. Такой формат совместим с проектным требованием Node ≥ 20.9
-без `tsx`, `ts-node` и экспериментального TypeScript stripping.
+Файл скрипта имеет расширение `.mjs` и запускается напрямую через Node как native
+ESM. Это убирает нестабильность запуска `node *.ts` без `tsx`, `ts-node` или
+экспериментального TypeScript stripping.
 
 ## Exit codes
 
@@ -89,20 +88,20 @@ npm run schema:check
 
 ## Почему это не в `verify` / CI / `build`
 
-`schema:check` намеренно **не** добавлен в `npm run verify`, `prebuild` или
-GitHub Actions, потому что требует:
+`schema:check` намеренно **не** добавлен в `npm run verify`, `prebuild`, обычный
+`npm run health` или GitHub Actions, потому что требует:
 
 - реальной строки подключения с секретом (`SUPABASE_DB_URL`);
 - сетевого доступа к базе Supabase.
 
 Добавление его в общий build/CI ломало бы сборку у всех, у кого нет доступа к
 базе, и противоречило бы правилу «не вставлять секреты в CI». Это отдельная
-ops/dev-проверка, которую запускают вручную против реальной базы. Отдельного
-агрегатора Project Health Check в проекте сейчас нет; ближайший — `npm run verify`
-(typecheck + lint + build + docs:check), и `schema:check` сознательно остаётся
-вне него.
+ops/dev-проверка, которую запускают вручную против реальной базы.
+`npm run health:local` запускает `schema:check` только если локально задан
+`SUPABASE_DB_URL` или `DATABASE_URL`. Без этих переменных команда явно пропускает
+проверку схемы и не печатает секреты.
 
 ## Как добавить новую таблицу/колонку в проверку
 
 Отредактируйте массивы `REQUIRED_TABLES` и `REQUIRED_COLUMNS` в
-`scripts/check-schema-sync.ts`. Список намеренно держится в одном месте.
+`scripts/check-schema-sync.mjs`. Список намеренно держится в одном месте.

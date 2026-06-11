@@ -59,22 +59,6 @@ export const ALLOWED_MODELS: ArenaModel[] = [
     description: "Бесплатная MoE-модель Google Gemma 4 — быстрее за счёт активных 4B параметров.",
   },
   {
-    id: "z-ai/glm-4.5-air:free",
-    name: "GLM 4.5 Air",
-    role: "Лёгкая general-модель",
-    provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная облегчённая модель Z.ai GLM для быстрых общих ответов.",
-  },
-  {
-    id: "moonshotai/kimi-k2.6:free",
-    name: "Kimi K2.6",
-    role: "General + длинный контекст",
-    provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная модель MoonshotAI Kimi с контекстом 262K для длинных задач.",
-  },
-  {
     id: "nousresearch/hermes-3-llama-3.1-405b:free",
     name: "Hermes 3 405B",
     role: "Крупная general-модель",
