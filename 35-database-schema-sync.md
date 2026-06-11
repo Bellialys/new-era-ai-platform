@@ -23,10 +23,15 @@
 
 - `tasks.task_text`
 - `tasks.mode_slug`
+- `tasks.user_id`
+- `tasks.anonymous_session_id`
 - `model_responses.task_id`
 - `votes.task_id`
+- `votes.user_id`
+- `votes.anonymous_session_id`
 - `models.model_key`
 - `models.provider`
+- `models.is_active`
 - `models.status`
 
 `models.status` добавлен миграцией `20260610110000_add_models_status_column.sql`
@@ -36,6 +41,9 @@
 - выражение: `case when is_active then 'active' else 'inactive' end`
 - режим: `generated always as (...) stored`
 - отдельного `default active` у поля нет
+
+`schema:check` должен проверять не только наличие `models.status`, но и то, что
+это generated column, зависящая от `models.is_active`.
 
 На текущем MVP выбор доступных моделей по-прежнему должен опираться на
 `models.is_active` / `models.is_public`. Поле `models.status` отражает текущее

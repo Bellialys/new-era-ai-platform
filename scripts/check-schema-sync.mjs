@@ -30,13 +30,26 @@ const ROOT = join(dirname(__dirname), ".");
 const REQUIRED_TABLES = ["profiles", "models", "tasks", "model_responses", "votes"];
 
 const REQUIRED_COLUMNS = [
-  { table: "tasks", column: "task_text" },
-  { table: "tasks", column: "mode_slug" },
-  { table: "model_responses", column: "task_id" },
-  { table: "votes", column: "task_id" },
   { table: "models", column: "model_key" },
   { table: "models", column: "provider" },
+  { table: "models", column: "is_active" },
   { table: "models", column: "status" },
+  { table: "tasks", column: "task_text" },
+  { table: "tasks", column: "mode_slug" },
+  { table: "tasks", column: "user_id" },
+  { table: "tasks", column: "anonymous_session_id" },
+  { table: "model_responses", column: "task_id" },
+  { table: "votes", column: "task_id" },
+  { table: "votes", column: "anonymous_session_id" },
+  { table: "votes", column: "user_id" },
+];
+
+const REQUIRED_GENERATED_COLUMNS = [
+  {
+    table: "models",
+    column: "status",
+    expressionIncludes: ["is_active", "active", "inactive"],
+  },
 ];
 
 function getConnectionString() {
@@ -54,7 +67,7 @@ async function introspect(client) {
         and table_type = 'BASE TABLE'`
   );
   const columnsResult = await client.query(
-    `select table_name, column_name
+    `select table_name, column_name, is_generated, generation_expression
        from information_schema.columns
       where table_schema = 'public'`
   );
@@ -65,7 +78,10 @@ async function introspect(client) {
   const columns = new Map();
   for (const row of columnsResult.rows) {
     if (!columns.has(row.table_name)) columns.set(row.table_name, new Set());
-    columns.get(row.table_name).add(row.column_name);
+    columns.get(row.table_name).set(row.column_name, {
+      isGenerated: row.is_generated,
+      generationExpression: row.generation_expression,
+    });
   }
 
   return { tables, columns };
@@ -97,6 +113,27 @@ function report(tables, columns) {
       console.log(`  OK       ${table}.${column}`);
     } else {
       console.log(`  MISSING  ${table}.${column}`);
+      missing += 1;
+    }
+  }
+
+  console.log("");
+  console.log("Generated columns:");
+  for (const { table, column, expressionIncludes } of REQUIRED_GENERATED_COLUMNS) {
+    const columnInfo = columns.get(table)?.get(column);
+    const expression = String(columnInfo?.generationExpression ?? "").toLowerCase();
+    const hasExpectedExpression = expressionIncludes.every((part) => expression.includes(part.toLowerCase()));
+
+    if (!tables.has(table)) {
+      console.log(`  MISSING  ${table}.${column} (table ${table} not found)`);
+      missing += 1;
+    } else if (!columnInfo) {
+      console.log(`  MISSING  ${table}.${column}`);
+      missing += 1;
+    } else if (columnInfo.isGenerated === "ALWAYS" && hasExpectedExpression) {
+      console.log(`  OK       ${table}.${column} generated from is_active`);
+    } else {
+      console.log(`  INVALID  ${table}.${column} must be generated from is_active`);
       missing += 1;
     }
   }

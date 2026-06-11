@@ -44,6 +44,7 @@ v0.5.3 - Voting MVP stabilization
 - Browser Supabase client теперь поддерживает fallback `NEXT_PUBLIC_SUPABASE_ANON_KEY` после `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - `npm run test:env-check` подключён к GitHub Actions CI.
 - Из fallback allowlist удалены два устаревших free model id, которых больше нет в live OpenRouter catalog.
+- Добавлена migration, деактивирующая эти устаревшие free model ids в Supabase catalog без удаления исторических строк.
 
 ### Fixed
 

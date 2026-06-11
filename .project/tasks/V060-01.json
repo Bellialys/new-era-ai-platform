@@ -2,18 +2,32 @@
   "$schema": "../task.schema.json",
   "id": "V060-01",
   "title": "Verify Supabase migrations on a clean local database",
-  "status": "planned",
+  "status": "in_progress",
   "priority": "medium",
   "files": [
     "supabase/migrations/",
     "08-database.md"
   ],
-  "checksRequired": ["typecheck", "lint", "build"],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "build"
+  ],
   "checksPassed": [],
-  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "lastUpdated": "2026-06-11T15:08:00.907Z",
   "commitHash": null,
   "transitions": [
-    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z", "note": "Migrated from 22-codex-action-backlog.md (Backlog task 1)." }
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-06-10T00:00:00.000Z",
+      "note": "Migrated from 22-codex-action-backlog.md (Backlog task 1)."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-06-11T15:08:00.907Z"
+    }
   ],
   "notes": "supabase db reset must pass from scratch; supabase db push must not try to re-apply removed 0007/0008; local and remote migration history must match."
 }
