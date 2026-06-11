@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V060-01",
   "title": "Verify Supabase migrations on a clean local database",
-  "status": "in_progress",
+  "status": "done",
   "priority": "medium",
   "files": [
     "supabase/migrations/",
@@ -13,9 +13,13 @@
     "lint",
     "build"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-06-11T15:08:00.907Z",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "build"
+  ],
+  "lastUpdated": "2026-06-11T15:23:10.185Z",
+  "commitHash": "f6cc764",
   "transitions": [
     {
       "from": null,
@@ -27,6 +31,30 @@
       "from": "planned",
       "to": "in_progress",
       "at": "2026-06-11T15:08:00.907Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "in_progress",
+      "at": "2026-06-11T15:22:50.118Z",
+      "note": "typecheck passed during clean migrations verification"
+    },
+    {
+      "from": "in_progress",
+      "to": "in_progress",
+      "at": "2026-06-11T15:22:57.800Z",
+      "note": "lint passed during clean migrations verification"
+    },
+    {
+      "from": "in_progress",
+      "to": "in_progress",
+      "at": "2026-06-11T15:23:03.884Z",
+      "note": "build passed during clean migrations verification"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "at": "2026-06-11T15:23:10.185Z",
+      "note": "Clean Supabase migrations verified on separate empty test project"
     }
   ],
   "notes": "supabase db reset must pass from scratch; supabase db push must not try to re-apply removed 0007/0008; local and remote migration history must match."

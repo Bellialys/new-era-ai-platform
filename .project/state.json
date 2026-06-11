@@ -4,11 +4,7 @@
   "currentVersion": "0.5.3",
   "currentPhase": "v0.5.3 - Voting MVP Stabilization",
   "status": "stable",
-  "activeTaskIds": [
-    "V054-01",
-    "V055-01",
-    "V060-01"
-  ],
+  "activeTaskIds": [],
   "lastSyncedAt": "2026-06-09T22:07:36.890Z",
   "baseBranch": "main"
 }
