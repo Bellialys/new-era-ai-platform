@@ -1,0 +1,5 @@
+#!/bin/sh
+# Auto-push the current branch after a successful commit.
+# Disable for one command with: GIT_AUTO_SYNC_AFTER_COMMIT=0 git commit ...
+
+node scripts/git/sync-after-commit.mjs --hook

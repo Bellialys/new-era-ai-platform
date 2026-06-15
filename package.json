@@ -36,6 +36,9 @@
     "docs:sync": "node scripts/sync/index.mjs",
     "docs:check": "node scripts/sync/index.mjs check",
     "docs:restore": "node scripts/sync/index.mjs restore",
+    "sync:status": "node scripts/git/sync-after-commit.mjs --dry-run",
+    "sync:after-commit": "node scripts/git/sync-after-commit.mjs",
+    "sync:install-hook": "git config core.hooksPath .githooks",
     "verify": "npm run typecheck && npm run lint && npm run build && npm run docs:check"
   },
   "dependencies": {
