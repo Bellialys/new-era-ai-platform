@@ -27,6 +27,11 @@ type SavePromptArenaRunInput = {
   prompt: string;
   modelKeys: string[];
   responses: ArenaResponseForPersistence[];
+  /** Verified owner of the run: a user id, a guest id, or neither. */
+  owner?: {
+    userId: string | null;
+    anonymousSessionId: string | null;
+  };
 };
 
 type SavePromptArenaRunResult = {
@@ -38,6 +43,7 @@ export async function savePromptArenaRun({
   prompt,
   modelKeys,
   responses,
+  owner,
 }: SavePromptArenaRunInput): Promise<SavePromptArenaRunResult> {
   const supabase = getSupabaseServerClient();
 
@@ -58,6 +64,8 @@ export async function savePromptArenaRun({
       status: taskStatus,
       selected_models: modelKeys,
       settings: {},
+      user_id: owner?.userId ?? null,
+      anonymous_session_id: owner?.anonymousSessionId ?? null,
       error_message:
         taskStatus === "failed" ? "All selected models failed to return a response." : null,
     })

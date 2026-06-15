@@ -4,7 +4,9 @@ import { getSupabaseServerClient } from "./supabase";
 type SaveBestVoteInput = {
   taskId: string;
   responseId: string;
+  /** Verified Supabase user id, or null for a guest. */
   userId?: string | null;
+  /** Server-issued anonymous guest id, or null for an authenticated user. */
   anonymousSessionId?: string | null;
 };
 
@@ -29,34 +31,20 @@ export function validateVoteIds(taskId: unknown, responseId: unknown): { taskId:
   return { taskId, responseId };
 }
 
-function validateUserId(userId: string | null): string | null {
-  if (userId === null) return null;
+type CastBestVoteRow = {
+  id: string;
+  task_id: string;
+  model_response_id: string;
+};
 
-  if (!UUID_PATTERN.test(userId)) {
-    throw new ApiError(400, "VALIDATION_ERROR", "userId must be a valid UUID.");
-  }
-
-  return userId;
-}
-
-function normalizeAnonymousSessionId(anonymousSessionId: string | null): string | null {
-  if (!anonymousSessionId) return null;
-
-  const normalized = anonymousSessionId.trim();
-
-  if (normalized.length === 0) return null;
-
-  if (normalized.length > 128) {
-    throw new ApiError(
-      400,
-      "VALIDATION_ERROR",
-      "anonymousSessionId must be 128 characters or less."
-    );
-  }
-
-  return normalized;
-}
-
+/**
+ * Persist a "best" vote. Identity is resolved by the caller from the verified
+ * session / guest cookie — never from the request body — so votes cannot be
+ * attributed to an arbitrary user.
+ *
+ * The replace-previous-vote + insert happens inside the cast_best_vote RPC, so
+ * it is a single atomic transaction (no delete-then-insert race).
+ */
 export async function saveBestVote({
   taskId,
   responseId,
@@ -69,63 +57,36 @@ export async function saveBestVote({
     throw new ApiError(503, "DATABASE_NOT_CONFIGURED", "Voting is not available yet.");
   }
 
-  const normalizedUserId = validateUserId(userId);
-  const normalizedAnonymousSessionId = normalizeAnonymousSessionId(anonymousSessionId);
-
-  if (!normalizedUserId && !normalizedAnonymousSessionId) {
-    throw new ApiError(
-      400,
-      "VOTER_REQUIRED",
-      "Voting requires either userId or anonymousSessionId."
-    );
+  if (!userId && !anonymousSessionId) {
+    throw new ApiError(400, "VOTER_REQUIRED", "Voting requires a session.");
   }
 
-  const { data: response, error: responseError } = await supabase
-    .from("model_responses")
-    .select("id, task_id, status")
-    .eq("id", responseId)
-    .eq("task_id", taskId)
-    .single();
+  const { data, error } = await supabase.rpc("cast_best_vote", {
+    p_task_id: taskId,
+    p_response_id: responseId,
+    p_user_id: userId,
+    p_anon_id: anonymousSessionId,
+  });
 
-  if (responseError || !response) {
-    throw new ApiError(404, "RESPONSE_NOT_FOUND", "Selected response was not found for this task.");
+  if (error) {
+    const message = error.message ?? "";
+    if (message.includes("RESPONSE_NOT_FOUND")) {
+      throw new ApiError(404, "RESPONSE_NOT_FOUND", "Selected response was not found for this task.");
+    }
+    if (message.includes("INVALID_VOTE_TARGET")) {
+      throw new ApiError(400, "INVALID_VOTE_TARGET", "Only successful responses can be selected as best.");
+    }
+    if (message.includes("VOTER_REQUIRED")) {
+      throw new ApiError(400, "VOTER_REQUIRED", "Voting requires a session.");
+    }
+
+    console.error("cast_best_vote RPC failed:", error);
+    throw new ApiError(500, "VOTE_SAVE_FAILED", "Could not save best vote. Please try again.");
   }
 
-  if (response.status !== "success") {
-    throw new ApiError(400, "INVALID_VOTE_TARGET", "Only successful responses can be selected as best.");
-  }
+  const vote = (Array.isArray(data) ? data[0] : data) as CastBestVoteRow | null;
 
-  let deleteQuery = supabase
-    .from("votes")
-    .delete()
-    .eq("task_id", taskId)
-    .eq("vote_type", "best");
-
-  if (normalizedUserId) {
-    deleteQuery = deleteQuery.eq("user_id", normalizedUserId);
-  } else {
-    deleteQuery = deleteQuery.eq("anonymous_session_id", normalizedAnonymousSessionId);
-  }
-
-  const { error: deleteError } = await deleteQuery;
-
-  if (deleteError) {
-    throw new ApiError(500, "VOTE_SAVE_FAILED", "Could not replace previous best vote.");
-  }
-
-  const { data: vote, error: voteError } = await supabase
-    .from("votes")
-    .insert({
-      task_id: taskId,
-      model_response_id: responseId,
-      user_id: normalizedUserId,
-      anonymous_session_id: normalizedAnonymousSessionId,
-      vote_type: "best",
-    })
-    .select("id, task_id, model_response_id, vote_type")
-    .single();
-
-  if (voteError || !vote) {
+  if (!vote) {
     throw new ApiError(500, "VOTE_SAVE_FAILED", "Could not save best vote. Please try again.");
   }
 

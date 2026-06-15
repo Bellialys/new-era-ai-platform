@@ -20,6 +20,8 @@ import {
   savePromptArenaRun,
   checkRateLimit,
   getRateLimitKeyFromHeaders,
+  resolveRequestIdentity,
+  applyGuestCookie,
 } from "@/lib/server";
 
 interface CompareRequest {
@@ -81,6 +83,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
         }
       );
     }
+
+    // Identity is server-authoritative: a verified user, otherwise an
+    // anonymous guest tracked by an httpOnly cookie. This is the backend access
+    // gate — every saved run has a real owner instead of an anonymous blob.
+    const identity = await resolveRequestIdentity(request);
 
     let body: unknown;
     try {
@@ -197,6 +204,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
         prompt: cleanPrompt,
         modelKeys: selectedModels.map((model) => model.modelKey),
         responses: arenaResponses,
+        owner: {
+          userId: identity.userId,
+          anonymousSessionId: identity.guestId,
+        },
       });
     } catch (persistError) {
       console.error("Prompt Arena persistence failed (continuing):", persistError);
@@ -211,14 +222,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
 
     logApiRequest("POST", "/api/compare", 200, Date.now() - startTime);
 
-    return NextResponse.json(
-      {
-        status: hasAnySuccess ? "success" : "error",
-        taskId: savedRun.taskId,
-        responses: savedArenaResponses,
-      },
-      { status: 200 }
-    );
+    const successBody: CompareResponse = {
+      status: hasAnySuccess ? "success" : "error",
+      taskId: savedRun.taskId,
+      responses: savedArenaResponses,
+    };
+
+    const successResponse = NextResponse.json(successBody, { status: 200 });
+
+    if (identity.kind === "guest") {
+      applyGuestCookie(successResponse, identity.guestId);
+    }
+
+    return successResponse;
   } catch (error) {
     const statusCode = error instanceof ApiError ? error.statusCode : 500;
     console.error("POST /api/compare error:", error);

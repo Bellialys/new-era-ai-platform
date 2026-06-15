@@ -1,6 +1,6 @@
 {
   "name": "new-era-ai-platform",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "description": "AI platform for comparing, evaluating and collaborating with multiple AI models.",
   "engines": {
@@ -42,6 +42,7 @@
     "verify": "npm run typecheck && npm run lint && npm run build && npm run docs:check"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.107.0",
     "next": "^16.2.6",
     "pg": "^8.21.0",

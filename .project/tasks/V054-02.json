@@ -1,0 +1,58 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V054-02",
+  "title": "Vote security, SSR auth foundation and audit fixes",
+  "status": "verify",
+  "priority": "high",
+  "files": [
+    "src/lib/supabase.ts",
+    "src/lib/supabase-proxy.ts",
+    "src/proxy.ts",
+    "src/lib/server/auth.ts",
+    "src/lib/server/votes.ts",
+    "src/lib/server/votes.test.ts",
+    "src/app/api/vote/route.ts",
+    "src/app/api/compare/route.ts",
+    "src/lib/server/arena-persistence.ts",
+    "src/components/arena/prompt-arena.tsx",
+    "src/lib/arena/constants.ts",
+    "supabase/migrations/20260615120000_atomic_best_vote_rpc.sql",
+    "src/app/error.tsx",
+    "src/app/loading.tsx",
+    "src/app/not-found.tsx",
+    "src/app/global-error.tsx",
+    ".nvmrc"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "build",
+    "docs:check"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test"
+  ],
+  "lastUpdated": "2026-06-15T19:00:00.000Z",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-06-15T18:30:00.000Z"
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-06-15T18:40:00.000Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-06-15T19:00:00.000Z",
+      "note": "Audit fixes implemented; typecheck/lint/test green. Awaiting build, docs:check, commit and deploy."
+    }
+  ],
+  "notes": "Closes audit nuances: server-authoritative vote identity via @supabase/ssr, middleware session refresh, vote rate-limit, atomic cast_best_vote RPC, route error/loading/not-found boundaries, removal of the already-documented-as-removed /arena-voting alias, and a Node .nvmrc pin. Full v0.6 features (profile, avatars, OAuth, model access levels, guest cards) remain deferred."
+}
