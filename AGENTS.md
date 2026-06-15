@@ -13,11 +13,11 @@
 ## Текущий статус проекта
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v0.5.3 - Voting MVP Stabilization
+**Текущая фаза:** v0.5.4 - Vote Security & Auth Foundation
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.5.3`
+**Текущая версия:** `v0.5.4`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 ```text
@@ -94,13 +94,32 @@ src/lib/server/votes.ts
 # server-side voting helper для актуальной votes-схемы
 
 src/lib/server/supabase.ts
-# server-only Supabase client
+# server-only Supabase service-role client (persistence, обходит RLS)
+
+src/lib/server/auth.ts
+# серверная идентичность: проверенный пользователь или guest-cookie
+
+src/lib/supabase.ts
+# браузерный Supabase client на cookie-сессиях (@supabase/ssr)
+
+src/proxy.ts
+# refresh Supabase-сессии перед route handlers (Next 16 proxy convention)
 
 src/lib/server/utils.ts
 # ошибки, валидация, логирование
 
 src/components/arena
 # UI Prompt Arena
+```
+
+## Голосование и идентичность
+
+```text
+/api/vote и /api/compare никогда не доверяют userId из тела запроса.
+# идентичность берётся из проверенной сессии Supabase или httpOnly guest-cookie
+
+best-голос пишется атомарным RPC cast_best_vote.
+# замена ответа + вставка в одной транзакции
 ```
 
 ## Важное правило по моделям

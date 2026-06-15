@@ -7,14 +7,50 @@
 ## Текущая версия
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.5.3`
+**Текущая версия:** `v0.5.4`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
 ```text
-v0.5.3 - Voting MVP stabilization
-# текущий стабильный MVP-релиз по 14-roadmap.md
+v0.5.4 - Vote Security & Auth Foundation
+# стабилизационный релиз поверх v0.5.3 по 14-roadmap.md
 ```
+
+## v0.5.4 - Vote Security & Auth Foundation
+
+Дата: 2026-06-15
+
+### Security
+
+- `/api/vote` больше не принимает `userId` из тела запроса. Идентичность голосующего
+  определяется на сервере: проверенный пользователь Supabase (cookie-сессия) или
+  анонимный гость через httpOnly-cookie `na_guest`. Это закрывает накрутку голосов от
+  имени произвольного пользователя.
+- Добавлен rate-limit на `/api/vote` (переиспользует `checkRateLimit`).
+- `/api/compare` определяет владельца запуска на сервере и сохраняет `tasks.user_id`
+  либо `tasks.anonymous_session_id` (раньше владелец не сохранялся).
+
+### Added
+
+- Перешли на `@supabase/ssr`: браузерный клиент на cookie-сессиях, серверный
+  `src/lib/server/auth.ts` и session-refresh `src/proxy.ts` (Next 16 proxy convention).
+- Атомарный Postgres RPC `cast_best_vote` (миграция
+  `20260615120000_atomic_best_vote_rpc.sql`) заменил неатомарный delete-then-insert.
+- Граничные экраны App Router: `error.tsx`, `loading.tsx`, `not-found.tsx`,
+  `global-error.tsx`.
+- Добавлен `.nvmrc` (Node 24) в соответствие с CI.
+- Тесты `src/lib/server/votes.test.ts`.
+
+### Changed
+
+- Клиент Prompt Arena больше не отправляет `anonymousSessionId` в `/api/vote`.
+- Маршрут `/arena-voting` и его alias-компонент фактически удалены из кода — это
+  приводит код в соответствие с записью об удалении от 2026-06-11.
+
+### Deferred
+
+- Полный Access Gate UI, guest-карточки `Анонимус #1234`, уровни доступа моделей,
+  страница `/profile`, загрузка аватаров и OAuth остаются этапами v0.6.1–v0.6.8.
 
 ## v0.5.3 - Voting MVP Stabilization
 

@@ -9,15 +9,15 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v0.5.3 - Voting MVP Stabilization
+**Текущая фаза:** v0.5.4 - Vote Security & Auth Foundation
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
-**Статус проекта:** `stable`
+**Статус проекта:** `stabilizing`
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.5.3`
+**Текущая версия:** `v0.5.4`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 Текущая версия проекта: **v0.5.3 - Voting MVP stabilization**.

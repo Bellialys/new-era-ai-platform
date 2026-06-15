@@ -3,6 +3,7 @@
  * Exports all server-only modules that should be used only in API routes
  */
 
+export * from "./auth";
 export * from "./models";
 export * from "./model-catalog";
 export * from "./openrouter";

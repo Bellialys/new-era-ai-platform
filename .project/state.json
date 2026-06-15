@@ -1,10 +1,12 @@
 {
   "$schema": "./state.schema.json",
   "project": "New Era AI Platform",
-  "currentVersion": "0.5.3",
-  "currentPhase": "v0.5.3 - Voting MVP Stabilization",
-  "status": "stable",
-  "activeTaskIds": [],
-  "lastSyncedAt": "2026-06-09T22:07:36.890Z",
+  "currentVersion": "0.5.4",
+  "currentPhase": "v0.5.4 - Vote Security & Auth Foundation",
+  "status": "stabilizing",
+  "activeTaskIds": [
+    "V054-02"
+  ],
+  "lastSyncedAt": "2026-06-15T18:54:21.733Z",
   "baseBranch": "main"
 }

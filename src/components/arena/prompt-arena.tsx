@@ -16,23 +16,11 @@ import { ArenaForm } from "./arena-form";
 import { ArenaResults } from "./arena-results";
 
 const MAX_MODELS_ERROR_MESSAGE = "В MVP можно выбрать максимум три модели.";
-const ANONYMOUS_SESSION_STORAGE_KEY = "new-era-anonymous-session-id";
 
 type VoteStatus = "idle" | "saving" | "success" | "error";
 
 function getDefaultModelIds(models: ArenaModel[]) {
   return models.slice(0, MODEL_MAX_SELECT).map((model) => model.id);
-}
-
-function getOrCreateAnonymousSessionId() {
-  const existingSessionId = window.localStorage.getItem(ANONYMOUS_SESSION_STORAGE_KEY);
-  if (existingSessionId) {
-    return existingSessionId;
-  }
-
-  const newSessionId = crypto.randomUUID();
-  window.localStorage.setItem(ANONYMOUS_SESSION_STORAGE_KEY, newSessionId);
-  return newSessionId;
 }
 
 export function PromptArena() {
@@ -273,11 +261,12 @@ export function PromptArena() {
         headers: {
           "Content-Type": "application/json",
         },
+        // Voter identity is resolved server-side from the session / guest
+        // cookie, so the client no longer sends an anonymous id.
         body: JSON.stringify({
           taskId,
           responseId,
           voteType: "best",
-          anonymousSessionId: getOrCreateAnonymousSessionId(),
         }),
       });
 
