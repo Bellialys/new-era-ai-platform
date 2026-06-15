@@ -19,9 +19,11 @@ dist/
 # env files
 .env
 .env.local
+.env*.local
 .env.development.local
 .env.test.local
 .env.production.local
+env.download
 
 # logs
 npm-debug.log*
@@ -48,6 +50,7 @@ Thumbs.db
 
 # project state sync (local backups only; state/tasks ARE committed)
 .project/backups/
+supabase/.branches/
 
 # temporary files
 *.tmp
