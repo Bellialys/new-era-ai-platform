@@ -44,7 +44,7 @@ export default function HomePage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/arena"
-              className="rounded-full bg-white px-6 py-3 text-center text-sm font-bold text-slate-950 transition hover:bg-violet-100"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-violet-300/60 bg-violet-600 px-6 py-3 text-center text-sm font-extrabold leading-5 text-white shadow-lg shadow-violet-950/35 transition hover:border-violet-200 hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-violet-200"
             >
               Открыть Prompt Arena →
             </Link>

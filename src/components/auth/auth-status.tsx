@@ -80,7 +80,7 @@ export function AuthStatus() {
           Login
         </Link>
         <Link
-          className="rounded-full bg-white px-3 py-1.5 font-semibold text-slate-950 transition hover:bg-violet-100"
+          className="inline-flex min-h-8 items-center justify-center rounded-full border border-violet-300/60 bg-violet-600 px-3 py-1.5 text-xs font-extrabold leading-4 text-white shadow-md shadow-violet-950/30 transition hover:border-violet-200 hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200"
           href="/signup"
         >
           Sign up
