@@ -38,7 +38,7 @@
 
 ## Текущий статус
 
-Текущая версия: **v0.5.3 - Voting MVP stabilization**.
+Последний стабильный MVP-релиз: **v0.5.3 - Voting MVP stabilization**. Текущая стабилизируемая фаза - **v0.5.4 - Vote Security & Auth Foundation**.
 
 Канонический статус и порядок версий фиксируются в `14-roadmap.md`.
 

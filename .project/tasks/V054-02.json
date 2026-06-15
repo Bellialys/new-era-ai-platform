@@ -32,9 +32,10 @@
   "checksPassed": [
     "typecheck",
     "lint",
-    "test"
+    "test",
+    "docs:check"
   ],
-  "lastUpdated": "2026-06-15T19:00:00.000Z",
+  "lastUpdated": "2026-06-16T00:50:00.000Z",
   "commitHash": null,
   "transitions": [
     {
@@ -52,6 +53,12 @@
       "to": "verify",
       "at": "2026-06-15T19:00:00.000Z",
       "note": "Audit fixes implemented; typecheck/lint/test green. Awaiting build, docs:check, commit and deploy."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-16T00:50:00.000Z",
+      "note": "Audit/stabilization pass: docs:check now compares planSync() not just markers; applyMarker preserves CRLF/LF (no false dry-run drift); /api/vote docs drop anonymousSessionId; V055-01 path fixed to .mjs; migration 20260616120000_harden_vote_rpc_execute_privileges grants execute->service_role + votes table privileges (RPC kept security definer); schema:check extended to verify the vote RPC privilege property. Verified locally: typecheck, lint, test, docs:check. build BLOCKED (no .env.local secrets); schema:check needs SUPABASE_DB_URL. Not committed yet."
     }
   ],
   "notes": "Closes audit nuances: server-authoritative vote identity via @supabase/ssr, middleware session refresh, vote rate-limit, atomic cast_best_vote RPC, route error/loading/not-found boundaries, removal of the already-documented-as-removed /arena-voting alias, and a Node .nvmrc pin. Full v0.6 features (profile, avatars, OAuth, model access levels, guest cards) remain deferred."

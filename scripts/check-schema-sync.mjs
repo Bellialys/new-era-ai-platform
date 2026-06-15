@@ -138,13 +138,107 @@ function report(tables, columns) {
     }
   }
 
-  console.log("");
-  if (missing === 0) {
-    console.log("SCHEMA SYNC OK — all required tables and columns are present.");
-    return 0;
+  return missing;
+}
+
+// --- Vote RPC privilege checks -------------------------------------------
+
+const VOTE_RPC_SIGNATURE = "public.cast_best_vote(uuid, uuid, uuid, text)";
+const VOTE_RPC_ROLES = ["anon", "authenticated", "service_role"];
+
+async function introspectVoteRpc(client) {
+  // Locate the function by schema + name + argument type signature.
+  const fn = await client.query(
+    `select p.prosecdef
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname = 'cast_best_vote'
+        and pg_get_function_identity_arguments(p.oid) = 'uuid, uuid, uuid, text'`
+  );
+
+  if (fn.rows.length === 0) {
+    return { exists: false };
   }
-  console.log(`SCHEMA SYNC FAILED — ${missing} missing item(s).`);
-  return 1;
+
+  // has_*_privilege throws on a missing role, so only probe roles that exist.
+  const rolesResult = await client.query(
+    `select rolname from pg_roles where rolname = any($1)`,
+    [VOTE_RPC_ROLES]
+  );
+  const roles = new Set(rolesResult.rows.map((row) => row.rolname));
+
+  async function fnExecute(role) {
+    if (!roles.has(role)) return null;
+    const result = await client.query(
+      `select has_function_privilege($1, $2, 'EXECUTE') as ok`,
+      [role, VOTE_RPC_SIGNATURE]
+    );
+    return result.rows[0].ok === true;
+  }
+
+  async function votesPrivilege(role, privilege) {
+    if (!roles.has(role)) return null;
+    const result = await client.query(
+      `select has_table_privilege($1, 'public.votes', $2) as ok`,
+      [role, privilege]
+    );
+    return result.rows[0].ok === true;
+  }
+
+  return {
+    exists: true,
+    securityDefiner: fn.rows[0].prosecdef === true,
+    execute: {
+      anon: await fnExecute("anon"),
+      authenticated: await fnExecute("authenticated"),
+      service_role: await fnExecute("service_role"),
+    },
+    votes: {
+      select: await votesPrivilege("service_role", "SELECT"),
+      insert: await votesPrivilege("service_role", "INSERT"),
+      delete: await votesPrivilege("service_role", "DELETE"),
+    },
+  };
+}
+
+function reportVoteRpc(rpc) {
+  let problems = 0;
+
+  console.log("");
+  console.log("Vote RPC (public.cast_best_vote):");
+
+  if (!rpc.exists) {
+    console.log(`  MISSING  ${VOTE_RPC_SIGNATURE}`);
+    return 1;
+  }
+  console.log("  OK       function exists");
+
+  // We assert the security *property* (who may execute / which grants exist),
+  // not a specific mode — cast_best_vote is intentionally service-role-only.
+  const expect = (label, value, expected) => {
+    if (value === null) {
+      console.log(`  SKIP     ${label} (role not present)`);
+      return;
+    }
+    if (value === expected) {
+      console.log(`  OK       ${label}`);
+    } else {
+      console.log(`  INVALID  ${label} (expected ${expected ? "granted" : "revoked"})`);
+      problems += 1;
+    }
+  };
+
+  expect("execute revoked from anon", rpc.execute.anon, false);
+  expect("execute revoked from authenticated", rpc.execute.authenticated, false);
+  expect("execute granted to service_role", rpc.execute.service_role, true);
+  expect("votes select granted to service_role", rpc.votes.select, true);
+  expect("votes insert granted to service_role", rpc.votes.insert, true);
+  expect("votes delete granted to service_role", rpc.votes.delete, true);
+
+  console.log(`  INFO     security mode: ${rpc.securityDefiner ? "definer" : "invoker"}`);
+
+  return problems > 0 ? 1 : 0;
 }
 
 async function main() {
@@ -175,7 +269,17 @@ async function main() {
 
   try {
     const { tables, columns } = await introspect(client);
-    return report(tables, columns);
+    const missing = report(tables, columns);
+    const rpcProblems = reportVoteRpc(await introspectVoteRpc(client));
+
+    const total = missing + rpcProblems;
+    console.log("");
+    if (total === 0) {
+      console.log("SCHEMA SYNC OK — tables, columns and vote RPC privileges verified.");
+      return 0;
+    }
+    console.log(`SCHEMA SYNC FAILED — ${total} problem(s).`);
+    return 1;
   } catch (error) {
     const code = error?.code ?? "QUERY_ERROR";
     console.error(`Schema introspection failed (${code}).`);

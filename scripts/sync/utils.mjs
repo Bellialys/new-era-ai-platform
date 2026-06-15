@@ -225,8 +225,14 @@ export function hasMarker(content, name) {
   return content.includes(markerStart(name)) && content.includes(markerEnd(name));
 }
 
-function markerBlock(name, generated) {
-  return `${markerStart(name)}\n${generated}\n${markerEnd(name)}`;
+/** Detect the dominant line ending so regenerated blocks match the file. */
+function detectEol(content) {
+  return content.includes("\r\n") ? "\r\n" : "\n";
+}
+
+function markerBlock(name, generated, eol = "\n") {
+  const body = String(generated).replace(/\r?\n/g, eol);
+  return `${markerStart(name)}${eol}${body}${eol}${markerEnd(name)}`;
 }
 
 /**
@@ -234,10 +240,14 @@ function markerBlock(name, generated) {
  * block after the first line matching `anchor` (falling back to the top of the
  * file). Never deletes text outside the markers.
  *
+ * The generated block is emitted in the file's own newline style (CRLF or LF)
+ * so a Windows (CRLF) checkout does not report false drift in `--dry-run`.
+ *
  * Returns { content, changed, inserted }.
  */
 export function applyMarker(content, name, generated, anchor) {
-  const block = markerBlock(name, generated);
+  const eol = detectEol(content);
+  const block = markerBlock(name, generated, eol);
 
   if (hasMarker(content, name)) {
     const pattern = new RegExp(
@@ -247,7 +257,7 @@ export function applyMarker(content, name, generated, anchor) {
     return { content: next, changed: next !== content, inserted: false };
   }
 
-  const lines = content.split("\n");
+  const lines = content.split(/\r?\n/);
   let insertAt = 0;
   if (anchor) {
     const index = lines.findIndex((line) => anchor.test(line));
@@ -259,9 +269,9 @@ export function applyMarker(content, name, generated, anchor) {
     if (headingIndex !== -1) insertAt = headingIndex + 1;
   }
 
-  const before = lines.slice(0, insertAt).join("\n");
-  const after = lines.slice(insertAt).join("\n");
-  const next = `${before}\n\n${block}\n${after.startsWith("\n") ? after : "\n" + after}`;
+  const before = lines.slice(0, insertAt).join(eol);
+  const after = lines.slice(insertAt).join(eol);
+  const next = `${before}${eol}${eol}${block}${eol}${after.startsWith(eol) ? after : eol + after}`;
   return { content: next, changed: true, inserted: true };
 }
 

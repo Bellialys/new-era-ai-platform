@@ -109,8 +109,7 @@ server-side allowlist -> frontend
 {
   "taskId": "task-uuid",
   "responseId": "model-response-uuid",
-  "voteType": "best",
-  "anonymousSessionId": "anonymous-session-id"
+  "voteType": "best"
 }
 ```
 
@@ -119,7 +118,7 @@ server-side allowlist -> frontend
 - `taskId` и `responseId` должны быть UUID;
 - `responseId` должен принадлежать указанному `taskId`;
 - выбирать можно только response со статусом `success`;
-- голос должен принадлежать authenticated user или guest через `anonymousSessionId`;
+- идентичность голосующего сервер берёт из Supabase-сессии или httpOnly-cookie `na_guest` (не из тела запроса);
 - актуальная схема БД использует `votes.model_response_id` и `vote_type = 'best'`;
 - старое значение `winner` не должно использоваться в новом frontend-коде или документации.
 

@@ -142,6 +142,13 @@ function runCheck() {
     }
   }
 
+  // Content drift: marker presence is necessary but not sufficient — the text
+  // *between* the markers must also match what the generator would produce.
+  // Compare against the actual planSync(state) result, not just the markers.
+  for (const item of planSync(state).planned) {
+    errors.push(`${item.path}: content out of sync — ${item.changes.join(", ")} (run \`npm run docs:sync\`)`);
+  }
+
   // Active documents declared in the map must exist.
   for (const doc of map.activeDocuments || []) {
     if (!fileExists(abs(doc))) {

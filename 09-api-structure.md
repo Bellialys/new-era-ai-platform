@@ -7,7 +7,7 @@
 Текущий статус:
 
 ```text
-v0.5.3
+v0.5.4
 # GET /api/models, POST /api/compare, GET /api/health и POST /api/vote реализованы
 # 14-roadmap.md остаётся главным источником статуса этапов
 ```
@@ -203,8 +203,7 @@ votes.vote_type = best | like | dislike
 {
   "taskId": "uuid-task-id",
   "responseId": "uuid-response-id",
-  "voteType": "best",
-  "anonymousSessionId": "anonymous-session-id"
+  "voteType": "best"
 }
 ```
 
@@ -212,6 +211,7 @@ votes.vote_type = best | like | dislike
 
 - `responseId` в API соответствует `votes.model_response_id` в базе;
 - `voteType = "best"` используется для выбора лучшего ответа;
+- идентичность голосующего сервер определяет из Supabase-сессии или httpOnly-cookie `na_guest`; `userId`/`anonymousSessionId` в body не передаются;
 - старое `voteType = "winner"` не должно использоваться в документации и новом frontend-коде;
 - выбирать можно только successful `model_responses`.
 

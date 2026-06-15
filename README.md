@@ -20,7 +20,7 @@
 **Текущая версия:** `v0.5.4`
 <!-- SYNC:PROJECT_VERSION_END -->
 
-Текущая версия проекта: **v0.5.3 - Voting MVP stabilization**.
+Последний стабильный MVP-релиз перед v0.6 - **v0.5.3 - Voting MVP stabilization**. Текущая стабилизируемая фаза - **v0.5.4** (см. блок статуса выше).
 
 Статус синхронизирован с `14-roadmap.md`.
 
@@ -229,16 +229,17 @@ server-side hardcoded allowlist
 
 ### `POST /api/vote`
 
-Текущий запрос `v0.5.3`:
+Текущий запрос `v0.5.4`:
 
 ```json
 {
   "taskId": "saved-task-uuid",
   "responseId": "saved-model-response-uuid",
-  "voteType": "best",
-  "anonymousSessionId": "anonymous-session-id"
+  "voteType": "best"
 }
 ```
+
+Идентичность голосующего определяется на сервере из Supabase-сессии или httpOnly-cookie `na_guest`; `userId`/`anonymousSessionId` из тела запроса больше не принимаются.
 
 `responseId` соответствует `votes.model_response_id`. Кнопка Winner в основной `/arena` активна только для сохранённых successful responses.
 
