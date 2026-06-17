@@ -8,27 +8,47 @@
     {
       "path": "README.md",
       "plugin": "readme",
-      "requiredMarkers": ["PROJECT_VERSION", "PROJECT_STATUS", "CURRENT_PHASE"]
+      "requiredMarkers": [
+        "PROJECT_VERSION",
+        "PROJECT_STATUS",
+        "CURRENT_PHASE"
+      ]
     },
     {
       "path": "14-roadmap.md",
       "plugin": "roadmap",
-      "requiredMarkers": ["PROJECT_VERSION", "PROJECT_STATUS", "CURRENT_PHASE"]
+      "requiredMarkers": [
+        "PROJECT_VERSION",
+        "PROJECT_STATUS",
+        "CURRENT_PHASE"
+      ]
     },
     {
       "path": "15-changelog.md",
       "plugin": "changelog",
-      "requiredMarkers": ["PROJECT_VERSION"]
+      "requiredMarkers": [
+        "PROJECT_VERSION"
+      ]
     },
     {
       "path": "AGENTS.md",
       "plugin": "agents",
-      "requiredMarkers": ["PROJECT_VERSION", "CURRENT_PHASE"]
+      "requiredMarkers": [
+        "PROJECT_VERSION",
+        "CURRENT_PHASE"
+      ]
     },
     {
       "path": "package.json",
       "plugin": "package-json",
       "requiredMarkers": []
+    },
+    {
+      "path": "00-readme.md",
+      "plugin": "readme",
+      "requiredMarkers": [
+        "PROJECT_VERSION"
+      ]
     }
   ],
   "activeDocuments": [
@@ -62,7 +82,6 @@
     "27-environments.md",
     "28-api-contracts.md",
     "29-database-ownership.md",
-    "29-database-ownership-policy.md",
     "30-data-retention-policy.md",
     "31-image-arena-spec.md",
     "32-model-catalog-governance.md",
@@ -72,7 +91,8 @@
     "36-document-sync-policy.md",
     "docs/37-env-check-policy.md",
     "docs/38-env-check-implementation.md",
-    "40-project-health-check.md"
+    "40-project-health-check.md",
+    "41-enterprise-readiness-roadmap.md"
   ],
   "deprecatedPatterns": [
     "*-addendum.md",

@@ -32,7 +32,7 @@ AI Team Mode является поздним режимом проекта.
 v1.0 - Stable Prompt Arena
 # базовый рабочий продукт
 
-v1.1 - Code Arena Lite
+v0.7 - Code Arena Lite
 # сравнение решений по коду без запуска чужого кода
 
 v1.2 - Multi Model Battle
@@ -44,8 +44,8 @@ v1.3 - Judge Mode
 v1.4 - Leaderboard
 # рейтинги и агрегированная статистика
 
-v1.5 - Accounts and Profiles
-# пользователи, профили и персональная история
+v0.6 - Accounts and Profiles
+# пользователи, профили, guest mode и база для персональной истории
 
 v1.6 - Admin Panel and Limits
 # лимиты, управление моделями, контроль расходов

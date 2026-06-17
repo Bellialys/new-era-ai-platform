@@ -7,14 +7,54 @@
 ## Текущая версия
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.5.4`
+**Текущая версия:** `v0.7.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
 ```text
-v0.5.4 - Vote Security & Auth Foundation
-# стабилизационный релиз поверх v0.5.3 по 14-roadmap.md
+v0.7.0-alpha.1 - Code Arena Lite stabilization
+# текущая alpha-ветка: v0.6/v0.7 функциональность в verification, не stable release
 ```
+
+## v0.7.0-alpha.1 - Code Arena Lite stabilization
+
+Дата: 2026-06-17
+
+### Added
+
+- Добавлен task-state для `V070-01 - v0.7 Code Arena Lite stabilization`.
+- Добавлен `41-enterprise-readiness-roadmap.md` как отдельный план выхода на international corporate-grade уровень.
+- Зафиксирован Code Arena Lite как текущий alpha-этап без запуска пользовательского кода.
+
+### Changed
+
+- `.project/state.json`, `package.json`, `package-lock.json` и sync-маркеры переведены на `0.7.0-alpha.1`.
+- v0.6 task-файлы переведены из `planned` в `verify`, потому что реализация присутствует в рабочем дереве, но ещё ждёт полного release gate.
+- `14-roadmap.md` очищен от конфликта `v0.7 Code Arena Lite` vs `v0.7 History MVP`; History перенесён в `v0.8`.
+- Guest identity contract уточнён: доверенный guest id живёт в httpOnly cookie `na_guest`, localStorage используется только для display card.
+- API-документы дополнены `/api/code-models` и `/api/code-compare`.
+- Auth session refresh переведён на Next.js 16 `src/proxy.ts`; duplicate `src/middleware.ts` удалён, `turbopack.root` зафиксирован.
+- `next` обновлён до `16.2.9`; `postcss` закрыт через npm `overrides` на `^8.5.15`.
+
+### Fixed
+
+- `src/components/code-arena/code-arena.tsx` больше не импортирует несуществующий `@/components/auth/access-gate`.
+- Code Arena Winner vote отправляет `responseId`, а не `winnerResponseId`.
+- `.project/task.schema.json` разрешает `archivedAt` для archived task-файлов.
+- `docs:sync` теперь синхронизирует `00-readme.md` через отдельную readme-index цель.
+- ESLint больше не падает на `unrs-resolver` native binding: `import/no-duplicates` заменён на built-in `no-duplicate-imports`, а `.claude/**` и `.codex/**` исключены из lint-scope.
+
+### Verification
+
+- `npm run typecheck` прошёл.
+- `npm run lint` прошёл.
+- `npm test` прошёл.
+- `npm run build` прошёл.
+- `npm run smoke` прошёл против `http://localhost:3000` (health `ok`, models `18`).
+- `npm run docs:check` прошёл.
+- `npm run state:check` прошёл.
+- `npm audit --audit-level=moderate` прошёл с `0 vulnerabilities`.
+- Live DB sync ещё должен пройти перед stable/release.
 
 ## v0.5.4 - Vote Security & Auth Foundation
 
@@ -33,9 +73,11 @@ v0.5.4 - Vote Security & Auth Foundation
 ### Added
 
 - Перешли на `@supabase/ssr`: браузерный клиент на cookie-сессиях, серверный
-  `src/lib/server/auth.ts` и session-refresh `src/proxy.ts` (Next 16 proxy convention).
+  `src/lib/server/auth.ts` и session-refresh через Next.js proxy (`src/proxy.ts`, updateSession() при каждом запросе); реализация в `src/lib/supabase-proxy.ts`.
 - Атомарный Postgres RPC `cast_best_vote` (миграция
-  `20260615120000_atomic_best_vote_rpc.sql`) заменил неатомарный delete-then-insert.
+  `20260615191924_atomic_best_vote_rpc.sql`) заменил неатомарный delete-then-insert.
+  Release-gate migration `20260617212741_reconcile_release_gate_security_and_models.sql`
+  перевела RPC на `SECURITY INVOKER` с execute только для `service_role`.
 - Граничные экраны App Router: `error.tsx`, `loading.tsx`, `not-found.tsx`,
   `global-error.tsx`.
 - Добавлен `.nvmrc` (Node 24) в соответствие с CI.

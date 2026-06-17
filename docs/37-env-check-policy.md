@@ -69,6 +69,25 @@ JavaScript-бандл. Любой пользователь сайта может
 Это секреты, нужные только для работы с миграциями/Supabase CLI. Их **не**
 требует обычный `npm run build` (см. правило про `prebuild`).
 
+## 6a. Переменные для режима `full`
+
+Группа `full` включает всё из `basic` плюс:
+
+| Переменная | Тип | Описание |
+|---|---|---|
+| `UPSTASH_REDIS_REST_URL` | secret | URL Upstash Redis для глобального rate limiting. Без него каждый Vercel serverless instance считает лимиты независимо — rate limit работает только per-instance. |
+| `UPSTASH_REDIS_REST_TOKEN` | secret | Токен доступа к Upstash Redis. Обязателен вместе с `UPSTASH_REDIS_REST_URL`. |
+| `APP_ENV` | optional | Окружение: `development`, `preview`, `production`. |
+| `APP_URL` | optional | Публичный URL приложения. |
+| `MODEL_TIMEOUT_MS` | optional | Таймаут ответа модели в мс (по умолчанию `OPENROUTER_TIMEOUT_MS` из constants.ts). |
+| `OPENROUTER_MAX_TOKENS` | optional | Максимум токенов в ответе модели (по умолчанию 2048). |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | secret | Опциональный секрет Vercel Deployment Protection для smoke-проверок protected Preview. Используется только server/CI tooling, не в браузере. |
+
+Группа `full` используется для проверки полной production-конфигурации:
+```bash
+node scripts/check-env.mjs full
+```
+
 ## 7. Возможные статусы
 
 | Статус | Значение |
@@ -111,3 +130,8 @@ JavaScript-бандл. Любой пользователь сайта может
   `WARNING: .env.local file not found`. Чекер подавляет это предупреждение, если
   `process.env.CI === "true"`, передан `--ci`, выставлен `VERCEL`/`VERCEL_ENV`
   или `NODE_ENV === "production"`.
+- Protected Preview проверяется через `npm run smoke` только с
+  `VERCEL_AUTOMATION_BYPASS_SECRET` в окружении. Скрипт передаёт его заголовком
+  `x-vercel-protection-bypass` и никогда не печатает значение.
+- Создание, ротация или удаление Vercel bypass secret считается изменением
+  production/preview secret state и требует отдельного явного подтверждения.

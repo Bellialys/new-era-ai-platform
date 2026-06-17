@@ -7,10 +7,13 @@
 Текущий статус документа:
 
 ```text
-v0.5.3
-# Supabase MVP: models, tasks, model_responses, profiles, votes
+v0.7.0-alpha.1
+# repo target: Prompt Arena + Auth/Guest/Profile + Code Arena Lite database surface
+# release gate: remote Supabase migration history and generated-column drift must be reconciled
 # task_text является каноническим полем текста задачи
 # votes использует model_response_id и vote_type: best, like, dislike
+# models.status должен быть generated column: active/inactive
+# cast_best_vote — атомарный RPC для best vote
 ```
 
 ## Главная идея базы
@@ -18,10 +21,13 @@ v0.5.3
 База хранит:
 
 - пользователей и профили;
+- anonymous guest sessions;
 - доступные AI-модели;
+- уровни доступа к моделям для guest/account;
 - задачи пользователя;
 - ответы моделей;
 - голосование за лучший ответ;
+- avatar storage metadata через `profiles.avatar_url`;
 - историю сравнений для будущего History MVP;
 - технические данные для аудита запусков и отладки ошибок.
 
@@ -80,6 +86,11 @@ prompt_text
 | `id` | uuid | ID пользователя из Supabase Auth |
 | `email` | text null | Email пользователя |
 | `display_name` | text null | Имя пользователя в интерфейсе |
+| `first_name` | text null | Имя |
+| `last_name` | text null | Фамилия |
+| `avatar_url` | text null | URL аватара из Supabase Storage |
+| `role` | text | `user`, `admin` |
+| `plan` | text | `free`, `premium` |
 | `created_at` | timestamptz | Дата создания |
 | `updated_at` | timestamptz | Дата обновления |
 
@@ -105,6 +116,8 @@ profiles.id -> auth.users.id
 | `description` | text null | Описание модели |
 | `price_label` | text | `free`, `cheap`, `balanced`, `expensive`, `unknown` |
 | `is_active` | boolean | Можно ли использовать модель |
+| `status` | text (generated) | `active` если `is_active = true`, иначе `inactive`. Вычисляемый столбец, только для чтения. |
+| `access_level` | text | `anonymous`, `registered`, `premium` |
 | `is_public` | boolean | Показывать ли модель в публичном каталоге |
 | `role_tags` | text[] | Теги роли: `general`, `fast`, `coding`, `reasoning` и т.д. |
 | `context_length` | integer null | Контекст модели, если известен |
@@ -223,6 +236,73 @@ response_id и vote_type = winner не используются.
 # актуальная схема использует model_response_id и vote_type = best
 ```
 
+## 6. anonymous_sessions
+
+Гостевые сессии для пользователей, которые выбрали режим `Продолжить как гость`.
+
+| Поле | Тип | Назначение |
+|---|---|---|
+| `id` | uuid | ID гостевой сессии |
+| `display_name` | text | Имя вида `Анонимус #4827` |
+| `avatar_seed` | text | Seed для отображения аватара |
+| `color_seed` | text | Seed для цвета guest card |
+| `created_at` | timestamptz | Дата создания |
+| `last_seen_at` | timestamptz | Дата последнего использования |
+| `converted_user_id` | uuid null | Будущая связь при конвертации гостя в аккаунт |
+
+Доверенный guest identity хранится в httpOnly cookie `na_guest`. `localStorage` используется только для отображения карточки и не является auth-фактором.
+
+## 7. Storage bucket avatars
+
+`avatars` - Supabase Storage bucket для фото профиля.
+
+Правила target-состояния:
+
+- bucket private;
+- upload/update/delete только владельцу;
+- путь файла: `{user_id}/avatar.{jpg|png|webp}`;
+- `profiles.avatar_url` хранит URL/путь текущего аватара.
+
+Storage bucket и RLS policies должны быть проверены отдельно в release gate, потому что `schema:check` проверяет только PostgreSQL public schema.
+
+## 8. RPC cast_best_vote
+
+Атомарная функция для сохранения best vote. Добавлена миграцией
+`20260615191924_atomic_best_vote_rpc.sql` и усилена release-gate migration
+`20260617212741_reconcile_release_gate_security_and_models.sql`.
+
+Сигнатура:
+
+```sql
+create or replace function public.cast_best_vote(
+  p_task_id uuid,
+  p_response_id uuid,
+  p_user_id uuid,
+  p_anon_id text
+) returns public.votes
+language plpgsql
+security invoker
+set search_path = public
+```
+
+Поведение:
+
+- Если у данного пользователя/guest уже есть best vote на этот `task_id` — заменяет его (upsert по уникальному индексу).
+- Возвращает запись `public.votes`.
+- Функция работает как `SECURITY INVOKER`; execute grant оставлен только для
+  `service_role` и `postgres`, `anon`/`authenticated` не имеют прямого execute.
+- Вызывается через server-side `supabase.rpc('cast_best_vote', {...})` из
+  `src/lib/server/votes.ts`.
+
+Параметры:
+
+| Параметр | Тип | Значение |
+|---|---|---|
+| `p_task_id` | uuid | ID задачи |
+| `p_response_id` | uuid | ID выбранного ответа |
+| `p_user_id` | uuid null | ID авторизованного пользователя (null для guest) |
+| `p_anon_id` | text null | ID anonymous guest-сессии из cookie `na_guest` (null для auth пользователя) |
+
 ## Текущий SQL-скелет целевого состояния
 
 ```sql
@@ -234,6 +314,7 @@ create table public.models (
   description text,
   price_label text not null default 'unknown',
   is_active boolean not null default true,
+  access_level text not null default 'anonymous',
   is_public boolean not null default true,
   role_tags text[] not null default '{}'::text[],
   context_length integer,
@@ -242,6 +323,21 @@ create table public.models (
   output_price_per_million numeric,
   sort_order integer not null default 100,
   raw_metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  -- generated column: computed from is_active, read-only
+  status text generated always as (case when is_active then 'active' else 'inactive' end) stored
+);
+
+create table public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  display_name text,
+  first_name text,
+  last_name text,
+  avatar_url text,
+  role text not null default 'user',
+  plan text not null default 'free',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -292,6 +388,16 @@ create table public.votes (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create table public.anonymous_sessions (
+  id uuid primary key default gen_random_uuid(),
+  display_name text not null,
+  avatar_seed text not null,
+  color_seed text not null,
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  converted_user_id uuid references auth.users(id) on delete set null
+);
 ```
 
 ## Миграции
@@ -311,6 +417,27 @@ create table public.votes (
 | `20260609054344_db_integrity_fixes.sql` | Integrity/security fixes: search_path, updated_at triggers, unique vote indexes |
 | `20260609082216_drop_prompt_text.sql` | Финальное удаление старого `prompt_text` после перехода к `task_text` |
 | `20260609095422_align_votes_indexes.sql` | Очистка старых votes indexes и финальное выравнивание best/reaction indexes |
+| `20260610061249_add_models_status_column.sql` | Добавляет generated column `status` в `public.models` (`active`/`inactive`) |
+| `20260615191924_atomic_best_vote_rpc.sql` | Создаёт RPC `cast_best_vote` — атомарный replace best vote |
+| `20260617083258_anonymous_sessions.sql` | Создаёт guest sessions для Access Gate |
+| `20260617083442_models_access_level.sql` | Добавляет `models.access_level` |
+| `20260617084057_profiles_extend_v0_6_4.sql` | Расширяет `profiles` для Profile MVP |
+| `20260617084255_avatars_storage_rls.sql` | Создаёт `avatars` bucket и Storage RLS policies |
+| `20260617212741_reconcile_release_gate_security_and_models.sql` | Release-gate reconciliation: governance metadata, deactivation of unavailable model IDs, generated `models.status`, `cast_best_vote` security-invoker hardening |
+
+Release-gate note:
+
+```text
+Remote Supabase migration history and local migration filenames are aligned
+through 20260617212741_reconcile_release_gate_security_and_models.
+
+Remote post-migration verification on 2026-06-18:
+# models.status is generated always as (...), mismatch count = 0
+# governance metadata exists for 21/21 model rows
+# active/public model count = 16
+# unavailable OpenRouter IDs are inactive/non-public
+# cast_best_vote is SECURITY INVOKER with execute only for service_role/postgres
+```
 
 Удалённые устаревшие локальные миграции:
 
@@ -335,14 +462,14 @@ create table public.votes (
 # это финальное выравнивание индексов votes под best/like/dislike
 ```
 
-## Что уже сделано в v0.5.3
+## Что уже сделано к v0.7.0-alpha.1 в рабочем дереве
 
 1. Созданы таблицы `models`, `tasks`, `model_responses`, `profiles`, `votes`.
 2. Включён RLS на основных публичных таблицах.
 3. `models` заполняется curated OpenRouter model set.
 4. Добавлен server-side Supabase client.
 5. `/api/models` читает активные публичные модели из Supabase.
-6. Если Supabase недоступен, `/api/models` использует hardcoded fallback.
+6. Если Supabase недоступен, `/api/models` использует hardcoded fallback (16 моделей — другой список, чем в Supabase-каталоге, это намеренно).
 7. Перед вызовом OpenRouter backend резолвит `selectionId` в server-only `model_key`.
 8. `/api/compare` best-effort сохраняет `tasks` и `model_responses`.
 9. `votes` подготовлена для выбора лучшего ответа и реакций.
@@ -354,10 +481,15 @@ create table public.votes (
 15. Server-side voting helper переведён на актуальную схему `model_response_id` и `best`.
 16. Основная Prompt Arena сохраняет Winner vote через `POST /api/vote`, если `/api/compare` вернул сохранённый `taskId`.
 17. Model catalog governance metadata подготовлены через `raw_metadata` без изменения `model_key`.
+18. Добавлен generated column `status` в `models` (`active`/`inactive` в зависимости от `is_active`).
+19. Деактивированы недоступные бесплатные модели: `z-ai/glm-4.5-air:free`, `moonshotai/kimi-k2.6:free`.
+20. Создан атомарный RPC `cast_best_vote`; release-gate hardening перевёл его на `SECURITY INVOKER` с execute только для `service_role`.
+21. Добавлены target-миграции `anonymous_sessions`, `models.access_level`, расширенный `profiles` и `avatars` storage.
+22. Code Arena Lite использует `tasks.mode_slug = 'code-arena'`, но не добавляет runner/sandbox/code execution.
 
 ## Будущие сущности Image Arena / Visual Arena
 
-Image Arena не входит в текущий обязательный scope Prompt Arena MVP. Нельзя менять scope `v0.5.3` так, будто визуальная генерация уже нужна сейчас.
+Image Arena не входит в текущий обязательный scope Prompt Arena MVP. Нельзя менять scope `v0.7.0-alpha.1` так, будто визуальная генерация уже нужна сейчас.
 
 После стабильной Prompt Arena можно добавить отдельные сущности:
 

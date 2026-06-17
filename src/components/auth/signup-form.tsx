@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
 import { getAuthErrorMessage } from "./auth-messages";
 

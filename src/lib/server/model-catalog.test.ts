@@ -18,6 +18,7 @@ const dbRows = [
     description: "DB model",
     role_tags: ["general", "fast"],
     price_label: "free",
+    access_level: "anonymous",
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
@@ -26,6 +27,7 @@ const dbRows = [
     description: null,
     role_tags: ["balanced"],
     price_label: "free",
+    access_level: "anonymous",
   },
 ];
 
@@ -38,6 +40,7 @@ function createMockSupabase(result: MockQueryResult) {
   const query = {
     select: vi.fn(() => query),
     eq: vi.fn(() => query),
+    in: vi.fn((column: string) => (column === "id" ? Promise.resolve(result) : query)),
     order: vi.fn(async () => result),
   };
   const client = {
@@ -93,7 +96,7 @@ describe("model catalog (DB mode)", () => {
 
     expect(client.from).toHaveBeenCalledWith("models");
     expect(query.select).toHaveBeenCalledWith(
-      "id, model_key, display_name, description, role_tags, price_label"
+      "id, model_key, display_name, description, role_tags, price_label, access_level"
     );
     expect(query.eq).toHaveBeenNthCalledWith(1, "is_active", true);
     expect(query.eq).toHaveBeenNthCalledWith(2, "is_public", true);

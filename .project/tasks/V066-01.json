@@ -2,18 +2,64 @@
   "$schema": "../task.schema.json",
   "id": "V066-01",
   "title": "v0.6.6 Email and Password Management",
-  "status": "planned",
+  "status": "verify",
   "priority": "medium",
   "files": [
     "20-auth-guest-profile-plan.md",
     "12-security-and-env.md"
   ],
-  "checksRequired": ["typecheck", "lint", "build"],
-  "checksPassed": [],
-  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "build"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "build",
+    "smoke",
+    "test"
+  ],
+  "lastUpdated": "2026-06-17T10:56:45.397Z",
   "commitHash": null,
   "transitions": [
-    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z", "note": "Migrated from 22-codex-action-backlog.md (Backlog task 7)." }
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-06-10T00:00:00.000Z",
+      "note": "Migrated from 22-codex-action-backlog.md (Backlog task 7)."
+    },
+    {
+      "from": "planned",
+      "to": "verify",
+      "at": "2026-06-17T10:27:48.908Z",
+      "note": "Implementation exists in working tree; awaiting full verification, docs sync and commit."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:44.314Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:45.079Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:45.832Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:55:17.395Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:56:45.397Z"
+    }
   ],
   "notes": "Change email (with confirmation), forgot/update password via Supabase Auth. Neutral security messages: never reveal whether an email exists or the exact login-failure reason. Keep profiles.email in sync with Auth email."
 }

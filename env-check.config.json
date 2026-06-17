@@ -110,6 +110,17 @@
       "example": "your-upstash-rest-token"
     },
     {
+      "name": "VERCEL_AUTOMATION_BYPASS_SECRET",
+      "required": false,
+      "category": "secret",
+      "groups": ["full"],
+      "validation": {
+        "type": "nonEmptyString",
+        "message": "optional Vercel Deployment Protection bypass secret for automated smoke checks"
+      },
+      "example": "your-vercel-automation-bypass-secret"
+    },
+    {
       "name": "APP_ENV",
       "required": false,
       "category": "config",

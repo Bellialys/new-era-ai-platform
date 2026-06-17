@@ -111,6 +111,15 @@ placeholder-значений** поля `example` в `env-check.config.json`.
 Менять сам `scripts/check-env.mjs` для новой переменной обычно не нужно — только
 конфиг.
 
+## 7.1 Smoke-check и Vercel Deployment Protection
+
+`scripts/smoke-check.mjs` поддерживает опциональную переменную
+`VERCEL_AUTOMATION_BYPASS_SECRET`. Если она задана, smoke-check добавляет
+заголовок `x-vercel-protection-bypass` к запросам `/api/health` и `/api/models`.
+
+Значение секрета не выводится в stdout/stderr и не попадает в JSON-репорт.
+Если переменная не задана, поведение smoke-check остаётся обычным.
+
 ## 8. Как проверить, что скрипт не раскрывает секреты
 
 - Запустите `npm run env:check` — в выводе только имена и статусы.

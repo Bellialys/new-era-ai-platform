@@ -26,6 +26,39 @@ Frontend вызывает только backend route handlers.
 - `model_key` провайдера не должен быть доверенным значением из frontend.
 - Backend повторно валидирует `prompt`, `modelIds`, `modeSlug` и выбранные модели.
 
+## Rate Limiting
+
+Публичные endpoints с дорогими или массовыми запросами защищены rate limiting. При превышении лимита возвращается `429` с заголовком `Retry-After` (секунды до сброса).
+
+| Endpoint | Лимит | Окно | Ключ |
+|---|---|---|---|
+| `GET /api/models` | 60 req | 60 сек | IP-адрес |
+| `POST /api/compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `POST /api/vote` | 30 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `GET /api/code-models` | 60 req | 60 сек | IP-адрес |
+| `POST /api/code-compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
+
+Ответ при превышении:
+
+```json
+{
+  "status": "error",
+  "errorCode": "RATE_LIMIT",
+  "message": "Too many requests. Please try again later."
+}
+```
+
+Заголовки ответа:
+
+```text
+HTTP/1.1 429 Too Many Requests
+Retry-After: 42
+```
+
+В production rate limit глобальный (Upstash Redis). Локально — in-memory per-process.
+
+Release-gate note: `POST /api/guest` создаёт anonymous session и должен пройти отдельный abuse/rate-limit review перед public release.
+
 ## `GET /api/models`
 
 Возвращает модели, доступные для Prompt Arena.
@@ -109,17 +142,20 @@ server-side allowlist -> frontend
 {
   "taskId": "task-uuid",
   "responseId": "model-response-uuid",
-  "voteType": "best",
-  "anonymousSessionId": "anonymous-session-id"
+  "voteType": "best"
 }
 ```
+
+> **Идентичность определяется из cookie, не из тела.**
+> Авторизованные пользователи — через Supabase-сессию (`sb-*` cookie).
+> Гости — через httpOnly cookie `na_guest` (выдаётся сервером автоматически).
+> Поле `anonymousSessionId` в теле запроса **игнорируется** — не передавать.
 
 Правила:
 
 - `taskId` и `responseId` должны быть UUID;
 - `responseId` должен принадлежать указанному `taskId`;
 - выбирать можно только response со статусом `success`;
-- голос должен принадлежать authenticated user или guest через `anonymousSessionId`;
 - актуальная схема БД использует `votes.model_response_id` и `vote_type = 'best'`;
 - старое значение `winner` не должно использоваться в новом frontend-коде или документации.
 
@@ -134,6 +170,69 @@ server-side allowlist -> frontend
   "voteType": "best"
 }
 ```
+
+## `GET /api/code-models`
+
+Возвращает модели для Code Arena Lite.
+
+Минимальный ответ:
+
+```json
+{
+  "status": "success",
+  "models": [
+    {
+      "id": "model-selection-id",
+      "name": "Model display name",
+      "provider": "openrouter",
+      "role": "coding"
+    }
+  ]
+}
+```
+
+## `POST /api/code-compare`
+
+Запускает сравнение кодовых решений через backend. Code Arena Lite не выполняет пользовательский код.
+
+Минимальный запрос:
+
+```json
+{
+  "prompt": "Напиши безопасный Next.js route handler",
+  "modelIds": ["model-selection-id-1", "model-selection-id-2"],
+  "language": "TypeScript",
+  "framework": "Next.js"
+}
+```
+
+Минимальный ответ:
+
+```json
+{
+  "status": "success",
+  "taskId": "saved-task-uuid-or-null",
+  "language": "TypeScript",
+  "framework": "Next.js",
+  "responses": [
+    {
+      "id": "response-uuid-or-generated-id",
+      "modelId": "model-selection-id-1",
+      "modelName": "Model display name",
+      "status": "success",
+      "answerText": "Ответ модели",
+      "latencyMs": 1234
+    }
+  ]
+}
+```
+
+Rules:
+
+- requires Supabase auth cookie or httpOnly guest cookie `na_guest`;
+- validates prompt, model IDs, language and framework server-side;
+- persists as `tasks.mode_slug = "code-arena"` when Supabase persistence is available;
+- never runs code, starts tests, spawns processes, or uses a sandbox in Lite mode.
 
 ## Related Docs
 

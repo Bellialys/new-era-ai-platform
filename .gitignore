@@ -47,6 +47,8 @@ Thumbs.db
 # local cache
 .cache/
 .turbo/
+.eslintcache
+.codex/
 
 # project state sync (local backups only; state/tasks ARE committed)
 .project/backups/

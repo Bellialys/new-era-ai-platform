@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V054-01",
   "title": "Environment Variables Checker with leak detection",
-  "status": "done",
+  "status": "archived",
   "priority": "high",
   "files": [
     "env-check.config.json",
@@ -56,5 +56,6 @@
       "note": "Env checker implementation verified; checks already recorded in task"
     }
   ],
-  "notes": "Production-grade env checker. Never prints secret values, lengths, or masked previews. prebuild runs basic check only. CI uses non-secret placeholders so build passes without real secrets."
+  "notes": "Production-grade env checker. Never prints secret values, lengths, or masked previews. prebuild runs basic check only. CI uses non-secret placeholders so build passes without real secrets.",
+  "archivedAt": "2026-06-17T05:36:40Z"
 }

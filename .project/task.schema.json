@@ -62,6 +62,10 @@
       "type": ["string", "null"],
       "pattern": "^[0-9a-f]{7,40}$"
     },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
     "transitions": {
       "type": "array",
       "items": {

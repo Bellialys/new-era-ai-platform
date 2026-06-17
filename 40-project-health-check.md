@@ -69,6 +69,10 @@ npm run smoke
 Для `health:production` нужно задать `SMOKE_BASE_URL` или
 `NEXT_PUBLIC_SITE_URL`, чтобы smoke-check смотрел на нужный deployment.
 
+Если проверяется protected Vercel Preview, дополнительно задайте
+`VERCEL_AUTOMATION_BYPASS_SECRET`. `smoke` передаст его только как
+`x-vercel-protection-bypass` header и не выведет значение в лог.
+
 ## Env Requirements
 
 Можно запускать без live provider-доступа:
@@ -95,6 +99,8 @@ npm run smoke
 
 - `smoke` - использует `SMOKE_BASE_URL`, `NEXT_PUBLIC_SITE_URL` или локальный
   `http://localhost:3000`.
+  Для protected Vercel Preview также нужен `VERCEL_AUTOMATION_BYPASS_SECRET`,
+  иначе Vercel Authentication вернёт 401 до попадания запроса в приложение.
 
 ## Security Rules
 
@@ -102,5 +108,6 @@ npm run smoke
 - Не коммитить `.env.local`.
 - Не печатать значения secrets в логах.
 - Не использовать `SUPABASE_SERVICE_ROLE_KEY` в browser/client code.
+- Не использовать `VERCEL_AUTOMATION_BYPASS_SECRET` в browser/client code.
 - `models:verify` может выводить отсутствующие `model_key`, но не API key.
 - `schema:check` может выводить безопасный error code, но не database URL.

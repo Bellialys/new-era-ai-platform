@@ -8,7 +8,6 @@ import {
   applyGuestCookie,
   checkRateLimit,
   createErrorResponse,
-  getRateLimitKeyFromHeaders,
   logApiRequest,
   resolveRequestIdentity,
   saveBestVote,
@@ -35,7 +34,26 @@ export async function POST(
   const startTime = Date.now();
 
   try {
-    const rateLimitKey = `vote:${getRateLimitKeyFromHeaders(request.headers)}`;
+    // Resolve identity BEFORE rate limiting so each user has their own quota
+    // rather than sharing a limit with everyone behind the same IP.
+    const identity = await resolveRequestIdentity(request);
+
+    // Require an explicit user or guest session.
+    if (identity.kind === "none") {
+      logApiRequest("POST", "/api/vote", 401, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(401, "AUTH_REQUIRED", "Please sign in or continue as a guest before voting.")
+        ),
+        { status: 401 }
+      );
+    }
+
+    const rateLimitSubKey =
+      identity.kind === "user"
+        ? `user:${identity.userId}`
+        : `guest:${identity.guestId}`;
+    const rateLimitKey = `vote:${rateLimitSubKey}`;
     const rateLimit = await checkRateLimit(
       rateLimitKey,
       VOTE_RATE_LIMIT_MAX_REQUESTS,
@@ -80,10 +98,6 @@ export async function POST(
     }
 
     const ids = validateVoteIds(taskId, responseId);
-
-    // Identity comes from the verified session / server-issued guest cookie,
-    // never from the request body.
-    const identity = await resolveRequestIdentity(request);
 
     const savedVote = await saveBestVote({
       taskId: ids.taskId,

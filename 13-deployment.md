@@ -737,6 +737,9 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=
 # production URL сайта
 
+VERCEL_AUTOMATION_BYPASS_SECRET=
+# optional: только для automation smoke/e2e against protected Preview
+
 APP_ENV=production
 # production окружение
 
@@ -764,6 +767,9 @@ SUPABASE_SERVICE_ROLE_KEY не должен быть NEXT_PUBLIC.
 
 NEXT_PUBLIC_* видны пользователю.
 # туда нельзя помещать секреты
+
+VERCEL_AUTOMATION_BYPASS_SECRET не должен быть NEXT_PUBLIC.
+# это secret для автоматического обхода Vercel Deployment Protection в проверках
 ```
 
 ## 13.3 Первый deploy
@@ -1271,3 +1277,8 @@ NEXT_PUBLIC_SITE_URL
 ```
 
 Реальные значения добавляются только в Vercel env и `.env.local`; они не должны попадать в Git или выводиться в логах.
+
+Для Vercel Preview с включённой Vercel Authentication автоматический
+`npm run smoke -- --url <preview-url>` требует
+`VERCEL_AUTOMATION_BYPASS_SECRET` в окружении запуска. Скрипт отправляет secret
+только через `x-vercel-protection-bypass` header и не печатает его значение.

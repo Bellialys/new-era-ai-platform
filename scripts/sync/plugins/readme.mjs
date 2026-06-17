@@ -1,6 +1,15 @@
 import { applyMarker } from "../utils.mjs";
 
-const ANCHOR = /^##\s+Текущий статус\s*$/;
+/**
+ * readme plugin — inserts/updates PROJECT_VERSION, PROJECT_STATUS, CURRENT_PHASE
+ * markers in README.md inside the status-section heading.
+ *
+ * Anchor is matched case-insensitively across six languages so the plugin works
+ * even if the README heading is translated.
+ */
+
+// Match the status-section heading in Russian, English, Spanish, Chinese, French, German.
+const ANCHOR = /^##\s+(Текущий статус|Current Status|Estado actual|当前状态|Statut actuel|Projektstatus)\s*$/i;
 
 const readmePlugin = {
   id: "readme",

@@ -119,6 +119,16 @@ STRIPE_SECRET_KEY=
 
 ADMIN_SECRET=
 # необязательный внутренний admin secret, приватный
+
+UPSTASH_REDIS_REST_URL=
+# URL Upstash Redis для production rate limiting; без него каждый serverless instance
+# считает лимиты независимо — rate limit де-факто не работает между репликами
+
+UPSTASH_REDIS_REST_TOKEN=
+# токен доступа к Upstash Redis; обязателен вместе с UPSTASH_REDIS_REST_URL
+
+VERCEL_AUTOMATION_BYPASS_SECRET=
+# секрет Vercel Deployment Protection для автоматических smoke/e2e проверок protected Preview
 ```
 
 Эти значения никогда нельзя раскрывать client-side.
@@ -136,13 +146,11 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
 NEXT_PUBLIC_SITE_URL=
 # публичный site URL
-
-NEXT_PUBLIC_ENABLE_CODE_ARENA=
-# публичный UI flag для видимости Code Arena
-
-NEXT_PUBLIC_ENABLE_TEAM_MODE=
-# публичный UI flag для видимости Team Mode
 ```
+
+> **Примечание:** feature-флаги `NEXT_PUBLIC_ENABLE_CODE_ARENA` и `NEXT_PUBLIC_ENABLE_TEAM_MODE`
+> убраны из env — соответствующие режимы контролируются константами в `src/lib/arena/constants.ts`
+> и версионным запретом в CLAUDE.md.
 
 Важное правило:
 
@@ -205,27 +213,22 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 APP_ENV=development
 # development, preview или production
 
-NEXT_PUBLIC_ENABLE_CODE_ARENA=false
-# показывает или скрывает Code Arena в UI
+UPSTASH_REDIS_REST_URL=https://your-upstash-endpoint.upstash.io
+# URL Upstash Redis — обязателен для production rate limiting между serverless instances
 
-ENABLE_CODE_RUNNER=false
-# server-side flag для Code Arena Runner, должен оставаться false до v1.7
+UPSTASH_REDIS_REST_TOKEN=your_upstash_token_here
+# токен Upstash Redis — server-only, никогда не в NEXT_PUBLIC_
 
-NEXT_PUBLIC_ENABLE_TEAM_MODE=false
-# показывает или скрывает AI Team Mode в UI
+VERCEL_AUTOMATION_BYPASS_SECRET=your_vercel_automation_bypass_secret
+# опционально: только для smoke/e2e против protected Vercel Preview
 
-ENABLE_TEAM_MODE=false
-# server-side flag для AI Team Mode, должен оставаться false до v2.0
-
-MIN_PROMPT_LENGTH=3
-# минимальная длина prompt для MVP
-
-MAX_PROMPT_LENGTH=8000
-# максимальная длина prompt для MVP
-
-MAX_MODELS_PER_COMPARE=3
-# максимум моделей для одного сравнения в MVP
+OPENROUTER_MAX_TOKENS=2048
+# максимум токенов в ответе модели; можно переопределить без деплоя
 ```
+
+> **Убрано:** `NEXT_PUBLIC_ENABLE_CODE_ARENA`, `ENABLE_CODE_RUNNER`, `NEXT_PUBLIC_ENABLE_TEAM_MODE`,
+> `ENABLE_TEAM_MODE`, `MIN_PROMPT_LENGTH`, `MAX_PROMPT_LENGTH`, `MAX_MODELS_PER_COMPARE` —
+> эти значения больше не читаются из env; они заменены константами в `src/lib/arena/constants.ts`.
 
 ## 3.2 Что нельзя делать
 
@@ -276,23 +279,26 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 APP_ENV=development
 # development, preview или production
 
-MIN_PROMPT_LENGTH=3
-# минимальная длина prompt
+UPSTASH_REDIS_REST_URL=
+# Upstash Redis URL для rate limiting (опционально локально, обязательно в production)
 
-MAX_PROMPT_LENGTH=8000
-# максимальная длина prompt для MVP
+UPSTASH_REDIS_REST_TOKEN=
+# Upstash Redis token (server-only)
 
-MAX_MODELS_PER_COMPARE=3
-# максимум моделей для одного сравнения
+VERCEL_AUTOMATION_BYPASS_SECRET=
+# Vercel Deployment Protection bypass secret для automation, server/CI only
+
+OPENROUTER_MAX_TOKENS=2048
+# максимум токенов в ответе модели
 ```
 
 Неправильный пример:
 
 ```env
-OPENROUTER_API_KEY=sk-real-secret-value
+OPENROUTER_API_KEY=[REDACTED_OPENROUTER_KEY]
 # реальный ключ нельзя хранить в GitHub
 
-NEXT_PUBLIC_OPENROUTER_API_KEY=sk-real-secret-value
+NEXT_PUBLIC_OPENROUTER_API_KEY=[REDACTED_OPENROUTER_KEY]
 # критическая ошибка: ключ попадёт в браузер
 ```
 
@@ -425,18 +431,16 @@ response.task_id = taskId
 
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Проверьте данные запроса."
-  }
+  "status": "error",
+  "errorCode": "VALIDATION_ERROR",
+  "message": "Проверьте данные запроса."
 }
 ```
 
 Неправильно:
 
 ```text
-Error: OPENROUTER_API_KEY is sk-real-secret-value...
+Error: OPENROUTER_API_KEY is [REDACTED_OPENROUTER_KEY]...
 # секрет нельзя показывать в ошибке
 
 Database stack trace with connection string
@@ -592,7 +596,8 @@ GitHub хранит код, документацию и package-lock.json.
 - список моделей проверяется на backend;
 - `/api/models` читает Supabase catalog с hardcoded fallback;
 - `modeSlug` проверяется на backend;
-- `/api/compare` защищён базовым in-memory rate limit;
+- все три endpoint защищены rate limit: `/api/models` (60 req/мин по IP), `/api/compare` (10 req/мин по user/guest), `/api/vote` (30 req/мин по user/guest);
+- rate limit использует Upstash Redis в production (глобальный, между serverless instances) с in-memory fallback для локальной разработки;
 - `/api/compare` best-effort сохраняет `tasks` и `model_responses`;
 - RLS и grants для текущих таблиц описаны Supabase migrations;
 - неизвестные ошибки скрываются за `INTERNAL_ERROR`;
@@ -603,9 +608,6 @@ GitHub хранит код, документацию и package-lock.json.
 Что добавить позже:
 
 ```text
-Persistent rate limit
-# заменить in-memory лимит на устойчивый production-ready лимит
-
 Prompt privacy policy
 # явно описать, что отправляется в OpenRouter
 

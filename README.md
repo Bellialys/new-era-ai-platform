@@ -9,20 +9,20 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v0.5.4 - Vote Security & Auth Foundation
+**Текущая фаза:** v0.7 - Code Arena Lite stabilization
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
-**Статус проекта:** `stabilizing`
+**Статус проекта:** `in_development`
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.5.4`
+**Текущая версия:** `v0.7.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
-Текущая версия проекта: **v0.5.3 - Voting MVP stabilization**.
+Текущая рабочая версия проекта: **v0.7.0-alpha.1 - Code Arena Lite stabilization**.
 
-Статус синхронизирован с `14-roadmap.md`.
+Статус синхронизирован с `.project/state.json`; порядок будущих этапов описан в `14-roadmap.md`.
 
 Реально готово:
 
@@ -33,6 +33,9 @@
 - backend route `POST /api/compare`;
 - backend route `GET /api/health`;
 - backend route `POST /api/vote`;
+- backend route `POST /api/guest`;
+- backend route `GET /api/code-models`;
+- backend route `POST /api/code-compare`;
 - серверная интеграция OpenRouter;
 - Supabase PostgreSQL migrations для `models`, `tasks`, `model_responses` и `profiles`;
 - server-side Supabase client для сохранения Prompt Arena;
@@ -48,16 +51,20 @@
 - исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`;
 - smoke-check script `npm run smoke`;
 - минимальный GitHub Actions CI;
+- Access Gate и guest mode через server-set httpOnly cookie `na_guest`;
+- Auth SSR, login/signup/logout, reset/update password flow;
+- профиль, базовая статистика, avatar upload и email change request;
+- Code Arena Lite без запуска пользовательского кода;
 - `package-lock.json`;
-- успешные проверки `typecheck`, `lint`, `test`, `build`.
+- текущий `typecheck` проходит; остальные проверки должны пройти перед stable/release.
 
 Пока не готово как стабильный пользовательский этап:
 
 - история сравнений;
 - production deploy на Vercel;
-- полноценные пользовательские аккаунты и личная история;
+- полная release-верификация v0.6/v0.7;
 - админ-панель;
-- Code Arena, Judge Mode, Leaderboard и AI Team Mode.
+- Judge Mode, Leaderboard, Code Arena Runner и AI Team Mode.
 
 ## Главная цель
 
@@ -191,7 +198,7 @@ server-side hardcoded allowlist
 
 ### `POST /api/compare`
 
-Текущий запрос `v0.5.3`:
+Текущий запрос `v0.7.0-alpha.1`:
 
 ```json
 {
@@ -201,7 +208,7 @@ server-side hardcoded allowlist
 }
 ```
 
-Текущий ответ `v0.5.3`:
+Текущий ответ `v0.7.0-alpha.1`:
 
 ```json
 {
@@ -229,18 +236,37 @@ server-side hardcoded allowlist
 
 ### `POST /api/vote`
 
-Текущий запрос `v0.5.3`:
+Текущий запрос `v0.7.0-alpha.1`:
 
 ```json
 {
   "taskId": "saved-task-uuid",
   "responseId": "saved-model-response-uuid",
-  "voteType": "best",
-  "anonymousSessionId": "anonymous-session-id"
+  "voteType": "best"
 }
 ```
 
 `responseId` соответствует `votes.model_response_id`. Кнопка Winner в основной `/arena` активна только для сохранённых successful responses.
+Идентичность берётся сервером из Supabase auth cookie или httpOnly guest cookie `na_guest`; frontend не передаёт user id или guest id в body.
+
+### `GET /api/code-models`
+
+Возвращает модели, доступные для Code Arena Lite.
+
+### `POST /api/code-compare`
+
+Запускает сравнение кодовых решений без выполнения пользовательского кода.
+
+```json
+{
+  "prompt": "Напиши Next.js route handler для безопасного вызова OpenRouter",
+  "modelIds": ["model-selection-id-1", "model-selection-id-2"],
+  "language": "TypeScript",
+  "framework": "Next.js"
+}
+```
+
+Code Arena Lite не запускает код, не выполняет тесты и не использует sandbox. Runner остаётся отдельным поздним этапом.
 
 Подробный контракт API описан в `28-api-contracts.md`.
 
@@ -288,6 +314,7 @@ server-side hardcoded allowlist
 | `docs/37-env-check-policy.md` | Политика Environment Variables Checker (`npm run env:check`) |
 | `docs/38-env-check-implementation.md` | Реализация Environment Variables Checker |
 | `40-project-health-check.md` | Команды `health`, `health:local`, `health:production` и live-проверка моделей |
+| `41-enterprise-readiness-roadmap.md` | План выхода на international corporate-grade уровень |
 | `AGENTS.md` | Правила для AI-агентов и разработчиков |
 
 Дополнительные audit/addendum документы в корне репозитория сохраняются как исторические или вспомогательные материалы. Основным документом по окружениям является только `27-environments.md`.
@@ -295,7 +322,7 @@ server-side hardcoded allowlist
 
 ## Главные правила разработки
 
-1. Сначала делаем простой рабочий MVP. Новые режимы добавляем только после стабилизации текущего (критерий: v1.0 по `14-roadmap.md`).
+1. Сначала стабилизируем текущие Arena-режимы. Code Arena Lite разрешён в v0.7, но Runner, Judge, Leaderboard, Image Arena и AI Team Mode добавляются только по `14-roadmap.md`.
 2. Сначала чиним production-ошибки, потом добавляем новые функции.
 3. Все AI-запросы идут только через backend. Секретные ключи не попадают во frontend и в GitHub.
 4. Секреты хранятся только в `.env.local` (локально) и Vercel Environment Variables (production).

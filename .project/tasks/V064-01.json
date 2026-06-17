@@ -2,19 +2,65 @@
   "$schema": "../task.schema.json",
   "id": "V064-01",
   "title": "v0.6.4 Profile MVP",
-  "status": "planned",
+  "status": "verify",
   "priority": "medium",
   "files": [
     "20-auth-guest-profile-plan.md",
     "supabase/migrations/",
     "src/app/profile/page.tsx"
   ],
-  "checksRequired": ["typecheck", "lint", "build"],
-  "checksPassed": [],
-  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "build"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "build",
+    "smoke",
+    "test"
+  ],
+  "lastUpdated": "2026-06-17T10:56:43.828Z",
   "commitHash": null,
   "transitions": [
-    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z", "note": "Migrated from 22-codex-action-backlog.md (Backlog task 5)." }
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-06-10T00:00:00.000Z",
+      "note": "Migrated from 22-codex-action-backlog.md (Backlog task 5)."
+    },
+    {
+      "from": "planned",
+      "to": "verify",
+      "at": "2026-06-17T10:27:39.272Z",
+      "note": "Implementation exists in working tree; awaiting full verification, docs sync and commit."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:39.610Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:40.414Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:41.210Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:55:15.968Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:56:43.828Z"
+    }
   ],
   "notes": "Extend profiles (first_name, last_name, display_name, avatar_url, role, plan, updated_at). /profile shows identity + plan + role + basic stats (tasks/responses/votes). Owner can edit names; other profiles are not accessible."
 }

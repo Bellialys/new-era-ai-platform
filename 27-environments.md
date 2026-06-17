@@ -68,6 +68,7 @@ Production должен быть защищён не только правила
 | `OPENROUTER_MAX_TOKENS` | Backend | Нет | Лимит токенов ответа модели. |
 | `UPSTASH_REDIS_REST_URL` | Backend | Нет | Нужен для rate limiting перед публичным deploy. |
 | `UPSTASH_REDIS_REST_TOKEN` | Backend | Нет | Секретный токен Redis. Только server-side. |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | CI / smoke tooling | Нет | Опциональный Vercel Deployment Protection bypass secret для автоматических проверок protected Preview. Не использовать в browser/client code. |
 
 ## Нормализация `APP_ENV`
 
@@ -345,6 +346,11 @@ Codex может:
 - добавлять guardrails;
 - писать инструкции для ручной настройки Vercel/Supabase;
 - проверять, что секреты не попали в репозиторий.
+
+Для protected Vercel Preview автоматические проверки должны использовать
+`VERCEL_AUTOMATION_BYPASS_SECRET` через заголовок `x-vercel-protection-bypass`.
+Codex не должен создавать, ротировать или удалять этот secret без отдельного
+явного подтверждения.
 
 ## Future hardening
 

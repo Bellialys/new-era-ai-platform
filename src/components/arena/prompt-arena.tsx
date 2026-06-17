@@ -1,12 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   PROMPT_MIN_LENGTH,
   PROMPT_MAX_LENGTH,
   MODEL_MIN_SELECT,
   MODEL_MAX_SELECT,
 } from "@/lib/arena/constants";
+import { getSupabaseClient } from "@/lib/supabase";
+import {
+  readGuestInfo,
+  createOrRefreshGuestSession,
+  clearGuestInfo,
+  type GuestInfo,
+} from "@/lib/guest";
 import type {
   ArenaApiResponse,
   ArenaResponseView,
@@ -14,16 +22,90 @@ import type {
 } from "@/types/arena";
 import { ArenaForm } from "./arena-form";
 import { ArenaResults } from "./arena-results";
+import { AccessGate } from "./access-gate";
 
-const MAX_MODELS_ERROR_MESSAGE = "В MVP можно выбрать максимум три модели.";
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type IdentityMode = "loading" | "gate" | "guest" | "user";
 
 type VoteStatus = "idle" | "saving" | "success" | "error";
+
+// ---------------------------------------------------------------------------
+// GuestCard
+// ---------------------------------------------------------------------------
+
+const AVATAR_COLORS = [
+  "bg-violet-600",
+  "bg-blue-600",
+  "bg-cyan-600",
+  "bg-emerald-600",
+  "bg-amber-600",
+  "bg-rose-600",
+  "bg-pink-600",
+  "bg-indigo-600",
+];
+
+function getAvatarColorClass(seed: string): string {
+  const hash = seed.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? "bg-violet-600";
+}
+
+function GuestCard({
+  info,
+  onSignIn,
+}: {
+  info: GuestInfo;
+  onSignIn: () => void;
+}) {
+  const colorClass = getAvatarColorClass(info.colorSeed);
+
+  return (
+    <div className="mb-6 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+      {/* Avatar */}
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${colorClass} text-sm font-black text-white`}
+      >
+        А
+      </div>
+
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-white">{info.displayName}</p>
+        <p className="text-xs text-slate-400">Гость · Только бесплатные модели</p>
+      </div>
+
+      {/* Sign-in button */}
+      <button
+        type="button"
+        onClick={onSignIn}
+        className="shrink-0 rounded-lg border border-white/15 px-3 py-1 text-xs font-semibold text-slate-300 transition hover:border-white/30 hover:text-white"
+      >
+        Войти
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PromptArena
+// ---------------------------------------------------------------------------
+
+const MAX_MODELS_ERROR_MESSAGE = "В MVP можно выбрать максимум три модели.";
 
 function getDefaultModelIds(models: ArenaModel[]) {
   return models.slice(0, MODEL_MAX_SELECT).map((model) => model.id);
 }
 
 export function PromptArena() {
+  // --- Identity state ---
+  const [identityMode, setIdentityMode] = useState<IdentityMode>("loading");
+  const [guestInfo, setGuestInfo] = useState<GuestInfo | null>(null);
+  const [guestCreateError, setGuestCreateError] = useState<string | null>(null);
+  const [isCreatingGuest, setIsCreatingGuest] = useState(false);
+
+  // --- Arena state ---
   const [availableModels, setAvailableModels] = useState<ArenaModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -41,52 +123,140 @@ export function PromptArena() {
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load available models on mount
+  // ---------------------------------------------------------------------------
+  // Identity resolution on mount
+  // ---------------------------------------------------------------------------
+
   useEffect(() => {
-    async function loadModels() {
-      try {
-        const response = await fetch("/api/models");
-        if (!response.ok) {
-          throw new Error("Failed to load models");
+    async function resolveIdentity() {
+      // 1. Check Supabase session (authenticated user)
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          setIdentityMode("user");
+          return;
         }
-        const data = (await response.json()) as {
-          status: string;
-          models: ArenaModel[];
-        };
-        setAvailableModels(data.models);
-        // Select the recommended MVP set by default.
-        if (data.models.length >= MODEL_MIN_SELECT) {
-          setSelectedModelIds(getDefaultModelIds(data.models));
-        }
-      } catch (error) {
-        console.error("Error loading models:", error);
-        setModelsError(
-          "Не удалось загрузить список моделей. Обновите страницу."
-        );
-      } finally {
-        setModelsLoading(false);
       }
+
+      // 2. Check localStorage for existing guest info
+      const stored = readGuestInfo();
+      if (stored) {
+        // Refresh the cookie by touching the server (fire-and-forget)
+        createOrRefreshGuestSession()
+          .then((info) => {
+            setGuestInfo(info);
+          })
+          .catch(() => {
+            // If refresh fails, still show the stored guest card
+            setGuestInfo(stored);
+          });
+        setGuestInfo(stored);
+        setIdentityMode("guest");
+        return;
+      }
+
+      // 3. No identity — show Access Gate
+      setIdentityMode("gate");
     }
 
-    loadModels();
+    // Subscribe to auth changes so the UI updates when user signs in/out
+    const supabase = getSupabaseClient();
+    let unsubscribe: (() => void) | undefined;
+    if (supabase) {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          setIdentityMode("user");
+        } else if (identityMode === "user") {
+          // User signed out — check for guest info
+          const stored = readGuestInfo();
+          setIdentityMode(stored ? "guest" : "gate");
+          setGuestInfo(stored);
+        }
+      });
+      unsubscribe = () => subscription.unsubscribe();
+    }
+
+    resolveIdentity();
+
+    return () => {
+      unsubscribe?.();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Abort pending requests on unmount
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
     };
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // Load models
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (identityMode === "loading" || identityMode === "gate") return;
+
+    async function loadModels() {
+      setModelsLoading(true);
+      try {
+        const response = await fetch("/api/models");
+        if (!response.ok) throw new Error("Failed to load models");
+        const data = (await response.json()) as {
+          status: string;
+          models: ArenaModel[];
+        };
+        setAvailableModels(data.models);
+        if (data.models.length >= MODEL_MIN_SELECT) {
+          setSelectedModelIds(getDefaultModelIds(data.models));
+        }
+      } catch (error) {
+        console.error("Error loading models:", error);
+        setModelsError("Не удалось загрузить список моделей. Обновите страницу.");
+      } finally {
+        setModelsLoading(false);
+      }
+    }
+
+    loadModels();
+  }, [identityMode]);
+
+  // ---------------------------------------------------------------------------
+  // Guest actions
+  // ---------------------------------------------------------------------------
+
+  async function handleContinueAsGuest() {
+    setIsCreatingGuest(true);
+    setGuestCreateError(null);
+    try {
+      const info = await createOrRefreshGuestSession();
+      setGuestInfo(info);
+      setIdentityMode("guest");
+    } catch (error) {
+      setGuestCreateError(
+        error instanceof Error ? error.message : "Не удалось создать гостевой профиль. Попробуйте ещё раз."
+      );
+    } finally {
+      setIsCreatingGuest(false);
+    }
+  }
+
+  function handleSignIn() {
+    window.location.href = "/login";
+  }
+
+  // ---------------------------------------------------------------------------
+  // Arena helpers
+  // ---------------------------------------------------------------------------
+
   function buildResponseViews(apiResponses: ArenaApiResponse[]): ArenaResponseView[] {
     return apiResponses.map((response) => {
-      const matchedModel = availableModels.find(
-        (model) => model.id === response.modelId
-      );
-
-      return {
-        ...response,
-        modelRole: matchedModel?.role ?? "Unknown model role",
-      };
+      const matchedModel = availableModels.find((model) => model.id === response.modelId);
+      return { ...response, modelRole: matchedModel?.role ?? "Unknown model role" };
     });
   }
 
@@ -105,23 +275,10 @@ export function PromptArena() {
 
   function validateForm() {
     const cleanPrompt = prompt.trim();
-
-    if (cleanPrompt.length < PROMPT_MIN_LENGTH) {
-      return "Введите задачу минимум из 3 символов.";
-    }
-
-    if (cleanPrompt.length > PROMPT_MAX_LENGTH) {
-      return `Введите задачу не длиннее ${PROMPT_MAX_LENGTH} символов.`;
-    }
-
-    if (selectedModelIds.length < MODEL_MIN_SELECT) {
-      return "Для сравнения нужно выбрать минимум две модели.";
-    }
-
-    if (selectedModelIds.length > MODEL_MAX_SELECT) {
-      return MAX_MODELS_ERROR_MESSAGE;
-    }
-
+    if (cleanPrompt.length < PROMPT_MIN_LENGTH) return "Введите задачу минимум из 3 символов.";
+    if (cleanPrompt.length > PROMPT_MAX_LENGTH) return `Введите задачу не длиннее ${PROMPT_MAX_LENGTH} символов.`;
+    if (selectedModelIds.length < MODEL_MIN_SELECT) return "Для сравнения нужно выбрать минимум две модели.";
+    if (selectedModelIds.length > MODEL_MAX_SELECT) return MAX_MODELS_ERROR_MESSAGE;
     return null;
   }
 
@@ -133,18 +290,15 @@ export function PromptArena() {
 
   function handleToggleModel(modelId: string) {
     setErrorMessage(null);
-
     setSelectedModelIds((currentIds) => {
       if (currentIds.includes(modelId)) {
         clearStaleResults();
         return currentIds.filter((id) => id !== modelId);
       }
-
       if (currentIds.length >= MODEL_MAX_SELECT) {
         setErrorMessage(MAX_MODELS_ERROR_MESSAGE);
         return currentIds;
       }
-
       clearStaleResults();
       return [...currentIds, modelId];
     });
@@ -152,7 +306,6 @@ export function PromptArena() {
 
   function handleSubmit() {
     const validationError = validateForm();
-
     if (validationError) {
       setErrorMessage(validationError);
       return;
@@ -173,14 +326,11 @@ export function PromptArena() {
     setResponses([]);
     setWinnerResponseId(null);
 
-    // Call the real API
     (async () => {
       try {
         const response = await fetch("/api/compare", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             prompt: prompt.trim(),
             modelIds: selectedModelIds,
@@ -189,19 +339,17 @@ export function PromptArena() {
           signal: abortController.signal,
         });
 
-        // Check if this response is still relevant
-        if (requestIdRef.current !== requestId) {
-          return;
-        }
+        if (requestIdRef.current !== requestId) return;
 
         if (!response.ok) {
-          const errorData = (await response.json()) as {
-            message?: string;
-            errorCode?: string;
-          };
-          throw new Error(
-            errorData.message || `API error: ${response.status}`
-          );
+          const errorData = (await response.json()) as { message?: string; errorCode?: string };
+          // If auth expired mid-session, go back to gate
+          if (response.status === 401) {
+            clearGuestInfo();
+            setIdentityMode("gate");
+            setGuestInfo(null);
+          }
+          throw new Error(errorData.message || `API error: ${response.status}`);
         }
 
         const data = (await response.json()) as {
@@ -210,28 +358,19 @@ export function PromptArena() {
           responses: ArenaApiResponse[];
         };
 
-        if (!data.responses) {
-          throw new Error("Invalid API response format");
-        }
+        if (!data.responses) throw new Error("Invalid API response format");
 
         setTaskId(data.taskId ?? null);
         setResponses(buildResponseViews(data.responses));
         if (!data.taskId) {
           setVoteStatus("error");
-          setVoteMessage(
-            "Winner voting недоступен: сравнение не сохранено в Supabase."
-          );
+          setVoteMessage("Winner voting недоступен: сравнение не сохранено в Supabase.");
         }
       } catch (error) {
-        if (requestIdRef.current !== requestId) {
-          return;
-        }
-
+        if (requestIdRef.current !== requestId) return;
         console.error("Error fetching responses:", error);
         setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Не удалось получить ответы. Попробуйте ещё раз."
+          error instanceof Error ? error.message : "Не удалось получить ответы. Попробуйте ещё раз."
         );
       } finally {
         if (requestIdRef.current === requestId) {
@@ -245,9 +384,7 @@ export function PromptArena() {
   async function handleSelectWinner(responseId: string) {
     if (!taskId) {
       setVoteStatus("error");
-      setVoteMessage(
-        "Winner voting недоступен: сравнение не сохранено в Supabase."
-      );
+      setVoteMessage("Winner voting недоступен: сравнение не сохранено в Supabase.");
       return;
     }
 
@@ -258,22 +395,12 @@ export function PromptArena() {
     try {
       const response = await fetch("/api/vote", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Voter identity is resolved server-side from the session / guest
-        // cookie, so the client no longer sends an anonymous id.
-        body: JSON.stringify({
-          taskId,
-          responseId,
-          voteType: "best",
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, responseId, voteType: "best" }),
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as {
-          message?: string;
-        };
+        const errorData = (await response.json()) as { message?: string };
         throw new Error(errorData.message || "Не удалось сохранить Winner vote.");
       }
 
@@ -284,9 +411,7 @@ export function PromptArena() {
       console.error("Error saving winner vote:", error);
       setVoteStatus("error");
       setVoteMessage(
-        error instanceof Error
-          ? error.message
-          : "Не удалось сохранить Winner vote."
+        error instanceof Error ? error.message : "Не удалось сохранить Winner vote."
       );
     } finally {
       setSavingVoteResponseId(null);
@@ -298,7 +423,6 @@ export function PromptArena() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setPrompt("");
-    // Reset to the recommended MVP set.
     if (availableModels.length >= MODEL_MIN_SELECT) {
       setSelectedModelIds(getDefaultModelIds(availableModels));
     } else {
@@ -314,35 +438,88 @@ export function PromptArena() {
     setIsLoading(false);
   }
 
-  return (
-    <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-      <ArenaForm
-        prompt={prompt}
-        maxPromptLength={PROMPT_MAX_LENGTH}
-        selectedModelIds={selectedModelIds}
-        models={availableModels}
-        modelsLoading={modelsLoading}
-        isLoading={isLoading}
-        errorMessage={errorMessage || modelsError}
-        onPromptChange={handlePromptChange}
-        onToggleModel={handleToggleModel}
-        onSubmit={handleSubmit}
-        onReset={handleReset}
-      />
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
-      <ArenaResults
-        responses={responses}
-        isLoading={isLoading}
-        loadingModelNames={availableModels
-          .filter((m) => selectedModelIds.includes(m.id))
-          .map((m) => m.name)}
-        winnerResponseId={winnerResponseId}
-        canSaveWinner={Boolean(taskId)}
-        voteStatus={voteStatus}
-        voteMessage={voteMessage}
-        savingVoteResponseId={savingVoteResponseId}
-        onSelectWinner={handleSelectWinner}
+  // Loading identity
+  if (identityMode === "loading") {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <svg className="h-8 w-8 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span className="text-sm">Загружаем…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Access Gate — no identity yet
+  if (identityMode === "gate") {
+    return (
+      <AccessGate
+        onContinueAsGuest={handleContinueAsGuest}
+        isLoading={isCreatingGuest}
+        errorMessage={guestCreateError}
       />
-    </section>
+    );
+  }
+
+  // Arena — user or guest
+  return (
+    <div>
+      {/* Guest card */}
+      {identityMode === "guest" && guestInfo && (
+        <GuestCard info={guestInfo} onSignIn={handleSignIn} />
+      )}
+
+      {/* User indicator */}
+      {identityMode === "user" && (
+        <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="text-sm text-emerald-300">Вы вошли в аккаунт</span>
+          <Link
+            href="/profile"
+            className="ml-auto text-xs text-slate-400 transition hover:text-white"
+          >
+            Профиль →
+          </Link>
+        </div>
+      )}
+
+      {/* Arena form + results */}
+      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <ArenaForm
+          prompt={prompt}
+          maxPromptLength={PROMPT_MAX_LENGTH}
+          selectedModelIds={selectedModelIds}
+          models={availableModels}
+          modelsLoading={modelsLoading}
+          isLoading={isLoading}
+          errorMessage={errorMessage || modelsError}
+          onPromptChange={handlePromptChange}
+          onToggleModel={handleToggleModel}
+          onSubmit={handleSubmit}
+          onReset={handleReset}
+        />
+
+        <ArenaResults
+          responses={responses}
+          isLoading={isLoading}
+          loadingModelNames={availableModels
+            .filter((m) => selectedModelIds.includes(m.id))
+            .map((m) => m.name)}
+          winnerResponseId={winnerResponseId}
+          canSaveWinner={Boolean(taskId)}
+          voteStatus={voteStatus}
+          voteMessage={voteMessage}
+          savingVoteResponseId={savingVoteResponseId}
+          onSelectWinner={handleSelectWinner}
+        />
+      </section>
+    </div>
   );
 }

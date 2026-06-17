@@ -1,6 +1,15 @@
 import { applyMarker } from "../utils.mjs";
 
-const ANCHOR = /^##\s+Текущая версия\s*$/;
+/**
+ * changelog plugin — inserts/updates the PROJECT_VERSION marker
+ * in 15-changelog.md inside the current-version heading.
+ *
+ * Anchor is matched case-insensitively across six languages so the plugin works
+ * even if the changelog heading is translated.
+ */
+
+// Match the version heading in Russian, English, German, French, Spanish, Chinese.
+const ANCHOR = /^##\s+(\u0422\u0435\u043a\u0443\u0449\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f|Current Version|Aktuelle Version|Version actuelle|Versi\u00f3n actual|\u5f53\u524d\u7248\u672c)\s*$/i;
 
 const changelogPlugin = {
   id: "changelog",

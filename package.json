@@ -1,18 +1,19 @@
 {
   "name": "new-era-ai-platform",
-  "version": "0.5.4",
+  "version": "0.7.0-alpha.1",
   "private": true,
   "description": "AI platform for comparing, evaluating and collaborating with multiple AI models.",
   "engines": {
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
+    "dev:host": "next dev --turbopack --hostname 0.0.0.0",
     "prebuild": "npm run env:check",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "eslint . --cache --max-warnings 0",
+    "lint:fix": "eslint . --fix --cache",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -38,16 +39,21 @@
     "docs:restore": "node scripts/sync/index.mjs restore",
     "sync:status": "node scripts/git/sync-after-commit.mjs --dry-run",
     "sync:after-commit": "node scripts/git/sync-after-commit.mjs",
-    "sync:install-hook": "git config core.hooksPath .githooks",
-    "verify": "npm run typecheck && npm run lint && npm run build && npm run docs:check"
+    "sync:install-hook": "git config core.hooksPath .githooks && node -e \"const fs=require('fs');fs.readdirSync('.githooks').forEach(f=>fs.chmodSync('.githooks/'+f,'755'))\"",
+    "check": "run-p typecheck lint",
+    "verify": "npm run check && npm run build && npm run docs:check",
+    "precommit": "lint-staged"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.107.0",
-    "next": "^16.2.6",
+    "next": "^16.2.9",
     "pg": "^8.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
+  },
+  "overrides": {
+    "postcss": "^8.5.15"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
@@ -57,8 +63,16 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.6",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "lint-staged": "^17.0.7",
+    "npm-run-all": "^4.1.5",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx}": [
+      "eslint --cache --fix --max-warnings 0"
+    ]
   }
 }

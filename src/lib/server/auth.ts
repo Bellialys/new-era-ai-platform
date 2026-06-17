@@ -4,7 +4,7 @@
  * The backend must never trust a user id sent in a request body. Instead the
  * caller is identified two ways, in priority order:
  *   1. a verified Supabase user, read from the auth cookie (refreshed by the
- *      middleware) — RLS-scoped publishable client, so getUser() is trustworthy;
+ *      proxy) — RLS-scoped publishable client, so getUser() is trustworthy;
  *   2. an anonymous guest, identified by a server-set httpOnly cookie that the
  *      browser cannot forge per request.
  *
@@ -35,7 +35,7 @@ function readPublicSupabaseConfig(): { url: string; key: string } | null {
 
 /**
  * Verified Supabase user id from the request's auth cookie, or null.
- * Read-only: token refresh is handled by the middleware, not here.
+ * Read-only: token refresh is handled by the proxy, not here.
  */
 export async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
   const config = readPublicSupabaseConfig();
@@ -49,7 +49,7 @@ export async function getAuthenticatedUserId(request: NextRequest): Promise<stri
         return request.cookies.getAll();
       },
       setAll() {
-        // Route handlers do not refresh the session; the middleware does.
+        // Route handlers do not refresh the session; the proxy does.
       },
     },
   });
@@ -89,14 +89,17 @@ export function applyGuestCookie(response: NextResponse, guestId: string): void 
 
 export type RequestIdentity =
   | { kind: "user"; userId: string; guestId: null }
-  | { kind: "guest"; userId: null; guestId: string };
+  | { kind: "guest"; userId: null; guestId: string }
+  | { kind: "none"; userId: null; guestId: null };
 
 /**
- * Resolve the caller to a verified user (preferred) or an anonymous guest.
- * Never returns null: a guest id is minted when nothing else identifies the
- * caller, so the Prompt Arena stays usable without an explicit sign-in step.
- * When a guest id is freshly minted, remember to persist it with
- * applyGuestCookie() on the response.
+ * Resolve the caller to a verified user, an existing anonymous guest, or
+ * neither ("none"). Unlike the previous version this function no longer
+ * auto-mints a fresh guest id: the caller must have explicitly created a
+ * guest session via POST /api/guest before using protected endpoints.
+ *
+ * Routes that need an identity should return 401 AUTH_REQUIRED when they
+ * receive { kind: "none" }.
  */
 export async function resolveRequestIdentity(request: NextRequest): Promise<RequestIdentity> {
   const userId = await getAuthenticatedUserId(request);
@@ -104,5 +107,10 @@ export async function resolveRequestIdentity(request: NextRequest): Promise<Requ
     return { kind: "user", userId, guestId: null };
   }
 
-  return { kind: "guest", userId: null, guestId: ensureGuestSessionId(request) };
+  const guestId = readGuestSessionId(request);
+  if (guestId) {
+    return { kind: "guest", userId: null, guestId };
+  }
+
+  return { kind: "none", userId: null, guestId: null };
 }

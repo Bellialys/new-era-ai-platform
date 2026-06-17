@@ -1,0 +1,73 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V070-01",
+  "title": "v0.7 Code Arena Lite stabilization",
+  "status": "verify",
+  "priority": "high",
+  "files": [
+    "14-roadmap.md",
+    "17-code-arena-spec.md",
+    "28-api-contracts.md",
+    "src/app/code/",
+    "src/app/api/code-models/",
+    "src/app/api/code-compare/",
+    "src/components/code-arena/",
+    "src/lib/arena/constants.ts",
+    "src/lib/server/model-catalog.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "build",
+    "docs:check"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "build",
+    "docs:check",
+    "smoke",
+    "test"
+  ],
+  "lastUpdated": "2026-06-17T10:56:46.923Z",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "verify",
+      "at": "2026-06-17T10:30:00.000Z",
+      "note": "Code Arena Lite exists in the working tree; awaiting full verification, documentation sync and commit."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:48.967Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:49.677Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:50.433Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:51.243Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:55:19.064Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:56:46.923Z"
+    }
+  ],
+  "notes": "Code Arena Lite compares generated code through backend OpenRouter calls only. It must not execute user code, run tests, spawn processes, or add sandbox/runner behavior in this stage."
+}

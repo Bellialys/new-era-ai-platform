@@ -24,7 +24,7 @@
 - публичный лендинг, `/auth`, `/api/health` можно смотреть без входа;
 - запуск сравнения моделей нельзя делать как пустой неизвестный пользователь;
 - перед запуском Prompt Arena пользователь должен выбрать `Войти / Зарегистрироваться` или `Продолжить как гость`;
-- гостевой режим создаёт реальную запись `anonymous_sessions` и получает `anonymousSessionId`;
+- гостевой режим создаёт реальную запись `anonymous_sessions`, а backend ставит httpOnly cookie `na_guest`;
 - `/api/compare` должен принимать запрос только если есть `user_id` или валидный `anonymous_session_id`;
 - без обоих вариантов backend должен возвращать `401 AUTH_REQUIRED`.
 
@@ -80,19 +80,21 @@
 
 При нажатии `Продолжить как гость` система должна:
 
-1. проверить localStorage на наличие `new-era-anonymous-session-id`;
-2. если его нет - создать новую anonymous session через backend;
+1. проверить localStorage на наличие display-информации гостя;
+2. если её нет или backend-cookie устарел - создать/обновить anonymous session через backend;
 3. сгенерировать имя вида `Анонимус #4827`;
 4. сгенерировать `avatarSeed` и `colorSeed`;
-5. сохранить session id в localStorage;
+5. сохранить в localStorage только display-информацию гостя;
 6. показать guest card;
 7. разрешить Prompt Arena только с бесплатными моделями.
 
 ### localStorage keys
 
+Важно: localStorage используется только для отображения guest card. Backend не доверяет `sessionId` из localStorage или request body. Доверенный guest identity хранится в httpOnly cookie `na_guest`, который ставит `POST /api/guest`.
+
 ```text
 new-era-anonymous-session-id
-# UUID гостевой сессии
+# UUID гостевой сессии для восстановления display card; не является доверенным auth-фактором
 
 new-era-anonymous-display-name
 # Например: Анонимус #4827
@@ -273,7 +275,7 @@ Email менять только через Supabase Auth.
 - создать `anonymous_sessions` migration;
 - добавить backend route создания guest session;
 - добавить generator `Анонимус #1234`;
-- сохранить guest id в localStorage;
+- сохранить guest display info в localStorage;
 - показать guest card в UI;
 - `/api/compare` принимает только `user_id` или валидный `anonymous_session_id`;
 - без user/guest возвращать `401 AUTH_REQUIRED`.
@@ -398,11 +400,11 @@ supabase db push
 1. Создать Supabase migration для таблицы anonymous_sessions.
 2. Добавить backend route для создания/обновления guest session.
 3. Добавить генератор гостя: Анонимус #1234, avatarSeed, colorSeed.
-4. Сохранять anonymousSessionId в localStorage.
+4. Сохранять guest display info в localStorage; доверенный guest id хранить только в httpOnly cookie `na_guest`.
 5. Добавить Access Gate UI: нельзя пользоваться Prompt Arena до входа или выбора гостевого режима.
 6. Добавить гостевую карточку в интерфейс.
-7. Передавать anonymousSessionId в /api/compare.
-8. /api/compare должен возвращать 401 AUTH_REQUIRED, если нет user session и нет valid anonymousSessionId.
+7. Не передавать `anonymousSessionId` в `/api/compare`; backend читает guest identity из cookie `na_guest`.
+8. /api/compare должен возвращать 401 AUTH_REQUIRED, если нет user session и нет valid `na_guest` cookie.
 9. /api/compare должен сохранять tasks.anonymous_session_id для гостя.
 10. Не добавлять регистрацию и Storage в этом шаге.
 11. Не ломать текущий Prompt Arena и fallback моделей.

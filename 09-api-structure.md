@@ -7,8 +7,10 @@
 Текущий статус:
 
 ```text
-v0.5.3
-# GET /api/models, POST /api/compare, GET /api/health и POST /api/vote реализованы
+v0.7.0-alpha.1
+# GET /api/models, POST /api/compare, GET /api/health, POST /api/vote,
+# POST /api/guest, GET /api/code-models и POST /api/code-compare реализованы/в alpha
+# rate limiting на публичных endpoint (Upstash Redis + in-memory fallback)
 # 14-roadmap.md остаётся главным источником статуса этапов
 ```
 
@@ -28,6 +30,35 @@ Database использует snake_case.
 # model_id, mode_slug, task_text, response_text, latency_ms, model_response_id
 ```
 
+## Rate Limiting
+
+Публичные endpoints с дорогими или массовыми запросами защищены rate limiting. При превышении — `429 Too Many Requests` с заголовком `Retry-After`.
+
+| Endpoint | Лимит | Окно | Ключ |
+|---|---|---|---|
+| `GET /api/models` | 60 req | 60 сек | IP-адрес |
+| `POST /api/compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `POST /api/vote` | 30 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `GET /api/code-models` | 60 req | 60 сек | IP-адрес |
+| `POST /api/code-compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
+
+Авторизованные пользователи и гости получают **персональную** квоту, не разделяемую с другими людьми за тем же IP (корпоративный NAT, VPN).
+
+Ответ при превышении:
+
+```json
+{
+  "status": "error",
+  "errorCode": "RATE_LIMIT",
+  "message": "Too many requests. Please try again later."
+}
+```
+
+Заголовок `Retry-After` содержит количество секунд до сброса счётчика.
+В production rate limit глобальный через Upstash Redis. Локально — in-memory per-process.
+
+Release-gate note: `POST /api/guest` создаёт anonymous session и сейчас не входит в таблицу rate-limited endpoints; перед public release нужен отдельный abuse-review этого route.
+
 ## Текущие routes
 
 | Route | Метод | Статус | Назначение |
@@ -36,6 +67,9 @@ Database использует snake_case.
 | `/api/compare` | POST | Реализовано | Отправить prompt нескольким моделям |
 | `/api/health` | GET | Реализовано | Проверить базовое состояние приложения |
 | `/api/vote` | POST | Реализовано | Сохранить best vote через backend route |
+| `/api/guest` | POST | Реализовано | Создать/обновить anonymous guest session и поставить `na_guest` cookie |
+| `/api/code-models` | GET | Alpha | Получить code-capable модели для Code Arena Lite |
+| `/api/code-compare` | POST | Alpha | Сравнить кодовые решения без запуска пользовательского кода |
 
 ## GET /api/models
 
@@ -181,8 +215,8 @@ modelIds = OpenRouter model keys из hardcoded allowlist.
 
 | Route | Метод | Этап | Назначение |
 |---|---|---|---|
-| `/api/history` | GET | v0.7 | Получить историю сравнений |
-| `/api/history/[taskId]` | GET | v0.7 | Открыть одно сравнение |
+| `/api/history` | GET | v0.8 | Получить историю сравнений |
+| `/api/history/[taskId]` | GET | v0.8 | Открыть одно сравнение |
 | `/api/admin/models` | CRUD | v1.5 | Управление моделями |
 | `/api/image-arena/generate` | POST | v1.7 | Сгенерировать изображения для будущей Image Arena |
 
@@ -203,10 +237,14 @@ votes.vote_type = best | like | dislike
 {
   "taskId": "uuid-task-id",
   "responseId": "uuid-response-id",
-  "voteType": "best",
-  "anonymousSessionId": "anonymous-session-id"
+  "voteType": "best"
 }
 ```
+
+> **Идентичность берётся из cookie, не из тела запроса.**
+> Авторизованные пользователи идентифицируются через Supabase-сессию (`sb-*` cookie).
+> Гости — через httpOnly cookie `na_guest` (выдаётся автоматически сервером при первом запросе).
+> Поле `anonymousSessionId` в теле **игнорируется** сервером — передавать его не нужно.
 
 Правила:
 
@@ -224,6 +262,64 @@ votes.vote_type = best | like | dislike
 ```
 
 Правильное поле - `taskId`.
+
+---
+
+## GET /api/code-models
+
+Возвращает список моделей, разрешённых для Code Arena Lite.
+
+Правила:
+
+- route использует backend model catalog;
+- guest видит только модели с anonymous-доступом;
+- frontend не получает provider `model_key`;
+- endpoint не включает Code Runner и не выполняет код.
+
+## POST /api/code-compare
+
+Запускает Code Arena Lite через backend/OpenRouter.
+
+Request body:
+
+```json
+{
+  "prompt": "Напиши Next.js route handler для безопасного вызова OpenRouter",
+  "modelIds": ["model-selection-id-1", "model-selection-id-2"],
+  "language": "TypeScript",
+  "framework": "Next.js"
+}
+```
+
+Правила:
+
+- нужна user session или guest cookie `na_guest`;
+- `modelIds` валидируются на backend;
+- `language` должен быть из allowlist Code Arena;
+- `framework` optional;
+- backend сохраняет `tasks.mode_slug = "code-arena"`;
+- код не запускается, тесты не выполняются, sandbox не используется.
+
+Минимальный ответ:
+
+```json
+{
+  "status": "success",
+  "taskId": "saved-task-uuid-or-null",
+  "language": "TypeScript",
+  "framework": "Next.js",
+  "responses": [
+    {
+      "id": "response-uuid-or-generated-id",
+      "modelId": "model-selection-id-1",
+      "modelName": "Model display name",
+      "status": "success",
+      "answerText": "Ответ модели",
+      "latencyMs": 1234
+    }
+  ]
+}
+```
 
 ---
 

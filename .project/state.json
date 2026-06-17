@@ -1,12 +1,20 @@
 {
   "$schema": "./state.schema.json",
   "project": "New Era AI Platform",
-  "currentVersion": "0.5.4",
-  "currentPhase": "v0.5.4 - Vote Security & Auth Foundation",
-  "status": "stabilizing",
+  "currentVersion": "0.7.0-alpha.1",
+  "currentPhase": "v0.7 - Code Arena Lite stabilization",
+  "status": "in_development",
   "activeTaskIds": [
-    "V054-02"
+    "V054-02",
+    "V061-01",
+    "V062-01",
+    "V063-01",
+    "V064-01",
+    "V065-01",
+    "V066-01",
+    "V067-01",
+    "V070-01"
   ],
-  "lastSyncedAt": "2026-06-15T18:54:21.733Z",
+  "lastSyncedAt": "2026-06-17T10:28:44.691Z",
   "baseBranch": "main"
 }

@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V061-01",
   "title": "v0.6.1 Access Gate and Guest Mode",
-  "status": "planned",
+  "status": "verify",
   "priority": "high",
   "files": [
     "20-auth-guest-profile-plan.md",
@@ -11,12 +11,58 @@
     "src/components/arena/",
     "supabase/migrations/"
   ],
-  "checksRequired": ["typecheck", "lint", "build"],
-  "checksPassed": [],
-  "lastUpdated": "2026-06-10T00:00:00.000Z",
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "build"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "build",
+    "smoke",
+    "test"
+  ],
+  "lastUpdated": "2026-06-17T10:56:41.498Z",
   "commitHash": null,
   "transitions": [
-    { "from": null, "to": "planned", "at": "2026-06-10T00:00:00.000Z", "note": "Migrated from 22-codex-action-backlog.md (Backlog task 2)." }
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-06-10T00:00:00.000Z",
+      "note": "Migrated from 22-codex-action-backlog.md (Backlog task 2)."
+    },
+    {
+      "from": "planned",
+      "to": "verify",
+      "at": "2026-06-17T10:27:24.208Z",
+      "note": "Implementation exists in working tree; awaiting full verification, docs sync and commit."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:32.569Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:33.257Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:49:34.168Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:55:13.611Z"
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T10:56:41.498Z"
+    }
   ],
-  "notes": "Block Prompt Arena until login or guest card is chosen. Add anonymous_sessions migration, guest session route, Access Gate UI, pass anonymousSessionId to /api/compare; /api/compare returns 401 AUTH_REQUIRED without user or valid guest session. No registration or Storage in this step."
+  "notes": "Block Prompt Arena until login or guest card is chosen. Add anonymous_sessions migration, guest session route, Access Gate UI, and httpOnly na_guest cookie identity; /api/compare returns 401 AUTH_REQUIRED without user or valid guest session. No registration or Storage in this step."
 }

@@ -1,6 +1,6 @@
-# 17 - Code Arena Spec
+﻿# 17 - Code Arena Spec
 
-> future-only: Этот документ описывает будущие этапы Code Arena и не является задачей на реализацию в `v0.5.3`.
+> active for v0.7 Lite, future-only for Runner: Code Arena Lite входит в текущую alpha-стабилизацию, Code Arena Runner остаётся будущим этапом `v1.7`.
 
 ## Назначение файла
 
@@ -22,7 +22,7 @@ Code Arena нужен, чтобы сравнивать AI-модели по ка
 Порядок разработки Code Arena должен соответствовать `14-roadmap.md`.
 
 ```text
-v1.1 - Code Arena Lite
+v0.7 - Code Arena Lite
 # сравнение кодовых ответов без запуска чужого кода
 
 v1.7 - Code Arena Runner
@@ -32,8 +32,8 @@ v1.7 - Code Arena Runner
 Runner нельзя переносить раньше аккаунтов, лимитов, админ-контроля и security review.
 
 ```text
-v1.5 - Accounts and Profiles
-# появляются пользователи, история и база для лимитов
+v0.6 - Accounts and Profiles
+# появляются пользователи, guest mode, профиль и база для лимитов
 
 v1.6 - Admin Panel and Limits
 # появляются ограничения, контроль моделей и админ-настройки
@@ -441,7 +441,7 @@ models должны быть из allowlist.
 models должны supports_code = true.
 # только code-friendly модели
 
-runTests = false в v1.1.
+runTests = false в v0.7.
 # Code Arena Lite без sandbox
 
 runTests = true только при ENABLE_CODE_RUNNER = true.
@@ -507,7 +507,7 @@ code_results
 
 Таблица `code_test_cases` хранит тесты, которые относятся к конкретной задаче Code Arena Runner.
 
-В `v1.1 Code Arena Lite` эта таблица не обязательна.
+В `v0.7 Code Arena Lite` эта таблица не обязательна.
 
 ## SQL
 
@@ -532,7 +532,7 @@ create table public.code_test_cases (
 
 Таблица `code_results` хранит результат запуска кода конкретной модели в sandbox.
 
-В `v1.1 Code Arena Lite` эта таблица не обязательна.
+В `v0.7 Code Arena Lite` эта таблица не обязательна.
 
 ## SQL
 
@@ -730,7 +730,7 @@ StdoutStderrBlock
 
 # Порядок реализации
 
-## Этап 1 - v1.1 Code Arena Lite
+## Этап 1 - v0.7 Code Arena Lite
 
 ```text
 Страница /code.
@@ -795,7 +795,7 @@ POST /api/code-compare.
 
 # Что не входит в первую версию Code Arena
 
-В `v1.1 Code Arena Lite` не входит:
+В `v0.7 Code Arena Lite` не входит:
 
 ```text
 запуск кода;

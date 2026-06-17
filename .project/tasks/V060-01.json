@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V060-01",
   "title": "Verify Supabase migrations on a clean local database",
-  "status": "done",
+  "status": "archived",
   "priority": "medium",
   "files": [
     "supabase/migrations/",
@@ -57,5 +57,6 @@
       "note": "Clean Supabase migrations verified on separate empty test project"
     }
   ],
-  "notes": "supabase db reset must pass from scratch; supabase db push must not try to re-apply removed 0007/0008; local and remote migration history must match."
+  "notes": "supabase db reset must pass from scratch; supabase db push must not try to re-apply removed 0007/0008; local and remote migration history must match.",
+  "archivedAt": "2026-06-17T05:36:40Z"
 }

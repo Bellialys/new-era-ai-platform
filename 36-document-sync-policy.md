@@ -1,4 +1,4 @@
-# 34 - Document Sync Policy
+# 36 - Document Sync Policy
 
 ## Назначение файла
 
@@ -57,6 +57,7 @@
 - `lastUpdated` — ISO date-time;
 - `commitHash` — хэш коммита (или `null`, пока задача не закрыта);
 - `transitions` — журнал переходов статусов (`from`, `to`, `at`, `note`);
+- `archivedAt` — время архивации, если task-файл оставлен в статусе `archived`;
 - `notes`.
 
 ### Definition of Done

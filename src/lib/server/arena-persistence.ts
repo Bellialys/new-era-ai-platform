@@ -23,10 +23,13 @@ type ArenaResponseForPersistence = {
   };
 };
 
-type SavePromptArenaRunInput = {
+type SaveArenaRunInput = {
   prompt: string;
+  modeSlug?: string;
   modelKeys: string[];
   responses: ArenaResponseForPersistence[];
+  /** Extra JSONB metadata stored in tasks.settings. */
+  settings?: Record<string, unknown>;
   /** Verified owner of the run: a user id, a guest id, or neither. */
   owner?: {
     userId: string | null;
@@ -34,21 +37,26 @@ type SavePromptArenaRunInput = {
   };
 };
 
-type SavePromptArenaRunResult = {
+type SaveArenaRunResult = {
   taskId: string | null;
   responseIdsByModelId: Record<string, string>;
 };
 
-export async function savePromptArenaRun({
+/** @deprecated Use saveArenaRun instead. */
+export type SavePromptArenaRunInput = SaveArenaRunInput;
+
+export async function saveArenaRun({
   prompt,
+  modeSlug = MODE_SLUG_PROMPT_ARENA,
   modelKeys,
   responses,
+  settings = {},
   owner,
-}: SavePromptArenaRunInput): Promise<SavePromptArenaRunResult> {
+}: SaveArenaRunInput): Promise<SaveArenaRunResult> {
   const supabase = getSupabaseServerClient();
 
   if (!supabase) {
-    console.warn("Supabase is not configured; skipping Prompt Arena persistence.");
+    console.warn("Supabase is not configured; skipping arena run persistence.");
     return { taskId: null, responseIdsByModelId: {} };
   }
 
@@ -59,11 +67,11 @@ export async function savePromptArenaRun({
   const { data: task, error: taskError } = await supabase
     .from("tasks")
     .insert({
-      mode_slug: MODE_SLUG_PROMPT_ARENA,
+      mode_slug: modeSlug,
       task_text: prompt,
       status: taskStatus,
       selected_models: modelKeys,
-      settings: {},
+      settings,
       user_id: owner?.userId ?? null,
       anonymous_session_id: owner?.anonymousSessionId ?? null,
       error_message:
@@ -129,3 +137,6 @@ export async function savePromptArenaRun({
     ),
   };
 }
+
+/** @deprecated Use saveArenaRun instead. */
+export const savePromptArenaRun = saveArenaRun;

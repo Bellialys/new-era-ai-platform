@@ -6,7 +6,7 @@ import {
   validateModelIds,
   validateModeSlug,
 } from "./utils";
-import { MODE_SLUG_PROMPT_ARENA } from "@/lib/arena/constants";
+import { MODE_SLUG_CODE_ARENA, MODE_SLUG_PROMPT_ARENA } from "@/lib/arena/constants";
 
 describe("validatePrompt", () => {
   it("rejects non-string input", () => {
@@ -64,10 +64,11 @@ describe("validateModeSlug", () => {
 
   it("accepts an allowed slug", () => {
     expect(validateModeSlug(MODE_SLUG_PROMPT_ARENA, MODE_SLUG_PROMPT_ARENA).valid).toBe(true);
+    expect(validateModeSlug(MODE_SLUG_CODE_ARENA, MODE_SLUG_PROMPT_ARENA).valid).toBe(true);
   });
 
   it("rejects an unknown slug", () => {
-    expect(validateModeSlug("code-arena", MODE_SLUG_PROMPT_ARENA).valid).toBe(false);
+    expect(validateModeSlug("image-arena", MODE_SLUG_PROMPT_ARENA).valid).toBe(false);
   });
 
   it("rejects a non-string slug", () => {

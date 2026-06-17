@@ -2,11 +2,11 @@
   "$schema": "../task.schema.json",
   "id": "V055-01",
   "title": "Supabase Schema Sync Check",
-  "status": "done",
+  "status": "archived",
   "priority": "medium",
   "files": [
     "scripts/check-schema-sync.ts",
-    "supabase/migrations/20260610110000_add_models_status_column.sql",
+    "supabase/migrations/20260610061249_add_models_status_column.sql",
     "35-database-schema-sync.md",
     "package.json"
   ],
@@ -55,5 +55,6 @@
       "note": "Schema sync check finalized and clean migrations verified"
     }
   ],
-  "notes": "schema:check now runs via plain CommonJS-compatible code in scripts/check-schema-sync.ts on the project-supported Node >=20.9 runtime. models.status drift is resolved by migration 20260610110000_add_models_status_column.sql, which adds a generated status column derived from is_active. schema:check still requires SUPABASE_DB_URL + network to validate the real Supabase DB and must not print secrets."
+  "notes": "schema:check now runs via plain CommonJS-compatible code in scripts/check-schema-sync.ts on the project-supported Node >=20.9 runtime. models.status drift is resolved by migration 20260610061249_add_models_status_column.sql, which adds a generated status column derived from is_active. schema:check still requires SUPABASE_DB_URL + network to validate the real Supabase DB and must not print secrets.",
+  "archivedAt": "2026-06-17T05:36:40Z"
 }

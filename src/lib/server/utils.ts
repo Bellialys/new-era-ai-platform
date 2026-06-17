@@ -172,5 +172,10 @@ export function logApiRequest(
 ): void {
   const timestamp = new Date().toISOString();
   const duration = durationMs ? ` (${durationMs}ms)` : "";
-  console.log(`[${timestamp}] ${method} ${path} ${statusCode}${duration}`);
+  const line = `[${timestamp}] ${method} ${path} ${statusCode}${duration}`;
+  if (statusCode >= 500) {
+    console.error(line);
+    return;
+  }
+  console.warn(line);
 }

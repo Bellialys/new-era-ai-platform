@@ -19,7 +19,6 @@ import {
   ApiError,
   savePromptArenaRun,
   checkRateLimit,
-  getRateLimitKeyFromHeaders,
   resolveRequestIdentity,
   applyGuestCookie,
 } from "@/lib/server";
@@ -59,7 +58,29 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
   const startTime = Date.now();
 
   try {
-    const rateLimitKey = `compare:${getRateLimitKeyFromHeaders(request.headers)}`;
+    // Resolve identity BEFORE rate limiting so that authenticated users get
+    // their own quota instead of sharing it with other users on the same IP
+    // (corporate NAT, shared VPN, etc.). Guests are keyed by their httpOnly
+    // session cookie set by POST /api/guest.
+    const identity = await resolveRequestIdentity(request);
+
+    // Require an explicit user or guest session (created via POST /api/guest).
+    // Completely unidentified callers get 401 AUTH_REQUIRED.
+    if (identity.kind === "none") {
+      logApiRequest("POST", "/api/compare", 401, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(401, "AUTH_REQUIRED", "Please sign in or continue as a guest before comparing models.")
+        ),
+        { status: 401 }
+      );
+    }
+
+    const rateLimitSubKey =
+      identity.kind === "user"
+        ? `user:${identity.userId}`
+        : `guest:${identity.guestId}`;
+    const rateLimitKey = `compare:${rateLimitSubKey}`;
     const rateLimit = await checkRateLimit(
       rateLimitKey,
       COMPARE_RATE_LIMIT_MAX_REQUESTS,
@@ -83,11 +104,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
         }
       );
     }
-
-    // Identity is server-authoritative: a verified user, otherwise an
-    // anonymous guest tracked by an httpOnly cookie. This is the backend access
-    // gate — every saved run has a real owner instead of an anonymous blob.
-    const identity = await resolveRequestIdentity(request);
 
     let body: unknown;
     try {
@@ -141,7 +157,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
 
     let selectedModels;
     try {
-      selectedModels = await resolveSelectedModels(selectedModelIds);
+      selectedModels = await resolveSelectedModels(selectedModelIds, identity);
     } catch (error) {
       const statusCode = error instanceof ApiError ? error.statusCode : 403;
       console.warn("Model resolution failed:", error);

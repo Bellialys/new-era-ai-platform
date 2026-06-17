@@ -1,6 +1,6 @@
 # 33. Feature Flags Policy
 
-> future-only: Разделы про будущие режимы и флаги фиксируют политику и не являются задачей на реализацию этих функций в `v0.5.3`.
+> policy: Документ фиксирует принципы управления функциями. Текущие Arena-режимы могут управляться константами и backend checks; env-флаги добавляются только там, где нужен runtime rollout/rollback между окружениями.
 
 ## 1. Назначение документа
 
@@ -28,7 +28,7 @@ Feature Flags нужны, чтобы:
 
 ## 3. Примеры feature flags
 
-Базовые флаги текущего MVP `v0.5.3`:
+Исторический пример флагов раннего MVP:
 
 ```env
 NEXT_PUBLIC_ENABLE_GUEST_MODE=false
@@ -37,7 +37,7 @@ NEXT_PUBLIC_ENABLE_VOTING=true
 NEXT_PUBLIC_ENABLE_HISTORY=false
 ```
 
-Auth, Guest Mode и History остаются выключенными до своих этапов roadmap. Voting уже входит в `v0.5.3 - Voting MVP Stabilization`, поэтому для текущего MVP его безопасное значение по умолчанию - `true`.
+Не считать этот пример актуальным списком обязательных env variables. Актуальные переменные окружения определяются `env-check.config.json`, `.env.local.example`, `docs/37-env-check-policy.md` и `12-security-and-env.md`.
 
 Дополнительные флаги для будущих режимов:
 
@@ -195,7 +195,7 @@ true
 
 ## 9. Где хранить feature flags
 
-Локально:
+Для runtime rollout/rollback между окружениями:
 
 ```env
 .env.local
@@ -205,6 +205,13 @@ true
 
 ```text
 Project Settings -> Environment Variables
+```
+
+Для compile-time или roadmap-gated функций:
+
+```text
+src/lib/arena/constants.ts
+# допустимо для функций, которые не должны переключаться без нового deploy
 ```
 
 Для разных окружений значения могут отличаться:
@@ -246,7 +253,7 @@ NEXT_PUBLIC_ENABLE_VOTING=true
 NEXT_PUBLIC_ENABLE_HISTORY=false
 ```
 
-Когда начнётся разработка `v0.6 - Auth, Guest Mode and Profile`, значения `NEXT_PUBLIC_ENABLE_GUEST_MODE` и `NEXT_PUBLIC_ENABLE_AUTH` можно включать в Development/Preview, но не считать production-ready без отдельной проверки.
+Для v0.7 Code Arena Lite текущий обязательный guardrail - backend-проверки и запрет Runner. Если позже понадобится скрывать `/code` в production без удаления кода, добавить явный флаг и описать его в env policy.
 
 ---
 
@@ -356,7 +363,7 @@ Feature flag обычно не нужен для:
 
 ## 17. Минимальный список флагов для MVP
 
-Для текущего MVP рекомендуется использовать:
+Пример возможного списка для будущего runtime rollout:
 
 ```env
 NEXT_PUBLIC_ENABLE_GUEST_MODE=false
@@ -375,6 +382,8 @@ ENABLE_MODEL_FALLBACK=true
 ENABLE_IMAGE_GENERATION=false
 ENABLE_CODE_EXECUTION=false
 ```
+
+Этот список не является текущим обязательным `.env` контрактом. Перед добавлением любого флага нужно обновить `env-check.config.json`, `.env.local.example` и документацию окружений.
 
 ---
 

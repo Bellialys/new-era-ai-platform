@@ -16,7 +16,8 @@
     "src/lib/server/arena-persistence.ts",
     "src/components/arena/prompt-arena.tsx",
     "src/lib/arena/constants.ts",
-    "supabase/migrations/20260615120000_atomic_best_vote_rpc.sql",
+    "supabase/migrations/20260615191924_atomic_best_vote_rpc.sql",
+    "supabase/migrations/20260617212741_reconcile_release_gate_security_and_models.sql",
     "src/app/error.tsx",
     "src/app/loading.tsx",
     "src/app/not-found.tsx",
@@ -32,9 +33,16 @@
   "checksPassed": [
     "typecheck",
     "lint",
-    "test"
+    "test",
+    "build",
+    "docs:check",
+    "state:check",
+    "smoke",
+    "migration:reconciled",
+    "preview:smoke",
+    "production:smoke"
   ],
-  "lastUpdated": "2026-06-15T19:00:00.000Z",
+  "lastUpdated": "2026-06-17T21:35:50.679Z",
   "commitHash": null,
   "transitions": [
     {
@@ -52,7 +60,31 @@
       "to": "verify",
       "at": "2026-06-15T19:00:00.000Z",
       "note": "Audit fixes implemented; typecheck/lint/test green. Awaiting build, docs:check, commit and deploy."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T15:12:31.421Z",
+      "note": "Local release-gate checks passed again with v0.7.0-alpha.1 working tree: typecheck, lint, test, build, docs:check, state:check and local smoke. Awaiting commit, migration reconciliation and preview verification."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T21:31:27.116Z",
+      "note": "Release-gate blockers closed: protected Vercel Preview verified via automation bypass; remote Supabase reconciliation migration 20260617212741 applied and verified. Awaiting commit/release sign-off."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T21:31:44.906Z",
+      "note": "Protected Preview smoke was verified through Vercel automation bypass tooling."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-17T21:35:50.679Z",
+      "note": "Final verification: preview dpl_DLN6fRpAsjd6CCcBsncK4iu2WZiX is READY and protected Preview API checks passed through Vercel curl; production smoke passed with 16 models after DB reconciliation."
     }
   ],
-  "notes": "Closes audit nuances: server-authoritative vote identity via @supabase/ssr, middleware session refresh, vote rate-limit, atomic cast_best_vote RPC, route error/loading/not-found boundaries, removal of the already-documented-as-removed /arena-voting alias, and a Node .nvmrc pin. Full v0.6 features (profile, avatars, OAuth, model access levels, guest cards) remain deferred."
+  "notes": "Closes audit nuances: server-authoritative vote identity via @supabase/ssr, middleware session refresh, vote rate-limit, atomic cast_best_vote RPC, route error/loading/not-found boundaries, removal of the already-documented-as-removed /arena-voting alias, and a Node .nvmrc pin. Migration reconciliation and protected Preview verification are complete; remains in verify until commit/release sign-off."
 }

@@ -11,21 +11,21 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v0.5.4 - Vote Security & Auth Foundation
+**Текущая фаза:** v0.7 - Code Arena Lite stabilization
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
-**Статус проекта:** `stabilizing`
+**Статус проекта:** `in_development`
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.5.4`
+**Текущая версия:** `v0.7.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
 ```text
-v0.5.3 - Voting MVP stabilization
-# текущий стабильный MVP-релиз перед v0.6
+v0.7.0-alpha.1 - Code Arena Lite stabilization
+# текущая рабочая ветка: v0.6/v0.7 функциональность есть в дереве, но этап не считается stable до полного verification gate
 ```
 
 Сейчас уже есть:
@@ -36,6 +36,9 @@ v0.5.3 - Voting MVP stabilization
 - `/api/compare`;
 - `/api/health`;
 - `/api/vote`;
+- `/api/guest`;
+- `/api/code-models`;
+- `/api/code-compare`;
 - OpenRouter на backend;
 - Supabase PostgreSQL migrations;
 - `/api/models` читает Supabase catalog с hardcoded fallback;
@@ -52,20 +55,29 @@ v0.5.3 - Voting MVP stabilization
 - исправленная схема `votes` на `model_response_id` и `vote_type = 'best' | 'like' | 'dislike'`;
 - smoke-check script `npm run smoke`;
 - минимальный GitHub Actions CI;
+- Access Gate, guest session через httpOnly cookie `na_guest`;
+- Auth SSR, profile, avatar upload, email/password management;
+- Code Arena Lite без запуска пользовательского кода;
 - подготовленные governance metadata для model catalog без утверждения live-verification OpenRouter IDs.
 
 Следующий главный этап:
 
 ```text
-v0.6 - Auth, Guest Mode and Profile
-# гостевой режим, регистрация, профиль и ограничения доступа к моделям
+v0.8 - History and Production Readiness
+# история сравнений, стабилизация preview/production, observability и release gate
 ```
 
-Детальный план этапа v0.6 вынесен в файл:
+Детальные планы текущих направлений вынесены в файлы:
 
 ```text
 20-auth-guest-profile-plan.md
-# главный документ для разработки регистрации, guest mode и профиля
+# Auth, guest mode и профиль
+
+17-code-arena-spec.md
+# Code Arena Lite и будущий Runner
+
+41-enterprise-readiness-roadmap.md
+# план выхода на международный corporate-grade уровень
 ```
 
 ## Канонический порядок версий
@@ -80,19 +92,21 @@ v0.6 - Auth, Guest Mode and Profile
 | `v0.5` | Supabase Integration | Модели, задачи и ответы через Supabase | Готово |
 | `v0.5.1` | Migration Sync | Репозиторий и remote Supabase migrations синхронизированы | Готово |
 | `v0.5.2` | Health and Voting Foundation | `/api/health`, smoke-check, исправленная база votes | Готово |
-| `v0.5.3` | Voting MVP Stabilization | Основная Prompt Arena сохраняет Winner vote через `/api/vote`, добавлен CI | Текущий стабильный MVP |
-| `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, ограничения моделей | Следующий этап |
-| `v0.7` | History MVP | История сравнений | Позже |
-| `v0.8` | First Deploy Stabilization | Проверка production, env, smoke, UX | Позже |
-| `v0.9` | Stable Prompt Arena hardening | Финальная стабилизация перед v1.0 | Позже |
-| `v1.0` | Stable Prompt Arena | Первая стабильная версия MVP | Позже |
-| `v1.1` | Code Arena Lite | Сравнение решений по коду без запуска кода | Позже |
+| `v0.5.3` | Voting MVP Stabilization | Основная Prompt Arena сохраняет Winner vote через `/api/vote`, добавлен CI | Завершён |
+| `v0.5.4` | Vote Security & Auth Foundation | Vote dedup RPC, user-aware rate limiting, security headers (CSP/HSTS), proxy/session refresh fix | Verify |
+| `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, аватар, email/password, ограничения моделей | Verify |
+| `v0.7` | Code Arena Lite | Сравнение кодовых решений без запуска кода | Текущая alpha-стабилизация |
+| `v0.8` | History and Production Readiness | История сравнений, preview/production smoke, observability baseline | Позже |
+| `v0.9` | Stable Arena Hardening | Финальная стабилизация Prompt Arena + Code Arena Lite перед v1.0 | Позже |
+| `v1.0` | Stable Arena MVP | Первая стабильная публичная версия MVP | Позже |
+| `v1.1` | Enterprise Readiness Foundation | SLO, monitoring, incident process, privacy/compliance baseline, supply-chain checks | Позже |
 | `v1.2` | Multi Model Battle | Формальные бои моделей | Позже |
 | `v1.3` | Judge Mode | Модель-судья оценивает ответы | Позже |
 | `v1.4` | Leaderboard | Рейтинг моделей | Позже |
 | `v1.5` | Admin Panel and Limits | Управление моделями, лимитами и тарифами | Позже |
-| `v1.6` | Code Arena Runner | Безопасный запуск кода в sandbox | Позже |
-| `v1.7` | Image Arena MVP | Сравнение изображений от image-моделей | Позже |
+| `v1.6` | Enterprise Governance and Billing | роли, аудит, лимиты, billing-ready governance | Позже |
+| `v1.7` | Code Arena Runner | Безопасный запуск кода в sandbox | Позже |
+| `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | Позже |
 | `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей | Позже |
 
 ## v0.1 - Project Documentation
@@ -259,9 +273,9 @@ npm run build
 - создать таблицу `anonymous_sessions`;
 - добавить генератор `Анонимус #1234`;
 - добавить `avatarSeed` и `colorSeed`;
-- хранить `anonymousSessionId` в `localStorage`;
+- хранить guest display info в `localStorage`;
 - показывать guest card в UI;
-- передавать `anonymousSessionId` в `/api/compare`;
+- не передавать guest id в `/api/compare`; backend использует httpOnly cookie `na_guest`;
 - сохранять `tasks.anonymous_session_id`.
 
 ### v0.6.2 - Model Access Levels
@@ -360,33 +374,60 @@ supabase db push
 # проверить remote sync
 ```
 
-## v0.7 - History MVP
+## v0.7 - Code Arena Lite
 
-Цель: дать пользователю открыть прошлые сравнения.
+Цель: добавить кодовый режим без запуска пользовательского кода.
+
+Что уже должно быть в alpha:
+
+- страница `/code`;
+- `GET /api/code-models`;
+- `POST /api/code-compare`;
+- выбор языка и framework context;
+- сравнение 2-3 code-capable моделей через backend/OpenRouter;
+- сохранение запуска как `tasks.mode_slug = 'code-arena'`;
+- Winner vote через общий `/api/vote`;
+- запрет на `eval`, `child_process`, sandbox/test runner и любое выполнение пользовательского кода.
+
+Критерий выхода из alpha:
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm run docs:check
+npm run smoke
+```
+
+Если затронута БД:
+
+```bash
+npm run env:check:migrations
+npm run schema:check
+supabase migration list
+```
+
+## v0.8 - History and Production Readiness
+
+Цель: дать пользователю открыть прошлые сравнения и подготовить проект к контролируемому production-пути.
 
 Что сделать:
 
 - создать страницу истории;
 - создать `/api/history`;
 - создать `/api/history/[taskId]`;
-- показывать task, responses, vote.
-
-## v0.8 - First Deploy Stabilization
-
-Цель: стабилизировать production после добавления аккаунтов.
-
-Что сделать:
-
+- показывать task, responses, vote;
 - проверить Vercel env;
 - проверить production build;
 - проверить реальные OpenRouter calls;
 - проверить Supabase connection;
-- проверить регистрацию, guest mode и profile;
-- проверить базовый сценарий пользователя.
+- проверить регистрацию, guest mode, profile и Code Arena Lite;
+- добавить request id в API errors/logs;
+- закрепить preview/production smoke procedure.
 
-## v1.0 - Stable Prompt Arena
+## v1.0 - Stable Arena MVP
 
-Цель: первая стабильная версия проекта.
+Цель: первая стабильная публичная версия проекта.
 
 Критерии:
 
@@ -399,14 +440,37 @@ supabase db push
 - guest mode работает;
 - регистрация работает;
 - профиль работает;
-- проект опубликован;
+- Code Arena Lite работает без запуска кода;
+- проект опубликован и проверен через production smoke;
 - секреты не попали в GitHub.
+
+## v1.1 - Enterprise Readiness Foundation
+
+Цель: подготовить проект к международному corporate-grade уровню без преждевременного усложнения продукта.
+
+Что сделать:
+
+- SLO/SLA baseline для `/`, `/arena`, `/code`, `/api/health`, `/api/models`;
+- structured logs с request id без секретов и без prompt body в обычных логах;
+- incident response и rollback procedure;
+- dependency/security scanning, secret scanning, SBOM и lockfile policy;
+- privacy/retention baseline для prompt data, guest data и account data;
+- AI safety baseline по provider errors, abuse limits, prompt privacy и model governance;
+- release checklist для Local -> Preview -> Staging -> Production;
+- documented support process для пользователей и enterprise-пилотов.
+
+Ориентиры качества:
+
+```text
+OWASP ASVS, OWASP LLM Top 10, NIST SSDF, SLSA, ISO 27001/SOC 2 readiness, Google SRE practices, GDPR/EU AI Act awareness
+# это рамки для контроля зрелости, не требование сертификации на v1.1
+```
 
 ## После v1.0
 
 Только после стабильной Prompt Arena можно двигаться к:
 
-- Code Arena Lite;
+- Enterprise Readiness Foundation;
 - Multi Model Battle;
 - Judge Mode;
 - Leaderboard;

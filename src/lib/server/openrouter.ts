@@ -124,7 +124,9 @@ function logOpenRouterDiagnostic({
   errorCode?: string;
   latencyMs: number;
 }): void {
-  console.info("[OpenRouter]", {
+  if (status < 400) return;
+
+  console.warn("[OpenRouter]", {
     modelId,
     status,
     statusText,
@@ -145,13 +147,20 @@ export type ModelResult =
 
 export async function fetchOpenRouterResponse(
   prompt: string,
-  modelId: string
+  modelId: string,
+  options?: { systemPrompt?: string }
 ): Promise<{ text: string; latencyMs: number; usage: ModelUsage }> {
   const apiKey = getApiKey();
 
+  const messages: OpenRouterRequest["messages"] = [];
+  if (options?.systemPrompt) {
+    messages.push({ role: "system", content: options.systemPrompt });
+  }
+  messages.push({ role: "user", content: prompt });
+
   const request: OpenRouterRequest = {
     model: modelId,
-    messages: [{ role: "user", content: prompt }],
+    messages,
     temperature: 0.7,
     max_tokens: getOpenRouterMaxTokens(),
   };
@@ -245,11 +254,12 @@ export async function fetchOpenRouterResponse(
 
 export async function fetchMultipleResponses(
   prompt: string,
-  modelIds: string[]
+  modelIds: string[],
+  options?: { systemPrompt?: string }
 ): Promise<ModelResult[]> {
   const promises = modelIds.map(async (modelId): Promise<ModelResult> => {
     try {
-      const { text, latencyMs, usage } = await fetchOpenRouterResponse(prompt, modelId);
+      const { text, latencyMs, usage } = await fetchOpenRouterResponse(prompt, modelId, options);
       return { success: true, text, latencyMs, usage };
     } catch (error) {
       const errorCode = error instanceof ApiError ? error.errorCode : "UNKNOWN_ERROR";
