@@ -141,7 +141,8 @@ Visual Studio Code
 | `v0.5.4` | Vote Security & Auth Foundation | Vote dedup RPC, proxy/session refresh fix, security headers | Verify |
 | `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, аватар, email/password, ограничения моделей | Verify |
 | `v0.7` | Code Arena Lite | Сравнение кодовых решений без запуска кода | Текущая alpha |
-| `v0.8` | History and Production Readiness | История сравнений, preview/production smoke, observability | Позже |
+| `v0.7.1` | Arena UX and Fair Voting | Streaming, Blind Arena, Code Diff, share/copy и guest anti-abuse | Следующий UX-подэтап |
+| `v0.8` | History and Production Readiness | История, публичные ссылки, критерии оценки, preview/production smoke, observability | Позже |
 | `v0.9` | Stable Arena Hardening | Финальная стабилизация перед v1.0 | Позже |
 | `v1.0` | Stable Arena MVP | Первая стабильная публичная версия | Позже |
 | `v1.1+` | Enterprise and Advanced Modes | Enterprise readiness, Battle, Judge, Leaderboard, Runner, Team Mode | Позже |
@@ -158,6 +159,10 @@ Visual Studio Code
 - карточки ответов рядом;
 - выбор лучшего ответа;
 - сохранение в Supabase;
+- streaming и blind voting;
+- Code Diff для Code Arena Lite;
+- публичные ссылки на сохранённые сравнения;
+- многокритериальная оценка ответов;
 - история сравнений;
 - базовый деплой на Vercel;
 - безопасное хранение ключей.

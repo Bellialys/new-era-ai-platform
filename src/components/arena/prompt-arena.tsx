@@ -32,6 +32,46 @@ type IdentityMode = "loading" | "gate" | "guest" | "user";
 
 type VoteStatus = "idle" | "saving" | "success" | "error";
 
+type CompareStreamEventName =
+  | "model_start"
+  | "model_token"
+  | "model_done"
+  | "model_error"
+  | "complete"
+  | "fatal_error";
+
+type CompareStreamEvent = {
+  event: CompareStreamEventName;
+  data: unknown;
+};
+
+type ModelStartPayload = {
+  modelId: string;
+  modelName: string;
+  modelRole: string;
+};
+
+type ModelTokenPayload = {
+  modelId: string;
+  token: string;
+};
+
+type ModelResultPayload = {
+  modelId: string;
+  response: ArenaApiResponse;
+};
+
+type CompareCompletePayload = {
+  status: string;
+  taskId?: string | null;
+  responses: ArenaApiResponse[];
+};
+
+type ApiErrorPayload = {
+  message?: string;
+  errorCode?: string;
+};
+
 // ---------------------------------------------------------------------------
 // GuestCard
 // ---------------------------------------------------------------------------
@@ -96,6 +136,118 @@ const MAX_MODELS_ERROR_MESSAGE = "В MVP можно выбрать максим�
 
 function getDefaultModelIds(models: ArenaModel[]) {
   return models.slice(0, MODEL_MAX_SELECT).map((model) => model.id);
+}
+
+function parseStreamEvent(rawEvent: string): CompareStreamEvent | null {
+  const eventLine = rawEvent
+    .split(/\r?\n/)
+    .find((line) => line.startsWith("event:"));
+  const dataLines = rawEvent
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice("data:".length).trimStart());
+
+  if (!eventLine || dataLines.length === 0) {
+    return null;
+  }
+
+  const event = eventLine.slice("event:".length).trim() as CompareStreamEventName;
+  try {
+    return {
+      event,
+      data: JSON.parse(dataLines.join("\n")) as unknown,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function asModelStartPayload(value: unknown): ModelStartPayload | null {
+  if (!isObject(value)) return null;
+  if (
+    typeof value.modelId !== "string" ||
+    typeof value.modelName !== "string" ||
+    typeof value.modelRole !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    modelId: value.modelId,
+    modelName: value.modelName,
+    modelRole: value.modelRole,
+  };
+}
+
+function asModelTokenPayload(value: unknown): ModelTokenPayload | null {
+  if (!isObject(value)) return null;
+  if (typeof value.modelId !== "string" || typeof value.token !== "string") {
+    return null;
+  }
+
+  return {
+    modelId: value.modelId,
+    token: value.token,
+  };
+}
+
+function asArenaApiResponse(value: unknown): ArenaApiResponse | null {
+  if (!isObject(value)) return null;
+  if (
+    typeof value.id !== "string" ||
+    typeof value.modelId !== "string" ||
+    typeof value.modelName !== "string" ||
+    (value.status !== "success" && value.status !== "error")
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    modelId: value.modelId,
+    modelName: value.modelName,
+    status: value.status,
+    answerText: typeof value.answerText === "string" ? value.answerText : null,
+    latencyMs: typeof value.latencyMs === "number" ? value.latencyMs : undefined,
+    errorCode: typeof value.errorCode === "string" ? value.errorCode : undefined,
+    errorMessage: typeof value.errorMessage === "string" ? value.errorMessage : undefined,
+  };
+}
+
+function asModelResultPayload(value: unknown): ModelResultPayload | null {
+  if (!isObject(value) || typeof value.modelId !== "string") return null;
+  const response = asArenaApiResponse(value.response);
+  if (!response) return null;
+
+  return {
+    modelId: value.modelId,
+    response,
+  };
+}
+
+function asCompletePayload(value: unknown): CompareCompletePayload | null {
+  if (!isObject(value) || !Array.isArray(value.responses)) return null;
+  const responses = value.responses
+    .map((response) => asArenaApiResponse(response))
+    .filter((response): response is ArenaApiResponse => Boolean(response));
+
+  return {
+    status: typeof value.status === "string" ? value.status : "error",
+    taskId: typeof value.taskId === "string" ? value.taskId : null,
+    responses,
+  };
+}
+
+function asApiErrorPayload(value: unknown): ApiErrorPayload {
+  if (!isObject(value)) return {};
+  return {
+    message: typeof value.message === "string" ? value.message : undefined,
+    errorCode: typeof value.errorCode === "string" ? value.errorCode : undefined,
+  };
 }
 
 export function PromptArena() {
@@ -253,11 +405,149 @@ export function PromptArena() {
   // Arena helpers
   // ---------------------------------------------------------------------------
 
+  function buildResponseView(
+    apiResponse: ArenaApiResponse,
+    fallbackRole?: string
+  ): ArenaResponseView {
+    const matchedModel = availableModels.find((model) => model.id === apiResponse.modelId);
+    return {
+      ...apiResponse,
+      modelRole: fallbackRole ?? matchedModel?.role ?? "Unknown model role",
+      isStreaming: false,
+    };
+  }
+
   function buildResponseViews(apiResponses: ArenaApiResponse[]): ArenaResponseView[] {
-    return apiResponses.map((response) => {
-      const matchedModel = availableModels.find((model) => model.id === response.modelId);
-      return { ...response, modelRole: matchedModel?.role ?? "Unknown model role" };
+    return apiResponses.map((response) => buildResponseView(response));
+  }
+
+  function upsertStreamingResponse(payload: ModelStartPayload) {
+    setResponses((currentResponses) => {
+      const existingIndex = currentResponses.findIndex(
+        (response) => response.modelId === payload.modelId
+      );
+      const streamingResponse: ArenaResponseView = {
+        id: `stream-${payload.modelId}`,
+        modelId: payload.modelId,
+        modelName: payload.modelName,
+        modelRole: payload.modelRole,
+        status: "success",
+        answerText: "",
+        isStreaming: true,
+      };
+
+      if (existingIndex === -1) {
+        return [...currentResponses, streamingResponse];
+      }
+
+      return currentResponses.map((response, index) =>
+        index === existingIndex ? { ...response, ...streamingResponse } : response
+      );
     });
+  }
+
+  function appendStreamingToken(payload: ModelTokenPayload) {
+    setResponses((currentResponses) =>
+      currentResponses.map((response) =>
+        response.modelId === payload.modelId
+          ? {
+              ...response,
+              answerText: `${response.answerText ?? ""}${payload.token}`,
+              isStreaming: true,
+            }
+          : response
+      )
+    );
+  }
+
+  function finishStreamingResponse(payload: ModelResultPayload) {
+    setResponses((currentResponses) => {
+      const existing = currentResponses.find(
+        (response) => response.modelId === payload.modelId
+      );
+      const nextResponse = buildResponseView(payload.response, existing?.modelRole);
+
+      if (!existing) {
+        return [...currentResponses, nextResponse];
+      }
+
+      return currentResponses.map((response) =>
+        response.modelId === payload.modelId ? nextResponse : response
+      );
+    });
+  }
+
+  function applyCompareStreamEvent(streamEvent: CompareStreamEvent): string | null {
+    switch (streamEvent.event) {
+      case "model_start": {
+        const payload = asModelStartPayload(streamEvent.data);
+        if (payload) upsertStreamingResponse(payload);
+        return null;
+      }
+      case "model_token": {
+        const payload = asModelTokenPayload(streamEvent.data);
+        if (payload) appendStreamingToken(payload);
+        return null;
+      }
+      case "model_done":
+      case "model_error": {
+        const payload = asModelResultPayload(streamEvent.data);
+        if (payload) finishStreamingResponse(payload);
+        return null;
+      }
+      case "complete": {
+        const payload = asCompletePayload(streamEvent.data);
+        if (!payload) return "Invalid streaming completion payload.";
+
+        setTaskId(payload.taskId ?? null);
+        setResponses(buildResponseViews(payload.responses));
+        if (!payload.taskId) {
+          setVoteStatus("error");
+          setVoteMessage("Winner voting недоступен: сравнение не сохранено в Supabase.");
+        }
+        return null;
+      }
+      case "fatal_error": {
+        const payload = asApiErrorPayload(streamEvent.data);
+        return payload.message ?? "Streaming comparison failed.";
+      }
+      default:
+        return null;
+    }
+  }
+
+  async function readCompareStream(response: Response, requestId: number) {
+    if (!response.body) {
+      throw new Error("Streaming response body is empty.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      if (requestIdRef.current !== requestId) {
+        await reader.cancel();
+        return;
+      }
+
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split(/\r?\n\r?\n/);
+      buffer = events.pop() ?? "";
+
+      for (const rawEvent of events) {
+        const streamEvent = parseStreamEvent(rawEvent);
+        if (!streamEvent) continue;
+
+        const fatalError = applyCompareStreamEvent(streamEvent);
+        if (fatalError) {
+          throw new Error(fatalError);
+        }
+      }
+    }
   }
 
   function clearStaleResults() {
@@ -335,6 +625,7 @@ export function PromptArena() {
             prompt: prompt.trim(),
             modelIds: selectedModelIds,
             modeSlug: "prompt-arena",
+            stream: true,
           }),
           signal: abortController.signal,
         });
@@ -350,6 +641,12 @@ export function PromptArena() {
             setGuestInfo(null);
           }
           throw new Error(errorData.message || `API error: ${response.status}`);
+        }
+
+        const contentType = response.headers.get("content-type") ?? "";
+        if (contentType.includes("text/event-stream")) {
+          await readCompareStream(response, requestId);
+          return;
         }
 
         const data = (await response.json()) as {

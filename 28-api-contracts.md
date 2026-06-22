@@ -20,7 +20,7 @@ Frontend вызывает только backend route handlers.
 
 ## Общие правила API
 
-- Ответы API должны быть JSON.
+- Ответы API должны быть JSON, кроме явно описанных streaming-режимов `text/event-stream`.
 - Ошибки должны возвращаться через безопасный формат `createErrorResponse`.
 - Секреты, API keys, service role keys и Authorization headers нельзя логировать.
 - `model_key` провайдера не должен быть доверенным значением из frontend.
@@ -105,11 +105,23 @@ server-side allowlist -> frontend
 }
 ```
 
+Streaming-запрос:
+
+```json
+{
+  "prompt": "Сравни Next.js и Nuxt для MVP",
+  "modelIds": ["model-selection-id-1", "model-selection-id-2"],
+  "modeSlug": "prompt-arena",
+  "stream": true
+}
+```
+
 Правила:
 
 - `prompt` должен пройти ограничения длины MVP;
 - `modelIds` должен содержать 2-3 модели;
 - `modeSlug` сейчас должен быть `prompt-arena`;
+- `stream: true` включает SSE-ответ `text/event-stream`, обычный запрос без `stream` сохраняет JSON-контракт;
 - backend резолвит model selection id в server-only `model_key`;
 - сохранение `tasks` и `model_responses` выполняется best-effort.
 
@@ -170,6 +182,27 @@ server-side allowlist -> frontend
   "voteType": "best"
 }
 ```
+
+Streaming events:
+
+```text
+event: model_start
+data: {"modelId":"model-selection-id-1","modelName":"Model display name","modelRole":"general"}
+
+event: model_token
+data: {"modelId":"model-selection-id-1","token":"часть ответа"}
+
+event: model_done
+data: {"modelId":"model-selection-id-1","response":{"id":"temporary-response-id","modelId":"model-selection-id-1","modelName":"Model display name","status":"success","answerText":"Полный ответ","latencyMs":1234}}
+
+event: model_error
+data: {"modelId":"model-selection-id-2","response":{"id":"temporary-response-id","modelId":"model-selection-id-2","modelName":"Model display name","status":"error","answerText":null,"errorCode":"OPENROUTER_ERROR","errorMessage":"Safe message"}}
+
+event: complete
+data: {"status":"success","taskId":"saved-task-uuid-or-null","responses":[]}
+```
+
+`complete.responses` является финальным источником `response.id` для `/api/vote`, потому что до сохранения в Supabase streaming events могут использовать временные ids.
 
 ## `GET /api/code-models`
 

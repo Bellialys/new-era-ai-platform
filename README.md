@@ -60,7 +60,10 @@
 
 Пока не готово как стабильный пользовательский этап:
 
+- UX-подэтап `v0.7.1`: streaming, blind voting, Code Diff, share/copy и guest anti-abuse;
 - история сравнений;
+- публичные ссылки на батлы и Open Graph preview;
+- многокритериальная оценка ответов;
 - production deploy на Vercel;
 - полная release-верификация v0.6/v0.7;
 - админ-панель;
@@ -322,7 +325,7 @@ Code Arena Lite не запускает код, не выполняет тест
 
 ## Главные правила разработки
 
-1. Сначала стабилизируем текущие Arena-режимы. Code Arena Lite разрешён в v0.7, но Runner, Judge, Leaderboard, Image Arena и AI Team Mode добавляются только по `14-roadmap.md`.
+1. Сначала стабилизируем текущие Arena-режимы. Code Arena Lite разрешён в v0.7, UX/Fair Voting улучшения идут через v0.7.1, но Runner, Judge, Leaderboard, Image Arena и AI Team Mode добавляются только по `14-roadmap.md`.
 2. Сначала чиним production-ошибки, потом добавляем новые функции.
 3. Все AI-запросы идут только через backend. Секретные ключи не попадают во frontend и в GitHub.
 4. Секреты хранятся только в `.env.local` (локально) и Vercel Environment Variables (production).

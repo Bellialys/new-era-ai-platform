@@ -16,6 +16,30 @@ v0.7.0-alpha.1 - Code Arena Lite stabilization
 # текущая alpha-ветка: v0.6/v0.7 функциональность в verification, не stable release
 ```
 
+## v0.7.1 Streaming Implementation - 2026-06-18
+
+### Added
+
+- Добавлен streaming-режим для `POST /api/compare` через `stream: true`: Prompt Arena может получать SSE-события `model_start`, `model_token`, `model_done`, `model_error` и `complete`.
+- Prompt Arena UI теперь может показывать ответы моделей по мере генерации, не ожидая полного JSON-ответа.
+- API contract `28-api-contracts.md` описывает streaming-события и правило, что `complete.responses` является финальным источником `response.id` для `/api/vote`.
+
+## Documentation Planning - 2026-06-18
+
+### Added
+
+- Добавлен плановый UX-подэтап `v0.7.1 - Arena UX and Fair Voting`.
+- В roadmap включены ближайшие улучшения: live streaming, Blind Arena, Code Diff, быстрый share/copy и guest anti-abuse.
+- В `v0.8` добавлены публичные ссылки на батлы, Open Graph preview, многокритериальная оценка и фильтры истории.
+- В `v0.9` добавлены Prompt Library, шаблоны с переменными, cost/token preview, персональная аналитика и подготовка Consensus Mode.
+
+### Deferred
+
+- Code Arena Runner остаётся не раньше `v1.7`.
+- Judge Mode остаётся не раньше `v1.3`.
+- Глобальный Leaderboard/Elo остаётся не раньше `v1.4`.
+- Semantic caching через `pgvector`, Batch Testing, multimodal uploads, Private Arenas и RAG оставлены для поздних этапов после privacy, cost и safety controls.
+
 ## v0.7.0-alpha.1 - Code Arena Lite stabilization
 
 Дата: 2026-06-17

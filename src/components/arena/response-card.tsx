@@ -17,8 +17,11 @@ export function ResponseCard({
   isVoteLocked,
   onSelectWinner,
 }: ResponseCardProps) {
-  const responseText = response.answerText ?? response.errorMessage ?? "Модель не вернула ответ.";
-  const canSelectWinner = response.status === "success" && canSaveWinner;
+  const responseText =
+    response.answerText ??
+    response.errorMessage ??
+    (response.isStreaming ? "Модель начала отвечать..." : "Модель не вернула ответ.");
+  const canSelectWinner = response.status === "success" && !response.isStreaming && canSaveWinner;
   const isDisabled = !canSelectWinner || isVoteLocked || isWinner;
   const winnerButtonLabel = isSavingWinner
     ? "Сохраняем Winner..."
@@ -47,7 +50,7 @@ export function ResponseCard({
                 : "rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-100"
             }
           >
-            {response.status === "success" ? "Успех" : "Ошибка"}
+            {response.isStreaming ? "Генерация" : response.status === "success" ? "Успех" : "Ошибка"}
           </span>
           {response.latencyMs !== undefined ? (
             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
@@ -81,7 +84,9 @@ export function ResponseCard({
       </button>
       {response.status === "success" && !canSaveWinner ? (
         <p className="mt-2 text-xs text-amber-100">
-          Winner voting появится после успешного сохранения сравнения в Supabase.
+          {response.isStreaming
+            ? "Winner voting появится после завершения генерации и сохранения сравнения."
+            : "Winner voting появится после успешного сохранения сравнения в Supabase."}
         </p>
       ) : null}
     </article>

@@ -22,4 +22,5 @@ export type ArenaApiResponse = {
 
 export type ArenaResponseView = ArenaApiResponse & {
   modelRole: string;
+  isStreaming?: boolean;
 };

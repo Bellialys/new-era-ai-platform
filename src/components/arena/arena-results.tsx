@@ -24,7 +24,7 @@ export function ArenaResults({
   savingVoteResponseId,
   onSelectWinner,
 }: ArenaResultsProps) {
-  if (isLoading) {
+  if (isLoading && responses.length === 0) {
     return (
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur">
         <p className="mb-4 text-sm font-semibold text-slate-300">
@@ -65,8 +65,9 @@ export function ArenaResults({
     );
   }
 
-  const successCount = responses.filter((r) => r.status === "success").length;
-  const errorCount = responses.length - successCount;
+  const streamingCount = responses.filter((r) => r.isStreaming).length;
+  const successCount = responses.filter((r) => r.status === "success" && !r.isStreaming).length;
+  const errorCount = responses.filter((r) => r.status === "error").length;
 
   return (
     <section className="grid gap-4">
@@ -78,6 +79,11 @@ export function ArenaResults({
           </span>
         </h2>
         <div className="flex gap-2">
+          {streamingCount > 0 && (
+            <span className="rounded-full bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-100">
+              {streamingCount} пишет
+            </span>
+          )}
           {successCount > 0 && (
             <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100">
               {successCount} успешно

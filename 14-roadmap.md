@@ -60,11 +60,18 @@ v0.7.0-alpha.1 - Code Arena Lite stabilization
 - Code Arena Lite без запуска пользовательского кода;
 - подготовленные governance metadata для model catalog без утверждения live-verification OpenRouter IDs.
 
+Ближайший плановый UX-подэтап:
+
+```text
+v0.7.1 - Arena UX and Fair Voting
+# streaming, blind voting, code diff, базовый share/copy и усиление защиты гостей
+```
+
 Следующий главный этап:
 
 ```text
 v0.8 - History and Production Readiness
-# история сравнений, стабилизация preview/production, observability и release gate
+# история сравнений, публичные ссылки, критерии оценки, preview/production, observability и release gate
 ```
 
 Детальные планы текущих направлений вынесены в файлы:
@@ -96,7 +103,8 @@ v0.8 - History and Production Readiness
 | `v0.5.4` | Vote Security & Auth Foundation | Vote dedup RPC, user-aware rate limiting, security headers (CSP/HSTS), proxy/session refresh fix | Verify |
 | `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, аватар, email/password, ограничения моделей | Verify |
 | `v0.7` | Code Arena Lite | Сравнение кодовых решений без запуска кода | Текущая alpha-стабилизация |
-| `v0.8` | History and Production Readiness | История сравнений, preview/production smoke, observability baseline | Позже |
+| `v0.7.1` | Arena UX and Fair Voting | Streaming, Blind Arena, Code Diff, быстрый share/copy и guest anti-abuse | Следующий UX-подэтап |
+| `v0.8` | History and Production Readiness | История сравнений, публичные ссылки, критерии оценки, preview/production smoke, observability baseline | Позже |
 | `v0.9` | Stable Arena Hardening | Финальная стабилизация Prompt Arena + Code Arena Lite перед v1.0 | Позже |
 | `v1.0` | Stable Arena MVP | Первая стабильная публичная версия MVP | Позже |
 | `v1.1` | Enterprise Readiness Foundation | SLO, monitoring, incident process, privacy/compliance baseline, supply-chain checks | Позже |
@@ -407,9 +415,50 @@ npm run schema:check
 supabase migration list
 ```
 
+## v0.7.1 - Arena UX and Fair Voting
+
+Цель: резко снизить трение в Arena-режимах и начать собирать более честные данные о качестве моделей без преждевременного запуска Judge Mode, Leaderboard или Code Runner.
+
+Что сделать:
+
+- добавить live streaming ответов для Prompt Arena и Code Arena Lite, чтобы ответы 2-3 моделей появлялись параллельно по мере генерации;
+- добавить Blind Arena: до голосования пользователь видит ответы как `Модель A`, `Модель B`, `Модель C`, а реальные названия раскрываются после выбора;
+- перемешивать порядок ответов перед показом, сохраняя корректную связь с `model_responses` и `/api/vote`;
+- добавить кнопку copy для каждого ответа и быстрый share action для сохранённого сравнения;
+- добавить Code Diff для Code Arena Lite: syntax highlighting и side-by-side diff без выполнения кода;
+- усилить guest anti-abuse: лимиты для гостей, ограничение длины prompt/code task, понятное предложение регистрации после лимита;
+- подготовить дизайн точного кэширования одинаковых запросов по ключу `mode + prompt + models + access level`, без semantic cache на этом этапе.
+
+Критерии готовности:
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm run docs:check
+npm run smoke
+```
+
+Если затронута БД:
+
+```bash
+npm run env:check:migrations
+npm run schema:check
+supabase migration list
+```
+
+Границы этапа:
+
+- не добавлять запуск пользовательского кода;
+- не добавлять Code Arena Runner;
+- не добавлять официальный Judge Mode;
+- не добавлять глобальный Leaderboard или Elo-рейтинг;
+- не добавлять Batch Testing, мультимодальные загрузки или RAG;
+- не добавлять новые дорогие модели без лимитов и cost visibility.
+
 ## v0.8 - History and Production Readiness
 
-Цель: дать пользователю открыть прошлые сравнения и подготовить проект к контролируемому production-пути.
+Цель: дать пользователю открыть прошлые сравнения, делиться результатами и подготовить проект к контролируемому production-пути.
 
 Что сделать:
 
@@ -417,6 +466,11 @@ supabase migration list
 - создать `/api/history`;
 - создать `/api/history/[taskId]`;
 - показывать task, responses, vote;
+- добавить публичные read-only ссылки на сохранённые сравнения с owner/privacy rules;
+- добавить Open Graph preview для публичных батлов: prompt preview, режим, модели после раскрытия и счётчик голосов;
+- добавить многокритериальную оценку ответов без официального Leaderboard: точность, полнота, краткость, следование инструкции, качество кода и безопасность кода;
+- добавить фильтры истории по дате, режиму, моделям и ключевым словам;
+- реализовать точное кэширование одинаковых запросов только после privacy/retention решения и с явным cache hit marker;
 - проверить Vercel env;
 - проверить production build;
 - проверить реальные OpenRouter calls;
@@ -424,6 +478,33 @@ supabase migration list
 - проверить регистрацию, guest mode, profile и Code Arena Lite;
 - добавить request id в API errors/logs;
 - закрепить preview/production smoke procedure.
+
+Что оставить позже:
+
+- semantic caching через `pgvector`;
+- Batch Testing через CSV;
+- мультимодальные загрузки PDF/CSV/картинок/аудио;
+- private arenas и RAG;
+- официальный Judge Mode и глобальный Leaderboard.
+
+## v0.9 - Stable Arena Hardening
+
+Цель: стабилизировать Prompt Arena и Code Arena Lite перед `v1.0`, улучшить повторное использование и подготовить продукт к публичному MVP.
+
+Что сделать:
+
+- добавить Prompt Library с сохранёнными шаблонами и переменными вида `{{table_name}}`;
+- добавить сценарии использования: деловое письмо, объяснение концепции, код-ревью, SQL, React/Next.js задача;
+- добавить предварительный расчёт стоимости и токенов для выбранных моделей, если данные модели позволяют это сделать безопасно и понятно;
+- добавить персональную аналитику пользователя по истории: какие модели чаще выигрывают у него в разных категориях;
+- подготовить спецификацию Consensus Mode, где отдельная модель собирает лучший финальный ответ из 2-3 результатов, но включать реализацию только после лимитов, cost visibility и отдельного user confirmation;
+- довести mobile UX, loading/error/success states и accessibility до release-ready состояния.
+
+Границы этапа:
+
+- персональная аналитика не является публичным Leaderboard;
+- Consensus Mode не является Judge Mode и не должен подменять официальную оценку моделей;
+- любые новые платные/дорогие вызовы требуют лимитов, cost preview и server-side enforcement.
 
 ## v1.0 - Stable Arena MVP
 
@@ -437,6 +518,8 @@ supabase migration list
 - выбирает победителя;
 - данные сохраняются;
 - история работает;
+- streaming, blind voting, copy/share и Code Diff работают без регрессий;
+- публичные ссылки не раскрывают приватные данные;
 - guest mode работает;
 - регистрация работает;
 - профиль работает;
@@ -456,6 +539,7 @@ supabase migration list
 - dependency/security scanning, secret scanning, SBOM и lockfile policy;
 - privacy/retention baseline для prompt data, guest data и account data;
 - AI safety baseline по provider errors, abuse limits, prompt privacy и model governance;
+- policy для semantic caching через `pgvector`: когда можно переиспользовать ответ, как показывать cache hit и как не смешивать приватные данные;
 - release checklist для Local -> Preview -> Staging -> Production;
 - documented support process для пользователей и enterprise-пилотов.
 

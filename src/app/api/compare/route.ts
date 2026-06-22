@@ -16,6 +16,7 @@ import {
   logApiRequest,
   resolveSelectedModels,
   fetchMultipleResponses,
+  streamOpenRouterResponse,
   ApiError,
   savePromptArenaRun,
   checkRateLimit,
@@ -27,6 +28,7 @@ interface CompareRequest {
   prompt?: unknown;
   modelIds?: unknown;
   modeSlug?: unknown;
+  stream?: unknown;
 }
 
 interface CompareResponse {
@@ -54,7 +56,200 @@ type PersistableCompareResponse = CompareResponse["responses"][number] & {
   };
 };
 
-export async function POST(request: NextRequest): Promise<NextResponse<CompareResponse | ReturnType<typeof createErrorResponse>>> {
+type ResolvedPromptModel = Awaited<ReturnType<typeof resolveSelectedModels>>[number];
+type CompareIdentity = Awaited<ReturnType<typeof resolveRequestIdentity>>;
+
+const sseEncoder = new TextEncoder();
+
+function writeSse(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  event: string,
+  payload: unknown
+): void {
+  try {
+    controller.enqueue(
+      sseEncoder.encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`)
+    );
+  } catch {
+    // Stream already closed (client disconnected)
+  }
+}
+
+function createStreamingCompareResponse({
+  cleanPrompt,
+  selectedModels,
+  identity,
+  startTime,
+}: {
+  cleanPrompt: string;
+  selectedModels: ResolvedPromptModel[];
+  identity: Exclude<CompareIdentity, { kind: "none" }>;
+  startTime: number;
+}): NextResponse {
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const arenaResponses: PersistableCompareResponse[] = [];
+
+      try {
+        await Promise.all(
+          selectedModels.map(async (model) => {
+            writeSse(controller, "model_start", {
+              modelId: model.selectionId,
+              modelName: model.name,
+              modelRole: model.role,
+            });
+
+            try {
+              const result = await streamOpenRouterResponse(
+                cleanPrompt,
+                model.modelKey,
+                (token) => {
+                  writeSse(controller, "model_token", {
+                    modelId: model.selectionId,
+                    token,
+                  });
+                }
+              );
+
+              const response: PersistableCompareResponse = {
+                id: crypto.randomUUID(),
+                modelId: model.selectionId,
+                modelName: model.name,
+                status: "success",
+                answerText: result.text,
+                latencyMs: result.latencyMs,
+                modelKey: model.modelKey,
+                dbModelId: model.modelId,
+                usage: result.usage,
+              };
+
+              arenaResponses.push(response);
+              writeSse(controller, "model_done", {
+                modelId: model.selectionId,
+                response: {
+                  id: response.id,
+                  modelId: response.modelId,
+                  modelName: response.modelName,
+                  status: response.status,
+                  answerText: response.answerText,
+                  latencyMs: response.latencyMs,
+                },
+              });
+            } catch (error) {
+              const response: PersistableCompareResponse = {
+                id: crypto.randomUUID(),
+                modelId: model.selectionId,
+                modelName: model.name,
+                status: "error",
+                answerText: null,
+                errorCode: error instanceof ApiError ? error.errorCode : "UNKNOWN_ERROR",
+                errorMessage:
+                  error instanceof ApiError
+                    ? error.message
+                    : "Failed to get response from this model",
+                modelKey: model.modelKey,
+                dbModelId: model.modelId,
+              };
+
+              arenaResponses.push(response);
+              writeSse(controller, "model_error", {
+                modelId: model.selectionId,
+                response: {
+                  id: response.id,
+                  modelId: response.modelId,
+                  modelName: response.modelName,
+                  status: response.status,
+                  answerText: response.answerText,
+                  errorCode: response.errorCode,
+                  errorMessage: response.errorMessage,
+                },
+              });
+            }
+          })
+        );
+
+        const orderedResponses = selectedModels.map((model) => {
+          const response = arenaResponses.find((item) => item.modelId === model.selectionId);
+          if (response) return response;
+
+          return {
+            id: crypto.randomUUID(),
+            modelId: model.selectionId,
+            modelName: model.name,
+            status: "error" as const,
+            answerText: null,
+            errorCode: "UNKNOWN_ERROR",
+            errorMessage: "Model response was not completed.",
+            modelKey: model.modelKey,
+            dbModelId: model.modelId,
+          };
+        });
+
+        const hasAnySuccess = orderedResponses.some((response) => response.status === "success");
+        let savedRun: Awaited<ReturnType<typeof savePromptArenaRun>> = {
+          taskId: null,
+          responseIdsByModelId: {},
+        };
+
+        try {
+          savedRun = await savePromptArenaRun({
+            prompt: cleanPrompt,
+            modelKeys: selectedModels.map((model) => model.modelKey),
+            responses: orderedResponses,
+            owner: {
+              userId: identity.userId,
+              anonymousSessionId: identity.guestId,
+            },
+          });
+        } catch (persistError) {
+          console.error("Prompt Arena streaming persistence failed (continuing):", persistError);
+        }
+
+        const savedArenaResponses = orderedResponses.map(
+          ({ usage: _usage, modelKey: _modelKey, dbModelId: _dbModelId, ...response }) => ({
+            ...response,
+            id: savedRun.responseIdsByModelId[response.modelId] ?? response.id,
+          })
+        );
+
+        logApiRequest("POST", "/api/compare", 200, Date.now() - startTime);
+        writeSse(controller, "complete", {
+          status: hasAnySuccess ? "success" : "error",
+          taskId: savedRun.taskId,
+          responses: savedArenaResponses,
+        });
+      } catch (error) {
+        const statusCode = error instanceof ApiError ? error.statusCode : 500;
+        console.error("POST /api/compare stream error:", error);
+        logApiRequest("POST", "/api/compare", statusCode, Date.now() - startTime);
+        writeSse(controller, "fatal_error", createErrorResponse(error));
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // Already closed (client disconnected)
+        }
+      }
+    },
+  });
+
+  const response = new NextResponse(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
+
+  if (identity.kind === "guest") {
+    applyGuestCookie(response, identity.guestId);
+  }
+
+  return response;
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   try {
@@ -118,7 +313,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
       );
     }
 
-    const { prompt, modelIds, modeSlug } = body as CompareRequest;
+    const { prompt, modelIds, modeSlug, stream } = body as CompareRequest;
+    const shouldStream = stream === true;
 
     const modeValidation = validateModeSlug(modeSlug, MODE_SLUG_PROMPT_ARENA);
     if (!modeValidation.valid) {
@@ -170,6 +366,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompareRe
         ),
         { status: statusCode }
       );
+    }
+
+    if (shouldStream) {
+      return createStreamingCompareResponse({
+        cleanPrompt,
+        selectedModels,
+        identity,
+        startTime,
+      });
     }
 
     const responses = await fetchMultipleResponses(

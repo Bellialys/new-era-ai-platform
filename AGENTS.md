@@ -64,11 +64,18 @@ v0.7 - Code Arena Lite stabilization
 # v0.6/v0.7 нельзя считать stable, пока не пройдены typecheck, lint, build, docs:check, smoke и нужные DB checks
 ```
 
+Ближайший плановый UX-подэтап:
+
+```text
+v0.7.1 - Arena UX and Fair Voting
+# streaming, blind voting, Code Diff, быстрый share/copy и guest anti-abuse
+```
+
 Следующий главный этап:
 
 ```text
 v0.8 - History and Production Readiness
-# история сравнений, preview/production smoke, observability baseline
+# история сравнений, публичные ссылки, критерии оценки, preview/production smoke, observability baseline
 ```
 
 ---
