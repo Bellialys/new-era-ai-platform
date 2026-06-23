@@ -26,6 +26,9 @@ export default function HomePage() {
           <Link className="rounded-full bg-violet-500/20 px-4 py-1.5 font-semibold text-violet-100 transition hover:bg-violet-500/30" href="/code">
             Code Arena
           </Link>
+          <Link className="transition hover:text-white" href="/history">
+            История
+          </Link>
           <a className="transition hover:text-white" href="https://github.com/Bellialys/new-era-ai-platform">
             GitHub
           </a>

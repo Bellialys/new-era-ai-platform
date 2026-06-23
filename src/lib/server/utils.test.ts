@@ -1,7 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   ApiError,
   createErrorResponse,
+  isUuid,
+  logApiRequest,
   validatePrompt,
   validateModelIds,
   validateModeSlug,
@@ -86,5 +88,45 @@ describe("createErrorResponse", () => {
     const response = createErrorResponse(new Error("internal db dsn leaked"));
     expect(response.errorCode).toBe("INTERNAL_ERROR");
     expect(response.message).not.toContain("dsn");
+  });
+
+  it("includes requestId when provided and omits it otherwise", () => {
+    const withId = createErrorResponse(new ApiError(404, "TASK_NOT_FOUND", "nope"), "req-1");
+    expect(withId).toEqual({
+      status: "error",
+      errorCode: "TASK_NOT_FOUND",
+      message: "nope",
+      requestId: "req-1",
+    });
+
+    const withoutId = createErrorResponse(new ApiError(404, "TASK_NOT_FOUND", "nope"));
+    expect(withoutId).not.toHaveProperty("requestId");
+  });
+});
+
+describe("isUuid", () => {
+  it("accepts a valid uuid", () => {
+    expect(isUuid("11111111-1111-4111-8111-111111111111")).toBe(true);
+  });
+
+  it("rejects malformed or non-string values", () => {
+    expect(isUuid("not-a-uuid")).toBe(false);
+    expect(isUuid(42)).toBe(false);
+    expect(isUuid(null)).toBe(false);
+  });
+});
+
+describe("logApiRequest", () => {
+  it("appends rid only when a requestId is supplied", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    logApiRequest("GET", "/api/history", 200, 5, "req-9");
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("rid=req-9"));
+
+    warn.mockClear();
+    logApiRequest("GET", "/api/history", 200, 5);
+    expect(warn).toHaveBeenCalledWith(expect.not.stringContaining("rid="));
+
+    warn.mockRestore();
   });
 });

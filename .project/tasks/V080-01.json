@@ -1,0 +1,47 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V080-01",
+  "title": "v0.8 History and request id foundation",
+  "status": "verify",
+  "priority": "high",
+  "files": [
+    "14-roadmap.md",
+    "28-api-contracts.md",
+    "src/lib/server/history.ts",
+    "src/lib/server/history.test.ts",
+    "src/lib/server/utils.ts",
+    "src/lib/server/utils.test.ts",
+    "src/lib/server/index.ts",
+    "src/lib/arena/constants.ts",
+    "src/app/api/history/",
+    "src/app/history/",
+    "src/components/history/",
+    "src/types/history.ts",
+    "src/app/page.tsx",
+    "src/app/arena/page.tsx",
+    "src/app/code/page.tsx"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "build",
+    "docs:check"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "docs:check"
+  ],
+  "lastUpdated": "2026-06-23T01:30:00.000Z",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "verify",
+      "at": "2026-06-23T01:30:00.000Z",
+      "note": "History (list + detail) backend, API routes, UI and request-id logging implemented in the working tree. Offline checks pass (typecheck, lint, test, docs:check). build/smoke and live Supabase verification are owner-only (no .env.local in this environment) and remain pending before this and the v0.7 release gate can be closed."
+    }
+  ],
+  "notes": "Read-only history over existing tasks/model_responses/votes tables — no migration required. Identity is scoped in every query (service role bypasses RLS). Version/phase promotion to v0.8 is deferred until the owner closes the v0.7 live gate. Follow-up: backfill x-request-id into compare/code-compare/vote/guest/models/profile routes; optional covering indexes tasks(user_id, created_at desc) and tasks(anonymous_session_id, created_at desc)."
+}

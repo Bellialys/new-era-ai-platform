@@ -13,9 +13,14 @@ export default function ArenaPage() {
             Введите задачу, выберите модели и получайте реальные ответы от AI через OpenRouter.
           </p>
         </div>
-        <Link className="text-sm text-slate-300 transition hover:text-white" href="/">
-          Вернуться на главную
-        </Link>
+        <div className="flex items-center gap-4 text-sm text-slate-300">
+          <Link className="transition hover:text-white" href="/history">
+            История
+          </Link>
+          <Link className="transition hover:text-white" href="/">
+            На главную
+          </Link>
+        </div>
         <AuthStatus />
       </header>
 

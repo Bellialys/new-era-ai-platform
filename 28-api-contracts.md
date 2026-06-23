@@ -37,6 +37,8 @@ Frontend вызывает только backend route handlers.
 | `POST /api/vote` | 30 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `GET /api/code-models` | 60 req | 60 сек | IP-адрес |
 | `POST /api/code-compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `GET /api/history` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `GET /api/history/[taskId]` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
 
 Ответ при превышении:
 
@@ -266,6 +268,96 @@ Rules:
 - validates prompt, model IDs, language and framework server-side;
 - persists as `tasks.mode_slug = "code-arena"` when Supabase persistence is available;
 - never runs code, starts tests, spawns processes, or uses a sandbox in Lite mode.
+
+## `GET /api/history` (v0.8)
+
+Возвращает прошлые сравнения текущего вызывающего (пользователя или гостя), новейшие сверху.
+
+> **Идентичность определяется из cookie, не из тела/параметров.**
+> Backend использует service role (обходит RLS), поэтому каждый запрос истории
+> фильтруется по `user_id` или `anonymous_session_id` владельца в самом WHERE.
+> Чужие задачи в принципе не попадают в выборку.
+
+Query-параметры (все необязательные):
+
+```text
+?limit=20         # размер страницы, по умолчанию 20, максимум 50
+?cursor=<ISO>     # created_at последней строки прошлой страницы (keyset-пагинация)
+?mode=code-arena  # фильтр по mode_slug (prompt-arena | code-arena); неизвестные игнорируются
+```
+
+Минимальный ответ:
+
+```json
+{
+  "status": "success",
+  "items": [
+    {
+      "taskId": "task-uuid",
+      "modeSlug": "prompt-arena",
+      "taskText": "Сравни Next.js и Nuxt для MVP",
+      "status": "completed",
+      "selectedModels": ["model-key-1", "model-key-2"],
+      "modelCount": 2,
+      "createdAt": "2026-06-20T10:00:00.000Z",
+      "hasWinner": true
+    }
+  ],
+  "nextCursor": "2026-06-20T10:00:00.000Z",
+  "requestId": "uuid"
+}
+```
+
+- `nextCursor` равен `null`, когда больше страниц нет;
+- требует Supabase auth cookie или httpOnly guest cookie `na_guest`; иначе `401 AUTH_REQUIRED`;
+- когда Supabase не сконфигурирован, возвращается пустой список (graceful empty).
+
+## `GET /api/history/[taskId]` (v0.8)
+
+Возвращает одно сравнение с его ответами и победителем, scoped к владельцу.
+
+Минимальный ответ:
+
+```json
+{
+  "status": "success",
+  "task": {
+    "taskId": "task-uuid",
+    "modeSlug": "prompt-arena",
+    "taskText": "Сравни Next.js и Nuxt для MVP",
+    "status": "completed",
+    "selectedModels": ["model-key-1", "model-key-2"],
+    "settings": {},
+    "createdAt": "2026-06-20T10:00:00.000Z",
+    "errorMessage": null,
+    "winnerResponseId": "model-response-uuid-or-null"
+  },
+  "responses": [
+    {
+      "responseId": "model-response-uuid",
+      "modelKey": "model-key-1",
+      "displayName": "Model display name",
+      "status": "success",
+      "responseText": "Ответ модели",
+      "errorCode": null,
+      "errorMessage": null,
+      "latencyMs": 1234,
+      "isWinner": true
+    }
+  ],
+  "requestId": "uuid"
+}
+```
+
+- `taskId` должен быть UUID, иначе `400 VALIDATION_ERROR`;
+- задача, которая не существует **или** не принадлежит вызывающему, возвращает `404 TASK_NOT_FOUND` (существование не раскрывается);
+- read-only: история не редактируется и не запускает повторных вызовов моделей.
+
+## Request ID (v0.8)
+
+Все history endpoints генерируют (или принимают входной) `x-request-id` и возвращают его
+в заголовке ответа, в теле успешного ответа (`requestId`) и в теле ошибки. Логи сервера
+содержат `rid=<requestId>` для корреляции. Секреты, cookie и Authorization headers не логируются.
 
 ## Related Docs
 

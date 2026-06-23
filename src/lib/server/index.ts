@@ -8,6 +8,7 @@ export * from "./models";
 export * from "./model-catalog";
 export * from "./openrouter";
 export * from "./arena-persistence";
+export * from "./history";
 export * from "./rate-limit";
 export * from "./supabase";
 export * from "./utils";

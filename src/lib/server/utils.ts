@@ -11,6 +11,14 @@
 
 import { ALLOWED_MODE_SLUGS, type ArenaModeSlug } from "@/lib/arena/constants";
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** True for a syntactically valid v1–v5 UUID string. */
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
 export class ApiError extends Error {
   constructor(
     public statusCode: number,
@@ -31,19 +39,23 @@ export interface SafeErrorResponse {
   status: "error";
   errorCode: string;
   message: string;
+  /** Correlates this error with server logs (see logApiRequest). */
+  requestId?: string;
 }
 
 /**
  * Create a safe error response for the client
  * - Sanitizes the error message
  * - Does not include stack trace or internal details
+ * - Optionally echoes a requestId so clients/logs can be correlated
  */
-export function createErrorResponse(error: unknown): SafeErrorResponse {
+export function createErrorResponse(error: unknown, requestId?: string): SafeErrorResponse {
   if (error instanceof ApiError) {
     return {
       status: "error",
       errorCode: error.errorCode,
       message: error.message,
+      ...(requestId ? { requestId } : {}),
     };
   }
 
@@ -54,7 +66,18 @@ export function createErrorResponse(error: unknown): SafeErrorResponse {
     status: "error",
     errorCode: "INTERNAL_ERROR",
     message: "An unexpected error occurred. Please try again.",
+    ...(requestId ? { requestId } : {}),
   };
+}
+
+const REQUEST_ID_HEADER = "x-request-id";
+
+/**
+ * Per-request correlation id. Honors an inbound x-request-id (e.g. from a proxy
+ * or load balancer) when present, otherwise mints a fresh UUID.
+ */
+export function resolveRequestId(request: { headers: { get(name: string): string | null } }): string {
+  return request.headers.get(REQUEST_ID_HEADER) ?? crypto.randomUUID();
 }
 
 /**
@@ -168,14 +191,18 @@ export function logApiRequest(
   method: string,
   path: string,
   statusCode: number,
-  durationMs?: number
+  durationMs?: number,
+  requestId?: string
 ): void {
   const timestamp = new Date().toISOString();
   const duration = durationMs ? ` (${durationMs}ms)` : "";
-  const line = `[${timestamp}] ${method} ${path} ${statusCode}${duration}`;
+  const rid = requestId ? ` rid=${requestId}` : "";
+  const line = `[${timestamp}] ${method} ${path} ${statusCode}${duration}${rid}`;
   if (statusCode >= 500) {
     console.error(line);
     return;
   }
   console.warn(line);
 }
+
+export { REQUEST_ID_HEADER };
