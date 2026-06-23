@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { HistoryList } from "@/components/history/history-list";
+import { StatsWidget } from "@/components/history/stats-widget";
 import type { HistoryListApiResponse, HistoryListItemView } from "@/types/history";
 
 type PageState = "loading" | "empty" | "ready" | "unauthorized" | "error";
@@ -91,6 +92,7 @@ export default function HistoryPage() {
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-8 sm:px-8">
       <HistoryHeader />
+      <StatsWidget />
 
       {state === "loading" ? (
         <p className="py-16 text-center text-sm text-slate-400">Загружаем историю…</p>
