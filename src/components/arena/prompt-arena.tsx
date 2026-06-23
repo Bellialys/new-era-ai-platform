@@ -120,7 +120,7 @@ function GuestCard({
       <button
         type="button"
         onClick={onSignIn}
-        className="shrink-0 rounded-lg border border-white/15 px-3 py-1 text-xs font-semibold text-slate-300 transition hover:border-white/30 hover:text-white"
+        className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-white/15 px-3 text-xs font-semibold text-slate-300 transition hover:border-white/30 hover:text-white"
       >
         Войти
       </button>

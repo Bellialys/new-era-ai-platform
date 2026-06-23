@@ -63,11 +63,11 @@ export function AuthStatus() {
   if (!session?.user) {
     return (
       <div className="flex items-center gap-2">
-        <Link className="transition hover:text-white" href="/login">
+        <Link className="inline-flex min-h-[44px] items-center px-2 transition hover:text-white" href="/login">
           Войти
         </Link>
         <Link
-          className="inline-flex min-h-8 items-center justify-center rounded-full border border-violet-300/60 bg-violet-600 px-3 py-1.5 text-xs font-extrabold leading-4 text-white shadow-md shadow-violet-950/30 transition hover:border-violet-200 hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200"
+          className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-violet-300/60 bg-violet-600 px-3 py-1.5 text-xs font-extrabold leading-4 text-white shadow-md shadow-violet-950/30 transition hover:border-violet-200 hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200"
           href="/signup"
         >
           Регистрация
@@ -85,7 +85,7 @@ export function AuthStatus() {
         {session.user.email}
       </Link>
       <button
-        className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+        className="min-h-[44px] rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={isSigningOut}
         onClick={handleLogout}
         type="button"

@@ -88,7 +88,7 @@ export function ResponseCard({
       </div>
 
       <div className="relative mt-5">
-        <div className="whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
+        <div className="overflow-x-auto whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
           {responseText}
         </div>
         {response.status === "success" && !response.isStreaming && response.answerText ? (
@@ -106,7 +106,7 @@ export function ResponseCard({
       <button
         disabled={isDisabled}
         onClick={() => onSelectWinner(response.id)}
-        className="mt-5 rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-5 min-h-[44px] rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
       >
         {winnerButtonLabel}

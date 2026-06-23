@@ -51,7 +51,7 @@ function GuestCard({ info, onSignIn }: { info: GuestInfo; onSignIn: () => void }
       </div>
       <button
         onClick={onSignIn}
-        className="ml-auto shrink-0 rounded-full border border-violet-300/40 bg-violet-600/20 px-3 py-1 text-xs font-semibold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-600/40"
+        className="ml-auto inline-flex min-h-[44px] shrink-0 items-center rounded-full border border-violet-300/40 bg-violet-600/20 px-3 text-xs font-semibold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-600/40"
       >
         Войти
       </button>
@@ -551,7 +551,7 @@ export function CodeArena() {
             <div className="flex gap-2">
               <button
                 onClick={() => setBlindMode((v) => !v)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                className={`inline-flex min-h-[44px] items-center justify-center rounded-full border px-3 text-xs font-semibold transition ${
                   blindMode && !winnerResponseId
                     ? "border-violet-400/50 bg-violet-500/20 text-violet-200"
                     : "border-white/15 text-slate-400 hover:border-white/30 hover:text-white"

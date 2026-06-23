@@ -51,7 +51,7 @@ export function HistoryResponseCard({ response }: { response: HistoryResponseVie
         </div>
       </div>
 
-      <div className="mt-5 whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
+      <div className="mt-5 overflow-x-auto whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
         {bodyText}
       </div>
     </article>

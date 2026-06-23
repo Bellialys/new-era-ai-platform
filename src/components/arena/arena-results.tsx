@@ -120,7 +120,7 @@ export function ArenaResults({
           <button
             onClick={onToggleBlindMode}
             title={blindMode ? "Показать модели" : "Скрыть модели (blind mode)"}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+            className={`inline-flex min-h-[44px] items-center justify-center rounded-full border px-3 text-xs font-semibold transition ${
               blindMode && !winnerResponseId
                 ? "border-violet-400/50 bg-violet-500/20 text-violet-200"
                 : "border-white/15 text-slate-400 hover:border-white/30 hover:text-white"
@@ -133,7 +133,7 @@ export function ArenaResults({
           {successCount > 0 && (
             <button
               onClick={handleCopyAll}
-              className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-slate-400 transition hover:border-white/30 hover:text-white"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/15 px-3 text-xs font-semibold text-slate-400 transition hover:border-white/30 hover:text-white"
               type="button"
             >
               Копировать всё
@@ -144,7 +144,7 @@ export function ArenaResults({
             <Link
               href={`/share/${taskId}`}
               target="_blank"
-              className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-slate-400 transition hover:border-white/30 hover:text-white"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/15 px-3 text-xs font-semibold text-slate-400 transition hover:border-white/30 hover:text-white"
             >
               Поделиться
             </Link>
