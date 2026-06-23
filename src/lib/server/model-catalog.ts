@@ -294,7 +294,7 @@ export async function resolveSelectedCodeModels(
       throw new ApiError(
         400,
         "MODEL_NOT_CODE_CAPABLE",
-        `Model \'${model.name}\' does not support code tasks. Please select code-capable models.`
+        `Model '${model.name}' does not support code tasks. Please select code-capable models.`
       );
     }
   }

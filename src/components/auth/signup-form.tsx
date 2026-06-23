@@ -13,6 +13,9 @@ export function SignupForm() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const errorCls = "rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200";
+  const successCls = "rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200";
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
@@ -20,23 +23,23 @@ export function SignupForm() {
 
     const supabase = getSupabaseClient();
     if (!supabase) {
-      setErrorMessage("Authentication is not configured yet.");
+      setErrorMessage("Аутентификация не настроена.");
       return;
     }
 
     const cleanEmail = email.trim();
     if (!cleanEmail) {
-      setErrorMessage("Enter your email.");
+      setErrorMessage("Введите email.");
       return;
     }
 
     if (password.length < 8) {
-      setErrorMessage("Password must be at least 8 characters.");
+      setErrorMessage("Пароль должен содержать минимум 8 символов.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage("Passwords do not match.");
+      setErrorMessage("Пароли не совпадают.");
       return;
     }
 
@@ -58,7 +61,7 @@ export function SignupForm() {
 
     setPassword("");
     setConfirmPassword("");
-    setSuccessMessage("Account created. Check your email if confirmation is enabled.");
+    setSuccessMessage("Аккаунт создан. Проверьте email — мы отправили ссылку для подтверждения.");
     setIsSubmitting(false);
   }
 
@@ -78,40 +81,36 @@ export function SignupForm() {
       </label>
 
       <label className="grid gap-2 text-sm text-slate-300">
-        Password
+        Пароль
         <input
           autoComplete="new-password"
           className="rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-violet-300/60"
           onChange={(event) => setPassword(event.target.value)}
-          placeholder="Minimum 8 characters"
+          placeholder="Минимум 8 символов"
           type="password"
           value={password}
         />
       </label>
 
       <label className="grid gap-2 text-sm text-slate-300">
-        Confirm password
+        Повторите пароль
         <input
           autoComplete="new-password"
           className="rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-violet-300/60"
           onChange={(event) => setConfirmPassword(event.target.value)}
-          placeholder="Repeat password"
+          placeholder="Повторите пароль"
           type="password"
           value={confirmPassword}
         />
       </label>
 
-      {errorMessage ? (
-        <p className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          {errorMessage}
-        </p>
-      ) : null}
+      {errorMessage ? <p className={errorCls}>{errorMessage}</p> : null}
 
       {successMessage ? (
-        <p className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <p className={successCls}>
           {successMessage}{" "}
           <Link className="font-semibold text-white underline-offset-4 hover:underline" href="/login">
-            Login
+            Войти
           </Link>
         </p>
       ) : null}
@@ -121,7 +120,7 @@ export function SignupForm() {
         disabled={isSubmitting}
         type="submit"
       >
-        {isSubmitting ? "Creating account..." : "Sign up"}
+        {isSubmitting ? "Создаём аккаунт..." : "Зарегистрироваться"}
       </button>
     </form>
   );

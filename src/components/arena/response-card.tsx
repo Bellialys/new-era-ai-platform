@@ -6,6 +6,8 @@ type ResponseCardProps = {
   canSaveWinner: boolean;
   isSavingWinner: boolean;
   isVoteLocked: boolean;
+  /** When set, hides the real model name and shows this label instead (e.g. "Модель A"). */
+  blindLabel?: string;
   onSelectWinner: (responseId: string) => void | Promise<void>;
 };
 
@@ -15,19 +17,34 @@ export function ResponseCard({
   canSaveWinner,
   isSavingWinner,
   isVoteLocked,
+  blindLabel,
   onSelectWinner,
 }: ResponseCardProps) {
+  const displayName = blindLabel ?? response.modelName;
+  const displayRole = blindLabel ? undefined : response.modelRole;
+
   const responseText =
     response.answerText ??
     response.errorMessage ??
     (response.isStreaming ? "Модель начала отвечать..." : "Модель не вернула ответ.");
+
   const canSelectWinner = response.status === "success" && !response.isStreaming && canSaveWinner;
   const isDisabled = !canSelectWinner || isVoteLocked || isWinner;
+
   const winnerButtonLabel = isSavingWinner
-    ? "Сохраняем Winner..."
+    ? "Сохраняем..."
     : isWinner
-      ? "Winner сохранён"
-      : "Сохранить Winner";
+      ? "Победитель сохранён"
+      : "Выбрать победителя";
+
+  async function handleCopy() {
+    if (!response.answerText) return;
+    try {
+      await navigator.clipboard.writeText(response.answerText);
+    } catch {
+      // clipboard not available — silently ignore
+    }
+  }
 
   return (
     <article
@@ -39,8 +56,8 @@ export function ResponseCard({
     >
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div>
-          <h2 className="text-xl font-bold text-white">{response.modelName}</h2>
-          <p className="text-sm text-violet-200">{response.modelRole}</p>
+          <h2 className="text-xl font-bold text-white">{displayName}</h2>
+          {displayRole ? <p className="text-sm text-violet-200">{displayRole}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <span
@@ -50,7 +67,7 @@ export function ResponseCard({
                 : "rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-100"
             }
           >
-            {response.isStreaming ? "Генерация" : response.status === "success" ? "Успех" : "Ошибка"}
+            {response.isStreaming ? "Генерация..." : response.status === "success" ? "Успех" : "Ошибка"}
           </span>
           {response.latencyMs !== undefined ? (
             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
@@ -70,8 +87,20 @@ export function ResponseCard({
         </div>
       </div>
 
-      <div className="mt-5 whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
-        {responseText}
+      <div className="relative mt-5">
+        <div className="whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
+          {responseText}
+        </div>
+        {response.status === "success" && !response.isStreaming && response.answerText ? (
+          <button
+            onClick={handleCopy}
+            title="Скопировать ответ"
+            className="absolute right-3 top-3 rounded-lg border border-white/10 bg-slate-900/60 px-2 py-1 text-xs text-slate-400 transition hover:border-white/25 hover:text-white"
+            type="button"
+          >
+            Копировать
+          </button>
+        ) : null}
       </div>
 
       <button
@@ -82,13 +111,6 @@ export function ResponseCard({
       >
         {winnerButtonLabel}
       </button>
-      {response.status === "success" && !canSaveWinner ? (
-        <p className="mt-2 text-xs text-amber-100">
-          {response.isStreaming
-            ? "Winner voting появится после завершения генерации и сохранения сравнения."
-            : "Winner voting появится после успешного сохранения сравнения в Supabase."}
-        </p>
-      ) : null}
     </article>
   );
 }

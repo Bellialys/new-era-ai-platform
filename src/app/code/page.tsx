@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SiteHeader } from "@/components/layout/site-header";
 import { CodeArena } from "@/components/code-arena/code-arena";
 
 export const metadata: Metadata = {
@@ -10,15 +11,10 @@ export const metadata: Metadata = {
 export default function CodePage() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <header className="mb-10">
-        <nav className="mb-6 flex items-center justify-end gap-4 text-sm text-slate-300">
-          <Link className="transition hover:text-white" href="/history">
-            История
-          </Link>
-          <Link className="transition hover:text-white" href="/">
-            На главную
-          </Link>
-        </nav>
+      <SiteHeader>
+        <span className="hidden text-sm text-slate-500 sm:inline">/ Code Arena</span>
+      </SiteHeader>
+      <div className="mb-10 mt-6">
         <div className="flex items-center gap-3">
           <span className="rounded-full bg-violet-500/20 px-3 py-1 text-xs font-bold text-violet-200">
             Code Arena
@@ -32,7 +28,12 @@ export default function CodePage() {
           Задай кодовую задачу, выбери язык и фреймворк — получи решения от нескольких
           AI-моделей одновременно и выбери лучшее.
         </p>
-      </header>
+        <div className="mt-3 flex gap-4 text-sm text-slate-400">
+          <Link className="transition hover:text-white" href="/">На главную</Link>
+          <Link className="transition hover:text-white" href="/arena">Prompt Arena</Link>
+          <Link className="transition hover:text-white" href="/history">История</Link>
+        </div>
+      </div>
 
       <CodeArena />
     </main>

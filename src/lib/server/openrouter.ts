@@ -69,7 +69,7 @@ interface OpenRouterStreamChunk {
  * Get OpenRouter API key from environment
  * @throws Error if API key is not configured
  */
-function getApiKey(): string {
+export function getApiKey(): string {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new ApiError(

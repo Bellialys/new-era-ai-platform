@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+
   PROMPT_MIN_LENGTH,
   PROMPT_MAX_LENGTH,
   MODEL_MIN_SELECT,
@@ -23,6 +24,10 @@ import {
   resolveRequestIdentity,
   applyGuestCookie,
 } from "@/lib/server";
+
+// Vercel: allow up to 60s for OpenRouter AI calls
+export const maxDuration = 60;
+
 
 interface CompareRequest {
   prompt?: unknown;

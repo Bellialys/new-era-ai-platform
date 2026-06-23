@@ -41,11 +41,11 @@
 ## Текущий статус проекта
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v0.7 - Code Arena Lite stabilization
+**Текущая фаза:** v0.9 - Stable Arena Hardening
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.7.0-alpha.1`
+**Текущая версия:** `v0.9.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
@@ -53,15 +53,15 @@
 <!-- SYNC:PROJECT_STATUS_END -->
 
 > **Разграничение версий:**
-> - `v0.7.0-alpha.1` — текущая alpha-стабилизация Code Arena Lite.
-> - `v0.6` — реализация Auth, Guest Mode, Profile, Avatar, Email Management и User-linked Arena находится в verification, не `done`.
-> - `v0.5.4` — Vote Security & Auth Foundation находится в verification до commit/release gate.
+> - `v0.9.0-alpha.1` — текущая alpha: Stable Arena Hardening (шаблоны, аналитика, anti-abuse).
+> - `v0.7.1-alpha.1` — Arena UX (streaming, blind mode, code diff).
+> - `v0.7.0-alpha.1` — Code Arena Lite.
 > - `v0.5.3` — последний полностью зафиксированный стабильный MVP-релиз.
 
 ```text
-v0.7 - Code Arena Lite stabilization
-# текущая alpha: Code Arena Lite без запуска пользовательского кода
-# v0.6/v0.7 нельзя считать stable, пока не пройдены typecheck, lint, build, docs:check, smoke и нужные DB checks
+v0.9 - Stable Arena Hardening
+# реализовано: prompt templates, code templates, /api/stats, guest anti-abuse, /history stats widget
+# v0.9 нельзя считать stable, пока не пройдены typecheck, lint, build, smoke
 ```
 
 Ближайший плановый UX-подэтап:

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+
   CODE_PROMPT_MIN_LENGTH,
   CODE_PROMPT_MAX_LENGTH,
   CODE_MODEL_MIN_SELECT,
   CODE_MODEL_MAX_SELECT,
   CODE_COMPARE_RATE_LIMIT_MAX_REQUESTS,
   CODE_COMPARE_RATE_LIMIT_WINDOW_MS,
+  GUEST_CODE_COMPARE_RATE_LIMIT_MAX_REQUESTS,
+  GUEST_CODE_COMPARE_RATE_LIMIT_WINDOW_MS,
   MODE_SLUG_CODE_ARENA,
   CODE_ARENA_LANGUAGES,
 } from "@/lib/arena/constants";
@@ -22,6 +25,10 @@ import {
   resolveRequestIdentity,
   applyGuestCookie,
 } from "@/lib/server";
+
+// Vercel: allow up to 60s for OpenRouter AI calls
+export const maxDuration = 60;
+
 
 interface CodeCompareRequest {
   prompt?: unknown;
@@ -109,10 +116,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<CodeCompa
         ? `user:${identity.userId}`
         : `guest:${identity.guestId}`;
     const rateLimitKey = `code-compare:${rateLimitSubKey}`;
+    const isGuest = identity.kind === "guest";
     const rateLimit = await checkRateLimit(
       rateLimitKey,
-      CODE_COMPARE_RATE_LIMIT_MAX_REQUESTS,
-      CODE_COMPARE_RATE_LIMIT_WINDOW_MS
+      isGuest ? GUEST_CODE_COMPARE_RATE_LIMIT_MAX_REQUESTS : CODE_COMPARE_RATE_LIMIT_MAX_REQUESTS,
+      isGuest ? GUEST_CODE_COMPARE_RATE_LIMIT_WINDOW_MS : CODE_COMPARE_RATE_LIMIT_WINDOW_MS
     );
 
     if (rateLimit.limited) {

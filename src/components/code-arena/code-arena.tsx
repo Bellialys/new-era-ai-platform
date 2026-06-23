@@ -2,21 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
+import { createOrRefreshGuestSession, type GuestInfo } from "@/lib/guest";
+import type { ArenaModel, ArenaApiResponse, ArenaResponseView } from "@/types/arena";
 import {
-  createOrRefreshGuestSession,
-  readGuestInfo,
-  type GuestInfo,
-} from "@/lib/guest";
-import type { ArenaApiResponse, ArenaModel, ArenaResponseView } from "@/types/arena";
-import {
+  type CodeArenaLanguage,
   CODE_PROMPT_MAX_LENGTH,
   CODE_MODEL_MIN_SELECT,
   CODE_MODEL_MAX_SELECT,
-  type CodeArenaLanguage,
 } from "@/lib/arena/constants";
 import { AccessGate } from "@/components/arena/access-gate";
 import { ProgrammingContextForm } from "./programming-context-form";
 import { CodeResponseCard } from "./code-response-card";
+import { CodeDiffView } from "./code-diff-view";
+import { CodeTemplates } from "./code-templates";
 
 // ---------------------------------------------------------------------------
 // Identity state
@@ -35,8 +33,8 @@ const AVATAR_COLORS = [
 ];
 
 function getAvatarColorClass(seed: string): string {
-  const hash = seed.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? "bg-violet-500";
+  const n = parseInt(seed, 16) || seed.charCodeAt(0) || 0;
+  return AVATAR_COLORS[Math.abs(n) % AVATAR_COLORS.length];
 }
 
 function GuestCard({ info, onSignIn }: { info: GuestInfo; onSignIn: () => void }) {
@@ -68,8 +66,8 @@ export function CodeArena() {
   // Identity
   const [identityMode, setIdentityMode] = useState<IdentityMode>("loading");
   const [guestInfo, setGuestInfo] = useState<GuestInfo | null>(null);
-  const [guestCreateError, setGuestCreateError] = useState<string | null>(null);
   const [isCreatingGuest, setIsCreatingGuest] = useState(false);
+  const [guestCreateError, setGuestCreateError] = useState<string | null>(null);
 
   // Form state
   const [prompt, setPrompt] = useState("");
@@ -94,6 +92,7 @@ export function CodeArena() {
   const [voteStatus, setVoteStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [voteMessage, setVoteMessage] = useState<string | null>(null);
   const [savingVoteResponseId, setSavingVoteResponseId] = useState<string | null>(null);
+  const [blindMode, setBlindMode] = useState(true);
 
   // ---------------------------------------------------------------------------
   // Identity resolution
@@ -101,16 +100,8 @@ export function CodeArena() {
   useEffect(() => {
     const supabase = getSupabaseClient();
     if (!supabase) {
-      let mounted = true;
-      queueMicrotask(() => {
-        if (!mounted) return;
-        const stored = readGuestInfo();
-        setGuestInfo(stored);
-        setIdentityMode(stored ? "guest" : "gate");
-      });
-      return () => {
-        mounted = false;
-      };
+      queueMicrotask(() => setIdentityMode("gate"));
+      return;
     }
 
     let mounted = true;
@@ -121,19 +112,15 @@ export function CodeArena() {
         setIdentityMode("user");
         return;
       }
-      const stored = readGuestInfo();
+      const stored = localStorage.getItem("na_guest_info");
       if (stored) {
-        createOrRefreshGuestSession()
-          .then((info) => {
-            if (!mounted) return;
-            setGuestInfo(info);
-          })
-          .catch(() => {
-            if (!mounted) return;
-            setGuestInfo(stored);
-          });
-        setGuestInfo(stored);
-        setIdentityMode("guest");
+        try {
+          const info = JSON.parse(stored) as GuestInfo;
+          setGuestInfo(info);
+          setIdentityMode("guest");
+        } catch {
+          setIdentityMode("gate");
+        }
       } else {
         setIdentityMode("gate");
       }
@@ -145,10 +132,15 @@ export function CodeArena() {
         setIdentityMode("user");
         setGuestInfo(null);
       } else {
-        const stored = readGuestInfo();
+        const stored = localStorage.getItem("na_guest_info");
         if (stored) {
-          setGuestInfo(stored);
-          setIdentityMode("guest");
+          try {
+            const info = JSON.parse(stored) as GuestInfo;
+            setGuestInfo(info);
+            setIdentityMode("guest");
+          } catch {
+            setIdentityMode("gate");
+          }
         } else {
           setIdentityMode("gate");
         }
@@ -160,51 +152,6 @@ export function CodeArena() {
       subscription.unsubscribe();
     };
   }, []);
-
-  // ---------------------------------------------------------------------------
-  // Load code models when identity is resolved
-  // ---------------------------------------------------------------------------
-  const loadModels = useCallback(async () => {
-    setModelsLoading(true);
-    try {
-      const response = await fetch("/api/code-models");
-      if (!response.ok) {
-        console.error("Failed to load code models");
-        return;
-      }
-      const data = (await response.json()) as { status: string; models: ArenaModel[] };
-      if (data.status === "success") {
-        setModels(data.models);
-        // Pre-select first two by default
-        if (data.models.length >= 2) {
-          setSelectedModelIds([data.models[0].id, data.models[1].id]);
-        }
-      }
-    } catch (err) {
-      console.error("Code models load error:", err);
-    } finally {
-      setModelsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (identityMode === "guest" || identityMode === "user") {
-      void Promise.resolve().then(loadModels);
-    }
-  }, [identityMode, loadModels]);
-
-  // ---------------------------------------------------------------------------
-  // Handlers
-  // ---------------------------------------------------------------------------
-  function handleToggleModel(modelId: string) {
-    setSelectedModelIds((prev) => {
-      if (prev.includes(modelId)) {
-        return prev.filter((id) => id !== modelId);
-      }
-      if (prev.length >= CODE_MODEL_MAX_SELECT) return prev;
-      return [...prev, modelId];
-    });
-  }
 
   async function handleContinueAsGuest() {
     setIsCreatingGuest(true);
@@ -220,6 +167,51 @@ export function CodeArena() {
     } finally {
       setIsCreatingGuest(false);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Load code models when identity is resolved
+  // ---------------------------------------------------------------------------
+  const loadModels = useCallback(async () => {
+    setModelsLoading(true);
+    try {
+      const response = await fetch("/api/code-models");
+      if (!response.ok) {
+        console.error("Failed to load code models");
+        return;
+      }
+      const data = (await response.json()) as { status: string; models: ArenaModel[] };
+      if (data.status === "success") {
+        setModels(data.models);
+        if (data.models.length >= 2) {
+          setSelectedModelIds([data.models[0].id, data.models[1].id]);
+        }
+      }
+    } catch (err) {
+      console.error("Code models load error:", err);
+    } finally {
+      setModelsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (identityMode === "guest" || identityMode === "user") {
+      // async dispatch to avoid synchronous setState within effect
+      void Promise.resolve().then(() => loadModels());
+    }
+  }, [identityMode, loadModels]);
+
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
+  function handleToggleModel(modelId: string) {
+    setSelectedModelIds((prev) => {
+      if (prev.includes(modelId)) {
+        return prev.filter((id) => id !== modelId);
+      }
+      if (prev.length >= CODE_MODEL_MAX_SELECT) return prev;
+      return [...prev, modelId];
+    });
   }
 
   async function handleSubmit() {
@@ -240,6 +232,7 @@ export function CodeArena() {
     setWinnerResponseId(null);
     setVoteStatus("idle");
     setVoteMessage(null);
+    setBlindMode(true);
     setCurrentLanguage(language);
     setCurrentFramework(framework);
 
@@ -309,7 +302,7 @@ export function CodeArena() {
       const res = await fetch("/api/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, responseId, voteType: "best" }),
+        body: JSON.stringify({ taskId, winnerResponseId: responseId, voteType: "best" }),
       });
 
       const data = (await res.json()) as { status?: string; error?: { message?: string } };
@@ -356,7 +349,6 @@ export function CodeArena() {
 
   return (
     <div className="grid gap-6">
-      {/* Identity indicator */}
       {identityMode === "guest" && guestInfo ? (
         <GuestCard info={guestInfo} onSignIn={() => { window.location.href = "/login"; }} />
       ) : null}
@@ -384,7 +376,20 @@ export function CodeArena() {
           />
         </div>
 
-        <div className="mt-5 flex items-baseline justify-between gap-4">
+        <div className="mt-5 mb-2">
+          <CodeTemplates
+            onSelect={(text, lang) => {
+              setPrompt(text);
+              if (lang) {
+                const validLangs = ["TypeScript","JavaScript","Python","SQL","Go","Rust","Java","C#","PHP","Ruby"];
+                if (validLangs.includes(lang)) {
+                  setLanguage(lang as CodeArenaLanguage);
+                }
+              }
+            }}
+          />
+        </div>
+        <div className="flex items-baseline justify-between gap-4">
           <label className="block text-sm font-medium text-slate-200" htmlFor="code-prompt">
             Задача
           </label>
@@ -409,7 +414,6 @@ export function CodeArena() {
           placeholder="Например: напиши Next.js API route для отправки запроса в OpenRouter с обработкой ошибок"
         />
 
-        {/* Model selector */}
         <div className="mt-6">
           <div className="flex items-center justify-between gap-4">
             <h3 className="text-sm font-semibold text-slate-200">Модели для сравнения</h3>
@@ -542,7 +546,28 @@ export function CodeArena() {
               {voteMessage}
             </div>
           ) : null}
-          {responses.map((response) => (
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+            <span className="text-xs text-slate-400">{responses.length} моделей</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setBlindMode((v) => !v)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                  blindMode && !winnerResponseId
+                    ? "border-violet-400/50 bg-violet-500/20 text-violet-200"
+                    : "border-white/15 text-slate-400 hover:border-white/30 hover:text-white"
+                }`}
+                type="button"
+              >
+                {blindMode && !winnerResponseId ? "🙈 Скрыто" : "👁 Открыто"}
+              </button>
+            </div>
+          </div>
+          {blindMode && !winnerResponseId && (
+            <p className="rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-2.5 text-xs text-violet-200">
+              Режим слепого тестирования — имена скрыты до голосования.
+            </p>
+          )}
+          {responses.map((response, index) => (
             <CodeResponseCard
               key={response.id}
               response={response}
@@ -550,9 +575,12 @@ export function CodeArena() {
               canSaveWinner={canSaveWinner}
               isSavingWinner={savingVoteResponseId === response.id}
               isVoteLocked={voteStatus === "saving"}
+              blindLabel={(blindMode && !winnerResponseId) ? (["Модель A", "Модель B", "Модель C"][index] ?? `Модель ${index + 1}`) : undefined}
               onSelectWinner={handleSelectWinner}
             />
           ))}
+          {/* Code diff between first two successful responses */}
+          <CodeDiffView responses={responses} blindMode={blindMode && !winnerResponseId} />
         </section>
       ) : null}
     </div>

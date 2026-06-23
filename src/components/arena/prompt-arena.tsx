@@ -270,6 +270,7 @@ export function PromptArena() {
   const [voteStatus, setVoteStatus] = useState<VoteStatus>("idle");
   const [voteMessage, setVoteMessage] = useState<string | null>(null);
   const [savingVoteResponseId, setSavingVoteResponseId] = useState<string | null>(null);
+  const [blindMode, setBlindMode] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -559,6 +560,7 @@ export function PromptArena() {
     setWinnerResponseId(null);
     setVoteStatus("idle");
     setVoteMessage(null);
+    setBlindMode(true);
     setSavingVoteResponseId(null);
     setIsLoading(false);
   }
@@ -618,7 +620,7 @@ export function PromptArena() {
 
     (async () => {
       try {
-        const response = await fetch("/api/compare", {
+        const response = await fetch("/api/stream-compare", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -814,6 +816,10 @@ export function PromptArena() {
           voteStatus={voteStatus}
           voteMessage={voteMessage}
           savingVoteResponseId={savingVoteResponseId}
+          prompt={prompt}
+          taskId={taskId}
+          blindMode={blindMode}
+          onToggleBlindMode={() => setBlindMode((v) => !v)}
           onSelectWinner={handleSelectWinner}
         />
       </section>

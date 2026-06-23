@@ -1,4 +1,5 @@
 import type { ArenaModel } from "@/types/arena";
+import { PromptTemplates } from "./prompt-templates";
 
 type ArenaFormProps = {
   prompt: string;
@@ -42,6 +43,9 @@ export function ArenaForm({
       </div>
 
       <div className="mt-5 flex items-baseline justify-between gap-4">
+        <div className="mb-2">
+          <PromptTemplates onSelect={onPromptChange} />
+        </div>
         <label className="block text-sm font-medium text-slate-200" htmlFor="prompt">
           Prompt
         </label>
