@@ -4,18 +4,7 @@
   "currentVersion": "0.9.0-alpha.1",
   "currentPhase": "v0.9 - Stable Arena Hardening",
   "status": "in_development",
-  "activeTaskIds": [
-    "V054-02",
-    "V061-01",
-    "V062-01",
-    "V063-01",
-    "V064-01",
-    "V065-01",
-    "V066-01",
-    "V067-01",
-    "V070-01",
-    "V080-01"
-  ],
-  "lastSyncedAt": "2026-06-23T02:00:00.000Z",
+  "activeTaskIds": [],
+  "lastSyncedAt": "2026-06-23T10:30:00.000Z",
   "baseBranch": "main"
 }

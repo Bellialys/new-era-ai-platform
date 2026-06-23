@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V064-01",
   "title": "v0.6.4 Profile MVP",
-  "status": "verify",
+  "status": "done",
   "priority": "medium",
   "files": [
     "20-auth-guest-profile-plan.md",
@@ -22,7 +22,7 @@
     "test"
   ],
   "lastUpdated": "2026-06-17T10:56:43.828Z",
-  "commitHash": null,
+  "commitHash": "25a651f",
   "transitions": [
     {
       "from": null,
@@ -60,6 +60,12 @@
       "from": "verify",
       "to": "verify",
       "at": "2026-06-17T10:56:43.828Z"
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-06-23T10:30:00.000Z",
+      "note": "Offline checks pass (typecheck, lint, docs:check, state:check). Build verified via Vercel production deployment 25a651f (READY). Smoke verified via live production endpoint."
     }
   ],
   "notes": "Extend profiles (first_name, last_name, display_name, avatar_url, role, plan, updated_at). /profile shows identity + plan + role + basic stats (tasks/responses/votes). Owner can edit names; other profiles are not accessible."

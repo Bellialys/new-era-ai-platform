@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V067-01",
   "title": "v0.6.7 User-linked Arena",
-  "status": "verify",
+  "status": "done",
   "priority": "medium",
   "files": [
     "src/app/api/compare/route.ts",
@@ -22,7 +22,7 @@
     "test"
   ],
   "lastUpdated": "2026-06-17T10:56:46.171Z",
-  "commitHash": null,
+  "commitHash": "25a651f",
   "transitions": [
     {
       "from": null,
@@ -60,6 +60,12 @@
       "from": "verify",
       "to": "verify",
       "at": "2026-06-17T10:56:46.171Z"
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-06-23T10:30:00.000Z",
+      "note": "Offline checks pass (typecheck, lint, docs:check, state:check). Build verified via Vercel production deployment 25a651f (READY). Smoke verified via live production endpoint."
     }
   ],
   "notes": "/api/compare resolves user vs guest: account runs save tasks.user_id, guest runs save tasks.anonymous_session_id. Profile statistics count real tasks/responses/votes; prepares future user history."

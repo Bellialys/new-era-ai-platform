@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V054-02",
   "title": "Vote security, SSR auth foundation and audit fixes",
-  "status": "verify",
+  "status": "done",
   "priority": "high",
   "files": [
     "src/lib/supabase.ts",
@@ -43,7 +43,7 @@
     "production:smoke"
   ],
   "lastUpdated": "2026-06-17T21:35:50.679Z",
-  "commitHash": null,
+  "commitHash": "25a651f",
   "transitions": [
     {
       "from": null,
@@ -84,6 +84,12 @@
       "to": "verify",
       "at": "2026-06-17T21:35:50.679Z",
       "note": "Final verification: preview dpl_DLN6fRpAsjd6CCcBsncK4iu2WZiX is READY and protected Preview API checks passed through Vercel curl; production smoke passed with 16 models after DB reconciliation."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-06-23T10:30:00.000Z",
+      "note": "Offline checks pass (typecheck, lint, docs:check, state:check). Build verified via Vercel production deployment 25a651f (READY). Smoke verified via live production endpoint."
     }
   ],
   "notes": "Closes audit nuances: server-authoritative vote identity via @supabase/ssr, middleware session refresh, vote rate-limit, atomic cast_best_vote RPC, route error/loading/not-found boundaries, removal of the already-documented-as-removed /arena-voting alias, and a Node .nvmrc pin. Migration reconciliation and protected Preview verification are complete; remains in verify until commit/release sign-off."

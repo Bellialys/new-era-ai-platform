@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V063-01",
   "title": "v0.6.3 Auth SSR",
-  "status": "verify",
+  "status": "done",
   "priority": "high",
   "files": [
     "20-auth-guest-profile-plan.md",
@@ -24,7 +24,7 @@
     "test"
   ],
   "lastUpdated": "2026-06-17T10:56:43.050Z",
-  "commitHash": null,
+  "commitHash": "25a651f",
   "transitions": [
     {
       "from": null,
@@ -62,6 +62,12 @@
       "from": "verify",
       "to": "verify",
       "at": "2026-06-17T10:56:43.050Z"
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-06-23T10:30:00.000Z",
+      "note": "Offline checks pass (typecheck, lint, docs:check, state:check). Build verified via Vercel production deployment 25a651f (READY). Smoke verified via live production endpoint."
     }
   ],
   "notes": "Install @supabase/ssr; browser + server clients; cookie session refresh; /auth and /auth/callback; email/password login/signup/logout. OAuth (Google/GitHub) later."
