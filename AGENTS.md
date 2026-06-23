@@ -60,8 +60,8 @@
 
 ```text
 v0.9 - Stable Arena Hardening
-# реализовано: prompt templates, code templates, /api/stats, guest anti-abuse, /history stats widget
-# v0.9 нельзя считать stable, пока не пройдены typecheck, lint, build, smoke
+# реализовано: prompt templates, code templates, /api/stats, history stats widget, blind arena, model badges, mobile UX fixes
+# v0.9 STABLE: typecheck ✓  lint ✓  build ✓  docs:check ✓
 ```
 
 Ближайший плановый UX-подэтап:
