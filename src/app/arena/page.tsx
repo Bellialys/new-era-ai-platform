@@ -21,6 +21,14 @@ export default function ArenaPage() {
       </div>
 
       <PromptArena />
+      <footer className="mt-12 border-t border-white/5 pt-6 text-center text-xs text-slate-600">
+        <p>
+          Новая эпоха AI Platform &nbsp;·&nbsp;
+          <a href="/privacy" className="transition hover:text-slate-400">Политика конфиденциальности</a>
+          &nbsp;·&nbsp;
+          <a href="/terms" className="transition hover:text-slate-400">Условия использования</a>
+        </p>
+      </footer>
     </main>
   );
 }

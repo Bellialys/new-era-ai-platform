@@ -41,11 +41,11 @@
 ## Текущий статус проекта
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v0.9 - Stable Arena Hardening
+**Текущая фаза:** v1.0 - Stable Arena MVP
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.9.0-alpha.1`
+**Текущая версия:** `v1.0.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
