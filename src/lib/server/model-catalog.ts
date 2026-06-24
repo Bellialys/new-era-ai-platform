@@ -72,13 +72,36 @@ function badgeFromTags(tags: string[] | null, priceLabel: string | null): string
   return priceLabel === "free" ? "Free" : undefined;
 }
 
-/** Access levels visible to each identity kind. */
-function allowedLevelsFor(identity: RequestIdentity | null): string[] {
+/** Access levels visible to each identity kind, optionally expanded by plan/role. */
+function allowedLevelsFor(identity: RequestIdentity | null, plan?: string | null): string[] {
   if (identity === null || identity.kind === "none" || identity.kind === "guest") {
     return ["anonymous"];
   }
-  // Authenticated user: anonymous + registered (premium reserved for future)
+  // Pro and admin users get access to all access levels.
+  if (plan === "pro" || plan === "admin") {
+    return ["anonymous", "registered", "premium"];
+  }
+  // Authenticated free users: anonymous + registered
   return ["anonymous", "registered"];
+}
+
+/** Fetch the plan/role for an authenticated user. Returns null if unavailable. */
+async function fetchUserPlan(userId: string): Promise<string | null> {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) return null;
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role, plan")
+      .eq("id", userId)
+      .single();
+    if (!data) return null;
+    const row = data as { role: string; plan: string };
+    if (row.role === "admin") return "admin";
+    return row.plan ?? "free";
+  } catch {
+    return null;
+  }
 }
 
 function fallbackCatalog(identity: RequestIdentity | null): ResolvedModel[] {
@@ -122,7 +145,8 @@ export async function loadModelCatalog(
     return fallbackCatalog(identity);
   }
 
-  const levels = allowedLevelsFor(identity);
+  const plan = identity?.kind === "user" ? await fetchUserPlan(identity.userId) : null;
+  const levels = allowedLevelsFor(identity, plan);
 
   try {
     const { data, error } = await supabase
@@ -251,7 +275,8 @@ export async function resolveSelectedModels(
     }
   }
 
-  const allowedLevels = allowedLevelsFor(identity);
+  const plan = identity?.kind === "user" ? await fetchUserPlan(identity.userId) : null;
+  const allowedLevels = allowedLevelsFor(identity, plan);
   const bySelectionId = new Map(allModels.map((model) => [model.selectionId, model]));
 
   return ids.map((id) => {
