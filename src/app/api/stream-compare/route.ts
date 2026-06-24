@@ -22,6 +22,7 @@ import {
   resolveRequestIdentity,
   getApiKey,
   logApiRequest,
+  checkDailyLimit,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -182,6 +183,20 @@ export async function POST(request: NextRequest): Promise<Response> {
     return new Response(
       JSON.stringify({ status: "error", error: { code: "AUTH_REQUIRED", message: "Sign in or continue as a guest." } }),
       { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  const dailyCheck = await checkDailyLimit(identity.userId, identity.guestId);
+  if (!dailyCheck.allowed) {
+    logApiRequest("POST", "/api/stream-compare", 429, Date.now() - startTime);
+    return new Response(
+      JSON.stringify({
+        error: "DAILY_LIMIT_EXCEEDED",
+        used: dailyCheck.used,
+        limit: dailyCheck.limit,
+        message: "Дневной лимит запросов исчерпан. Обновите план для большего количества запросов.",
+      }),
+      { status: 429, headers: { "Content-Type": "application/json" } }
     );
   }
 
