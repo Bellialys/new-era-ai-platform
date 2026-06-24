@@ -95,7 +95,7 @@ npm audit --audit-level=moderate
 - [ ] Если меняется больше 5 файлов — дать Stop Signal и дождаться подтверждения.
 - [ ] Сформулировать plan self-review: scope, риски, альтернативы, affected docs.
 - [ ] Не редактировать auto-sync блоки вручную без необходимости.
-- [ ] Проверить смысловую согласованность `AGENTS`, `CLAUDE`, `23`, `24`, `25-definition-of-done`, `25-production-excellence`, `36`.
+- [ ] Проверить смысловую согласованность `AGENTS`, `CLAUDE`, `23`, `24`, `26-definition-of-done`, `25-production-excellence`, `36`.
 - [ ] Перед commit выполнить staged diff review, `git diff --cached --check`, secret scan, `state:check`, `docs:check`.
 - [ ] Commit message — Conventional Commit на английском.
 - [ ] В отчёте указать commit hash, проверки, blocked/unverified items.

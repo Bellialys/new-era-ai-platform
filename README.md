@@ -303,7 +303,7 @@ server-side hardcoded allowlist
 | `.project/tasks/*.json` | Канонический список задач для Codex |
 | `23-codex-quality-rules.md` | Правила качества для Codex |
 | `24-codex-active-rule-set.md` | Активный rule set |
-| `25-definition-of-done.md` | Definition of Done |
+| `26-definition-of-done.md` | Definition of Done |
 | `27-environments.md` | Главный документ по окружениям Local / Preview / Staging / Production |
 | `28-api-contracts.md` | API contracts |
 | `29-database-ownership.md` | Владение данными и связи таблиц |

@@ -311,7 +311,7 @@ VERCEL_GIT_COMMIT_SHA
 | `package-lock.json` | lockfile leaf |
 | `tsconfig.json`, `next.config.ts`, `eslint.config.mjs`, `postcss.config.mjs`, `vitest.config.ts` | tool/framework config leaves |
 | `supabase/migrations/20260615120000_atomic_best_vote_rpc.sql` | последний элемент migration chain |
-| `08-database.md`, `09-api-structure.md`, `10-ui-pages.md`, `11-ai-models.md`, `14-roadmap.md`, `15-changelog.md`, `18-team-mode-spec.md`, `24-codex-active-rule-set.md`, `25-definition-of-done.md`, `28-api-contracts.md`, `29-database-ownership.md`, `30-data-retention-policy.md`, `31-image-arena-spec.md` | docs leaves; не runtime dead code |
+| `08-database.md`, `09-api-structure.md`, `10-ui-pages.md`, `11-ai-models.md`, `14-roadmap.md`, `15-changelog.md`, `18-team-mode-spec.md`, `24-codex-active-rule-set.md`, `26-definition-of-done.md`, `28-api-contracts.md`, `29-database-ownership.md`, `30-data-retention-policy.md`, `31-image-arena-spec.md` | docs leaves; не runtime dead code |
 
 ## 8. Unresolved/Broken References
 
@@ -419,7 +419,7 @@ VERCEL_GIT_COMMIT_SHA
 21-access-gate-policy.md
 23-codex-quality-rules.md
 24-codex-active-rule-set.md
-25-definition-of-done.md
+26-definition-of-done.md
 27-environments.md
 28-api-contracts.md
 29-apply-documentation-audit-fixes.ps1

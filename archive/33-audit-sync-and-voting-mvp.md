@@ -17,7 +17,7 @@ Current practical status:
 
 ### Added
 
-- `25-definition-of-done.md`.
+- `26-definition-of-done.md`.
 - `29-database-ownership-policy.md`.
 - `28-api-contracts.md` with the MVP API details.
 - `30-data-retention-policy.md` with the MVP retention rules.

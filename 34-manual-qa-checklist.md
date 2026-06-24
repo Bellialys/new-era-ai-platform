@@ -630,7 +630,7 @@ If manual verification is impossible, Codex must clearly say what was not checke
 
 ## 20. Related documents
 
-- `25-definition-of-done.md`
+- `26-definition-of-done.md`
 - `28-api-contracts.md`
 - `29-database-ownership.md`, if present
 - `30-data-retention-policy.md`

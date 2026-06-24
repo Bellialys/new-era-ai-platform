@@ -26,7 +26,7 @@ v1.7.0-alpha.1 - Code Arena Runner
 
 ### Changed
 
-- `25-definition-of-done.md`, `36-document-sync-policy.md`, `41-enterprise-readiness-roadmap.md` и `19-development-checklist.md` синхронизированы с production-grade agent workflow и текущим этапом `v1.7`.
+- `26-definition-of-done.md`, `36-document-sync-policy.md`, `41-enterprise-readiness-roadmap.md` и `19-development-checklist.md` синхронизированы с production-grade agent workflow и текущим этапом `v1.7`.
 
 ## v1.7.0-alpha.1 Documentation and Migration Sync - 2026-06-24
 

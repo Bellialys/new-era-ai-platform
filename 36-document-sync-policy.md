@@ -69,7 +69,7 @@
 
 Это правило проверяется автоматически (`state:check` / `docs:check`) и при
 переводе задачи через `state:task`. Подробности Definition of Done —
-в `25-definition-of-done.md`.
+в `26-definition-of-done.md`.
 
 ## SYNC-маркеры
 
@@ -188,7 +188,7 @@ npm run verify
 - `CLAUDE.md`;
 - `23-codex-quality-rules.md`;
 - `24-codex-active-rule-set.md`;
-- `25-definition-of-done.md`;
+- `26-definition-of-done.md`;
 - `25-production-excellence.md`;
 - `36-document-sync-policy.md`;
 - `.project/state.json`;

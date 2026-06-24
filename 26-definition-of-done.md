@@ -1,4 +1,4 @@
-# 25 - Definition of Done
+# 26 - Definition of Done
 
 ## Назначение
 
