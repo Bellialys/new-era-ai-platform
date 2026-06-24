@@ -9,7 +9,7 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v0.7 - Code Arena Lite stabilization
+**Текущая фаза:** v1.7 - Code Arena Runner
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
@@ -17,10 +17,10 @@
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.7.0-alpha.1`
+**Текущая версия:** `v1.7.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
-Текущая рабочая версия проекта: **v0.7.0-alpha.1 - Code Arena Lite stabilization**.
+Текущая рабочая версия проекта: **v1.7.0-alpha.1 - Code Arena Runner**.
 
 Статус синхронизирован с `.project/state.json`; порядок будущих этапов описан в `14-roadmap.md`.
 
@@ -36,6 +36,10 @@
 - backend route `POST /api/guest`;
 - backend route `GET /api/code-models`;
 - backend route `POST /api/code-compare`;
+- backend route `POST /api/judge`;
+- backend route `POST /api/code-run`;
+- backend route `GET /api/admin/audit`;
+- backend route `GET /api/admin/usage`;
 - серверная интеграция OpenRouter;
 - Supabase PostgreSQL migrations для `models`, `tasks`, `model_responses` и `profiles`;
 - server-side Supabase client для сохранения Prompt Arena;
@@ -54,20 +58,16 @@
 - Access Gate и guest mode через server-set httpOnly cookie `na_guest`;
 - Auth SSR, login/signup/logout, reset/update password flow;
 - профиль, базовая статистика, avatar upload и email change request;
-- Code Arena Lite без запуска пользовательского кода;
+- Code Arena: сравнение кодовых решений отдельно от запуска; запуск кода доступен авторизованным пользователям через внешний Piston runner;
 - `package-lock.json`;
 - текущий `typecheck` проходит; остальные проверки должны пройти перед stable/release.
 
 Пока не готово как стабильный пользовательский этап:
 
-- UX-подэтап `v0.7.1`: streaming, blind voting, Code Diff, share/copy и guest anti-abuse;
-- история сравнений;
-- публичные ссылки на батлы и Open Graph preview;
-- многокритериальная оценка ответов;
-- production deploy на Vercel;
-- полная release-верификация v0.6/v0.7;
-- админ-панель;
-- Judge Mode, Leaderboard, Code Arena Runner и AI Team Mode.
+- release-gate для `v1.7.0-alpha.1`: повторная проверка docs/state/typecheck/lint/build/schema;
+- live smoke внешнего runner и admin routes на целевом окружении;
+- Image Arena;
+- AI Team Mode.
 
 ## Главная цель
 
@@ -201,7 +201,7 @@ server-side hardcoded allowlist
 
 ### `POST /api/compare`
 
-Текущий запрос `v0.7.0-alpha.1`:
+Текущий запрос `v1.7.0-alpha.1`:
 
 ```json
 {
@@ -211,7 +211,7 @@ server-side hardcoded allowlist
 }
 ```
 
-Текущий ответ `v0.7.0-alpha.1`:
+Текущий ответ `v1.7.0-alpha.1`:
 
 ```json
 {
@@ -239,7 +239,7 @@ server-side hardcoded allowlist
 
 ### `POST /api/vote`
 
-Текущий запрос `v0.7.0-alpha.1`:
+Текущий запрос `v1.7.0-alpha.1`:
 
 ```json
 {
@@ -269,7 +269,7 @@ server-side hardcoded allowlist
 }
 ```
 
-Code Arena Lite не запускает код, не выполняет тесты и не использует sandbox. Runner остаётся отдельным поздним этапом.
+`POST /api/code-compare` только сравнивает кодовые ответы моделей и не запускает их. `POST /api/code-run` отдельно передаёт код во внешний Piston runner; endpoint доступен только авторизованным пользователям и не выполняет пользовательский код на сервере приложения.
 
 Подробный контракт API описан в `28-api-contracts.md`.
 
@@ -325,7 +325,7 @@ Code Arena Lite не запускает код, не выполняет тест
 
 ## Главные правила разработки
 
-1. Сначала стабилизируем текущие Arena-режимы. Code Arena Lite разрешён в v0.7, UX/Fair Voting улучшения идут через v0.7.1, но Runner, Judge, Leaderboard, Image Arena и AI Team Mode добавляются только по `14-roadmap.md`.
+1. Текущий этап — `v1.7 - Code Arena Runner`; порядок дальнейших этапов остаётся в `14-roadmap.md`.
 2. Сначала чиним production-ошибки, потом добавляем новые функции.
 3. Все AI-запросы идут только через backend. Секретные ключи не попадают во frontend и в GitHub.
 4. Секреты хранятся только в `.env.local` (локально) и Vercel Environment Variables (production).
@@ -334,5 +334,5 @@ Code Arena Lite не запускает код, не выполняет тест
 7. Все изменения схемы базы данных — только через миграции; после применения сверяем версии миграций (`list_migrations`) с локальными файлами.
 8. Документация обновляется в том же commit, что и код. Изменил схему или API-контракт — сразу правишь соответствующий `.md`.
 9. Model ID проверяем на OpenRouter перед добавлением в базу или код.
-10. Не запускаем пользовательский код до отдельной безопасной версии Runner (v1.7).
+10. Запуск пользовательского кода в v1.7 разрешён только через внешний runner с auth, rate limit и без доступа к server-side секретам.
 11. Каждый важный этап фиксируем через Git commit.

@@ -11,21 +11,21 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.3 - Judge Mode (stable)
+**Текущая фаза:** v1.7 - Code Arena Runner
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
-**Статус проекта:** `stable`
+**Статус проекта:** `in_development`
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.3.0`
+**Текущая версия:** `v1.7.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
 ```text
-v0.7.0-alpha.1 - Code Arena Lite stabilization
-# текущая рабочая ветка: v0.6/v0.7 функциональность есть в дереве, но этап не считается stable до полного verification gate
+v1.7.0-alpha.1 - Code Arena Runner
+# текущая рабочая ветка: внешний runner доступен авторизованным пользователям; этап остаётся in_development до полного release gate
 ```
 
 Сейчас уже есть:
@@ -39,6 +39,10 @@ v0.7.0-alpha.1 - Code Arena Lite stabilization
 - `/api/guest`;
 - `/api/code-models`;
 - `/api/code-compare`;
+- `/api/judge`;
+- `/api/code-run`;
+- `/api/admin/audit`;
+- `/api/admin/usage`;
 - OpenRouter на backend;
 - Supabase PostgreSQL migrations;
 - `/api/models` читает Supabase catalog с hardcoded fallback;
@@ -58,20 +62,24 @@ v0.7.0-alpha.1 - Code Arena Lite stabilization
 - Access Gate, guest session через httpOnly cookie `na_guest`;
 - Auth SSR, profile, avatar upload, email/password management;
 - Code Arena Lite без запуска пользовательского кода;
+- Judge Mode и сохранение `tasks.judge_verdict`;
+- Leaderboard;
+- admin routes для audit/usage/model/user management;
+- Code Arena Runner через внешний Piston runner для авторизованных пользователей;
 - подготовленные governance metadata для model catalog без утверждения live-verification OpenRouter IDs.
 
-Ближайший плановый UX-подэтап:
+Текущий release-gate для v1.7:
 
 ```text
-v0.7.1 - Arena UX and Fair Voting
-# streaming, blind voting, code diff, базовый share/copy и усиление защиты гостей
+v1.7.0-alpha.1 - Code Arena Runner
+# state/docs/package/migrations/API contracts/schema/build должны быть синхронизированы перед stable sign-off
 ```
 
 Следующий главный этап:
 
 ```text
-v0.8 - History and Production Readiness
-# история сравнений, публичные ссылки, критерии оценки, preview/production, observability и release gate
+v1.8 - Image Arena MVP
+# сравнение изображений от image-моделей только после storage/safety/release review
 ```
 
 Детальные планы текущих направлений вынесены в файлы:
@@ -102,18 +110,18 @@ v0.8 - History and Production Readiness
 | `v0.5.3` | Voting MVP Stabilization | Основная Prompt Arena сохраняет Winner vote через `/api/vote`, добавлен CI | Завершён |
 | `v0.5.4` | Vote Security & Auth Foundation | Vote dedup RPC, user-aware rate limiting, security headers (CSP/HSTS), proxy/session refresh fix | Verify |
 | `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, аватар, email/password, ограничения моделей | Verify |
-| `v0.7` | Code Arena Lite | Сравнение кодовых решений без запуска кода | Текущая alpha-стабилизация |
-| `v0.7.1` | Arena UX and Fair Voting | Streaming, Blind Arena, Code Diff, быстрый share/copy и guest anti-abuse | Следующий UX-подэтап |
+| `v0.7` | Code Arena Lite | Сравнение кодовых решений без запуска кода | Завершён |
+| `v0.7.1` | Arena UX and Fair Voting | Streaming, Blind Arena, Code Diff, быстрый share/copy и guest anti-abuse | Завершён |
 | `v0.8` | History and Production Readiness | История сравнений, публичные ссылки, критерии оценки, preview/production smoke, observability baseline | Завершён |
 | `v0.9` | Stable Arena Hardening | Финальная стабилизация Prompt Arena + Code Arena Lite перед v1.0 | Завершён |
 | `v1.0` | Stable Arena MVP | Первая стабильная публичная версия MVP | **Завершён** |
-| `v1.1` | Enterprise Readiness Foundation | SLO, monitoring, incident process, privacy/compliance baseline, supply-chain checks | **В разработке** |
-| `v1.2` | Multi Model Battle | Формальные бои моделей | Позже |
-| `v1.3` | Judge Mode | Модель-судья оценивает ответы | Позже |
-| `v1.4` | Leaderboard | Рейтинг моделей | **В разработке** |
-| `v1.5` | Admin Panel and Limits | Управление моделями, лимитами и тарифами | **В разработке** |
-| `v1.6` | Enterprise Governance and Billing | роли, аудит, лимиты, billing-ready governance | **В разработке** |
-| `v1.7` | Code Arena Runner | Безопасный запуск кода в sandbox | **В разработке** |
+| `v1.1` | Enterprise Readiness Foundation | SLO, monitoring, incident process, privacy/compliance baseline, supply-chain checks | Завершён |
+| `v1.2` | Multi Model Battle | Формальные бои моделей | Завершён |
+| `v1.3` | Judge Mode | Модель-судья оценивает ответы | Завершён |
+| `v1.4` | Leaderboard | Рейтинг моделей | Завершён |
+| `v1.5` | Admin Panel and Limits | Управление моделями, лимитами и тарифами | Завершён |
+| `v1.6` | Enterprise Governance and Billing | роли, аудит, лимиты, billing-ready governance | Завершён |
+| `v1.7` | Code Arena Runner | Запуск кода через внешний runner для авторизованных пользователей | **В разработке** |
 | `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | Позже |
 | `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей | Позже |
 

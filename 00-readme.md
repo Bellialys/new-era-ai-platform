@@ -41,10 +41,10 @@
 ## Текущий статус
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.7.0-alpha.1`
+**Текущая версия:** `v1.7.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
-Текущая рабочая версия: **v0.7.0-alpha.1 - Code Arena Lite stabilization**.
+Текущая рабочая версия: **v1.7.0-alpha.1 - Code Arena Runner**.
 
 Канонический текущий статус фиксируется в `.project/state.json`, порядок версий - в `14-roadmap.md`.
 
@@ -65,6 +65,10 @@
 - `POST /api/guest`;
 - `GET /api/code-models`;
 - `POST /api/code-compare`;
+- `POST /api/judge`;
+- `POST /api/code-run`;
+- `GET /api/admin/audit`;
+- `GET /api/admin/usage`;
 - серверная интеграция OpenRouter;
 - Supabase PostgreSQL migrations для `models`, `tasks`, `model_responses` и `profiles`;
 - server-side Supabase client для сохранения Prompt Arena;
@@ -82,17 +86,16 @@
 - минимальный GitHub Actions CI;
 - Access Gate, guest mode через httpOnly cookie `na_guest`;
 - Auth SSR, profile, avatar upload, email/password management;
-- Code Arena Lite без запуска пользовательского кода;
+- Code Arena: сравнение кодовых решений отдельно от запуска, запуск кода через внешний runner только для авторизованных пользователей;
 - `package-lock.json`;
 - текущий `typecheck` проходит; полный release gate ещё должен пройти.
 
-Пока не готово:
+Пока не готово как стабильный релиз:
 
-- история сравнений;
-- production deploy на Vercel;
-- полная release-верификация v0.6/v0.7;
-- админ-панель;
-- дополнительные режимы.
+- release-gate для `v1.7.0-alpha.1`;
+- live smoke внешнего runner и admin routes на целевом окружении;
+- Image Arena;
+- AI Team Mode.
 
 ## Технологический стек
 
@@ -140,12 +143,13 @@ Visual Studio Code
 | `v0.5.3` | Voting MVP Stabilization | Основная Prompt Arena сохраняет Winner vote через `/api/vote` | Завершён |
 | `v0.5.4` | Vote Security & Auth Foundation | Vote dedup RPC, proxy/session refresh fix, security headers | Verify |
 | `v0.6` | Auth, Guest Mode and Profile | Гости, аккаунты, профиль, аватар, email/password, ограничения моделей | Verify |
-| `v0.7` | Code Arena Lite | Сравнение кодовых решений без запуска кода | Текущая alpha |
-| `v0.7.1` | Arena UX and Fair Voting | Streaming, Blind Arena, Code Diff, share/copy и guest anti-abuse | Следующий UX-подэтап |
-| `v0.8` | History and Production Readiness | История, публичные ссылки, критерии оценки, preview/production smoke, observability | Позже |
-| `v0.9` | Stable Arena Hardening | Финальная стабилизация перед v1.0 | Позже |
-| `v1.0` | Stable Arena MVP | Первая стабильная публичная версия | Позже |
-| `v1.1+` | Enterprise and Advanced Modes | Enterprise readiness, Battle, Judge, Leaderboard, Runner, Team Mode | Позже |
+| `v0.7` | Code Arena Lite | Сравнение кодовых решений без запуска кода | Завершён |
+| `v0.7.1` | Arena UX and Fair Voting | Streaming, Blind Arena, Code Diff, share/copy и guest anti-abuse | Завершён |
+| `v0.8` | History and Production Readiness | История, публичные ссылки, критерии оценки, preview/production smoke, observability | Завершён |
+| `v0.9` | Stable Arena Hardening | Финальная стабилизация перед v1.0 | Завершён |
+| `v1.0` | Stable Arena MVP | Первая стабильная публичная версия | Завершён |
+| `v1.1-v1.6` | Enterprise and Advanced Modes | Enterprise readiness, Battle, Judge, Leaderboard, admin, governance | Завершён |
+| `v1.7` | Code Arena Runner | Внешний runner для авторизованных пользователей | В разработке |
 
 ## Первый настоящий MVP
 
@@ -169,14 +173,13 @@ Visual Studio Code
 
 ## Что нельзя делать сейчас
 
-До завершения `v1.0` не добавлять:
+На этапе `v1.7.0-alpha.1` не добавлять:
 
-- запуск пользовательского кода;
-- полноценный Code Arena Runner;
+- запуск пользовательского кода внутри server-side процесса приложения;
+- обход auth/rate-limit для `/api/code-run`;
 - AI Team Mode;
-- сложный Leaderboard;
-- платёжную систему;
-- тяжёлую админ-панель;
+- Image Arena без отдельного safety/storage review;
+- платёжную систему без отдельного billing review;
 - много новых режимов одновременно.
 
 ## Главные файлы для работы

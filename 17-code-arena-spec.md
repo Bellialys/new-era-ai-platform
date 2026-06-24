@@ -1,6 +1,6 @@
 ﻿# 17 - Code Arena Spec
 
-> active for v0.7 Lite, future-only for Runner: Code Arena Lite входит в текущую alpha-стабилизацию, Code Arena Runner остаётся будущим этапом `v1.7`.
+> active: Code Arena Lite завершён, текущий `v1.7` включает Code Arena Runner через внешний Piston runner для авторизованных пользователей. Собственный sandbox остаётся отдельным security-review направлением.
 
 ## Назначение файла
 
@@ -26,7 +26,7 @@ v0.7 - Code Arena Lite
 # сравнение кодовых ответов без запуска чужого кода
 
 v1.7 - Code Arena Runner
-# sandbox, тесты, лимиты и результаты запуска кода
+# внешний runner, auth, rate limits и результаты запуска кода
 ```
 
 Runner нельзя переносить раньше аккаунтов, лимитов, админ-контроля и security review.
@@ -51,7 +51,7 @@ Code Arena Lite
 # первая версия без обязательного запуска кода
 
 Code Arena Runner
-# будущая версия с sandbox, тестами, code_test_cases и code_results
+# текущая alpha-версия с внешним runner; собственный sandbox/test-cases/results остаются отдельным расширением
 ```
 
 ## Почему нужно разделение
@@ -261,7 +261,7 @@ status.
 
 ## Когда делать Runner
 
-Runner делать только в версии `v1.7` или позже.
+Runner начат в версии `v1.7`.
 
 Перед Runner должны быть готовы:
 
@@ -645,7 +645,7 @@ WebContainers
 # только позже, сложнее и опаснее
 ```
 
-Конкретный выбор sandbox нужно оформить отдельным решением в `16-decisions.md`, когда проект дойдёт до Runner.
+Конкретный выбор собственного sandbox нужно оформить отдельным решением в `16-decisions.md`, если проект выходит за пределы внешнего runner.
 
 # UI Code Arena
 
@@ -783,7 +783,7 @@ POST /api/code-compare.
 Опционально generateTests.
 # будущая AI-генерация тестов
 
-Запускать код в sandbox.
+Запускать код через внешний runner для авторизованных пользователей.
 # runTests = true
 
 Сохранять code_results.

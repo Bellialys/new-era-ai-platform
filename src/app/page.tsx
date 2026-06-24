@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 
 const modes = [
   { name: "Prompt Arena", status: "live", href: "/arena", description: "Сравнение ответов нескольких AI на одну задачу" },
-  { name: "Code Arena", status: "live", href: "/code", description: "Сравнение кодовых решений с запуском кода в sandbox" },
+  { name: "Code Arena", status: "live", href: "/code", description: "Сравнение кодовых решений; внешний runner доступен после входа" },
   { name: "Multi Model Battle", status: "live", href: "/arena", description: "Формальное соревнование моделей" },
   { name: "Judge Mode", status: "live", href: "/arena", description: "Одна модель оценивает ответы других" },
   { name: "Leaderboard", status: "live", href: "/leaderboard", description: "Рейтинг моделей по голосам" },
@@ -20,7 +20,7 @@ export default function HomePage() {
       <section className="grid flex-1 items-center gap-10 py-16 lg:grid-cols-[1.1fr_0.9fr]">
         <div>
           <p className="mb-4 inline-flex rounded-full border border-violet-300/30 bg-violet-500/10 px-4 py-2 text-sm text-violet-100">
-            v1.3 — Multi Model Battle · Judge Mode · UX Polish
+            v1.7 — Code Arena Runner · External Sandbox · Auth Required
           </p>
           <h1 className="max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
             AI-платформа для сравнения нескольких моделей на одной задаче

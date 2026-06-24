@@ -36,9 +36,13 @@ Frontend вызывает только backend route handlers.
 | `POST /api/compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/vote` | 30 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `GET /api/code-models` | 60 req | 60 сек | IP-адрес |
-| `POST /api/code-compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `POST /api/code-compare` | 8 req / 3 guest req | 60 сек | user UUID или guest cookie `na_guest` |
+| `POST /api/judge` | 3 req / 1 guest req | 60 сек | user UUID или guest cookie `na_guest` |
+| `POST /api/code-run` | 10 req | 60 сек | user UUID; guests are not allowed |
 | `GET /api/history` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `GET /api/history/[taskId]` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `GET /api/admin/audit` | no public quota | admin Supabase session | `requireAdmin()` |
+| `GET /api/admin/usage` | no public quota | admin Supabase session | `requireAdmin()` |
 
 Ответ при превышении:
 
@@ -268,6 +272,159 @@ Rules:
 - validates prompt, model IDs, language and framework server-side;
 - persists as `tasks.mode_slug = "code-arena"` when Supabase persistence is available;
 - never runs code, starts tests, spawns processes, or uses a sandbox in Lite mode.
+
+## `POST /api/judge` (v1.3+, current in v1.7)
+
+Запускает AI judge для 2+ готовых ответов и, если передан `taskId`, best-effort сохраняет результат в `tasks.judge_verdict`.
+
+Минимальный запрос:
+
+```json
+{
+  "taskId": "saved-task-uuid",
+  "prompt": "Сравни подходы к реализации rate limit",
+  "responses": [
+    {
+      "modelId": "model-selection-id-1",
+      "modelName": "Model A",
+      "answerText": "..."
+    },
+    {
+      "modelId": "model-selection-id-2",
+      "modelName": "Model B",
+      "answerText": "..."
+    }
+  ]
+}
+```
+
+Минимальный ответ:
+
+```json
+{
+  "status": "ok",
+  "verdict": {
+    "winnerModelId": "model-selection-id-1",
+    "winnerModelName": "Model A",
+    "winnerLabel": "A",
+    "reasoning": "2-3 sentence explanation",
+    "scores": {
+      "model-selection-id-1": 8,
+      "model-selection-id-2": 7
+    }
+  }
+}
+```
+
+Rules:
+
+- requires Supabase auth cookie or httpOnly guest cookie `na_guest`;
+- `prompt` must be at least 3 characters;
+- `responses` must contain at least 2 items with non-empty `answerText`;
+- model names are used only for UI/result mapping; judge prompt uses blind labels;
+- rate limit: authenticated users 3 requests/min, guests 1 request/min;
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_BODY`, `INVALID_PROMPT`, `INVALID_RESPONSES`, `INSUFFICIENT_RESPONSES`, `JUDGE_PARSE_ERROR`, `INTERNAL_ERROR`.
+
+## `POST /api/code-run` (v1.7)
+
+Запускает пользовательский код через внешний Piston runner. Код не выполняется через `eval`, `exec`, `child_process` или локальный server-side sandbox приложения.
+
+Минимальный запрос:
+
+```json
+{
+  "language": "TypeScript",
+  "code": "console.log('hello')"
+}
+```
+
+Минимальный ответ:
+
+```json
+{
+  "stdout": "hello\n",
+  "stderr": "",
+  "exitCode": 0,
+  "cpuTime": 0,
+  "language": "TypeScript"
+}
+```
+
+Rules:
+
+- requires a real Supabase authenticated user; guest identity returns `401 AUTH_REQUIRED`;
+- `language` must be one of the configured Code Arena languages supported by `LANGUAGE_CONFIG`;
+- `code` is required and must not exceed `CODE_RUN_MAX_CHARS` (`10000`);
+- Piston receives a single file, empty stdin/args, `run_timeout = 5000` and `compile_timeout = 10000`;
+- response output is truncated to 5000 characters for stdout and stderr;
+- rate limit: 10 runs/min per user UUID;
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `PISTON_ERROR`, `INTERNAL_ERROR`.
+
+## `GET /api/admin/audit` (v1.6+, current in v1.7)
+
+Возвращает последние audit events для admin UI. Endpoint читает `public.audit_log` через server-side service role, но внешний доступ дополнительно закрыт `requireAdmin()`.
+
+Запрос не принимает query-параметры в текущей реализации.
+
+Минимальный ответ:
+
+```json
+{
+  "entries": [
+    {
+      "id": "audit-row-uuid",
+      "actorId": "user-uuid-or-null",
+      "actorName": "Display name or null",
+      "action": "admin.models.update",
+      "targetType": "model",
+      "targetId": "model-id",
+      "payload": {},
+      "createdAt": "2026-06-24T05:54:08.000Z"
+    }
+  ]
+}
+```
+
+Rules:
+
+- requires Supabase auth cookie for a user whose `profiles.role = 'admin'`;
+- non-admin or missing auth returns `403 FORBIDDEN`;
+- database misconfiguration/query failure returns safe `500 INTERNAL_ERROR`;
+- response is limited to 50 newest rows ordered by `created_at desc`;
+- no `anon`/`authenticated` direct table access is granted for `public.audit_log`;
+- no public route rate limit is configured because access is admin-only and the result size is capped.
+
+## `GET /api/admin/usage` (v1.6+, current in v1.7)
+
+Возвращает admin-сводку usage по авторизованным пользователям за текущий UTC-день и последние 7 дней.
+
+Запрос не принимает query-параметры в текущей реализации.
+
+Минимальный ответ:
+
+```json
+{
+  "users": [
+    {
+      "userId": "user-uuid",
+      "displayName": "Display name or null",
+      "plan": "free",
+      "requestsToday": 2,
+      "requestsWeek": 9
+    }
+  ]
+}
+```
+
+Rules:
+
+- requires Supabase auth cookie for a user whose `profiles.role = 'admin'`;
+- reads `tasks` from the last 7 UTC days where `user_id` is not null;
+- joins `profiles` for display name and plan;
+- returns at most 50 users sorted by weekly request count descending;
+- non-admin or missing auth returns `403 FORBIDDEN`;
+- database misconfiguration/query failure returns safe `500 INTERNAL_ERROR`;
+- no public route rate limit is configured because access is admin-only and the result size is capped.
 
 ## `GET /api/history` (v0.8)
 

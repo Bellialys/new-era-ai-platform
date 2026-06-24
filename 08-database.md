@@ -7,13 +7,15 @@
 Текущий статус документа:
 
 ```text
-v0.7.0-alpha.1
-# repo target: Prompt Arena + Auth/Guest/Profile + Code Arena Lite database surface
-# release gate: remote Supabase migration history and generated-column drift must be reconciled
+v1.7.0-alpha.1
+# repo target: Prompt Arena + Auth/Guest/Profile + Code Arena + Judge + Admin audit database surface
+# release gate: remote Supabase migration history, audit_log RLS and generated-column drift must stay reconciled
 # task_text является каноническим полем текста задачи
 # votes использует model_response_id и vote_type: best, like, dislike
 # models.status должен быть generated column: active/inactive
 # cast_best_vote — атомарный RPC для best vote
+# tasks.judge_verdict хранит JSON-вердикт POST /api/judge
+# public.audit_log хранит admin/governance audit events и не открыт anon/authenticated напрямую
 ```
 
 ## Главная идея базы
@@ -152,6 +154,7 @@ model_key нельзя доверять с frontend.
 | `status` | text | `pending`, `running`, `completed`, `partial`, `failed`, `cancelled` |
 | `selected_models` | jsonb | Список выбранных model keys для аудита запуска |
 | `settings` | jsonb | Настройки запуска |
+| `judge_verdict` | jsonb null | Вердикт `POST /api/judge`: победитель, reasoning и scores |
 | `error_message` | text null | Ошибка на уровне задачи |
 | `created_at` | timestamptz | Дата создания |
 | `updated_at` | timestamptz | Дата обновления |
@@ -265,7 +268,29 @@ response_id и vote_type = winner не используются.
 
 Storage bucket и RLS policies должны быть проверены отдельно в release gate, потому что `schema:check` проверяет только PostgreSQL public schema.
 
-## 8. RPC cast_best_vote
+## 8. audit_log
+
+`public.audit_log` хранит server-side audit events для admin/governance функций.
+
+| Поле | Тип | Назначение |
+|---|---|---|
+| `id` | uuid | ID записи аудита |
+| `actor_id` | uuid null | Пользователь-инициатор, если известен |
+| `action` | text | Название действия |
+| `target_type` | text null | Тип объекта действия |
+| `target_id` | text null | ID объекта действия |
+| `payload` | jsonb null | Безопасные технические детали события без секретов |
+| `created_at` | timestamptz | Дата создания |
+
+Правила доступа:
+
+- RLS включён на `public.audit_log`;
+- `anon` и `authenticated` не получают прямой доступ к таблице;
+- `service_role` имеет только `SELECT` и `INSERT`;
+- policies `audit_log_service_role_select` и `audit_log_service_role_insert` ограничены ролью `service_role`;
+- чтение наружу идёт через `GET /api/admin/audit` и `requireAdmin()`.
+
+## 9. RPC cast_best_vote
 
 Атомарная функция для сохранения best vote. Добавлена миграцией
 `20260615191924_atomic_best_vote_rpc.sql` и усилена release-gate migration
@@ -353,6 +378,7 @@ create table public.tasks (
   status text not null default 'pending',
   selected_models jsonb not null default '[]'::jsonb,
   settings jsonb not null default '{}'::jsonb,
+  judge_verdict jsonb,
   error_message text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -398,6 +424,32 @@ create table public.anonymous_sessions (
   last_seen_at timestamptz not null default now(),
   converted_user_id uuid references auth.users(id) on delete set null
 );
+
+create table public.audit_log (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid references auth.users(id) on delete set null,
+  action text not null,
+  target_type text,
+  target_id text,
+  payload jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.audit_log enable row level security;
+
+grant insert, select on public.audit_log to service_role;
+
+create policy audit_log_service_role_select
+on public.audit_log
+for select
+to service_role
+using (true);
+
+create policy audit_log_service_role_insert
+on public.audit_log
+for insert
+to service_role
+with check (true);
 ```
 
 ## Миграции
@@ -424,12 +476,14 @@ create table public.anonymous_sessions (
 | `20260617084057_profiles_extend_v0_6_4.sql` | Расширяет `profiles` для Profile MVP |
 | `20260617084255_avatars_storage_rls.sql` | Создаёт `avatars` bucket и Storage RLS policies |
 | `20260617212741_reconcile_release_gate_security_and_models.sql` | Release-gate reconciliation: governance metadata, deactivation of unavailable model IDs, generated `models.status`, `cast_best_vote` security-invoker hardening |
+| `20260624034630_add_judge_verdict_to_tasks.sql` | Добавляет `tasks.judge_verdict jsonb null` для результата `POST /api/judge` |
+| `20260624055408_add_audit_log.sql` | Создаёт `public.audit_log`, индексы, service_role grants и RLS policies без прямого доступа anon/authenticated |
 
 Release-gate note:
 
 ```text
 Remote Supabase migration history and local migration filenames are aligned
-through 20260617212741_reconcile_release_gate_security_and_models.
+through 20260624055408_add_audit_log.
 
 Remote post-migration verification on 2026-06-18:
 # models.status is generated always as (...), mismatch count = 0
@@ -437,6 +491,13 @@ Remote post-migration verification on 2026-06-18:
 # active/public model count = 16
 # unavailable OpenRouter IDs are inactive/non-public
 # cast_best_vote is SECURITY INVOKER with execute only for service_role/postgres
+
+v1.7.0-alpha.1 sync on 2026-06-24:
+# remote migrations include 20260624034630 add_judge_verdict_to_tasks
+# remote migrations include 20260624055408 add_audit_log
+# audit_log RLS is enabled
+# audit_log policies exist only for service_role SELECT/INSERT
+# anon/authenticated do not have direct audit_log SELECT
 ```
 
 Удалённые устаревшие локальные миграции:
@@ -462,7 +523,7 @@ Remote post-migration verification on 2026-06-18:
 # это финальное выравнивание индексов votes под best/like/dislike
 ```
 
-## Что уже сделано к v0.7.0-alpha.1 в рабочем дереве
+## Что уже сделано к v1.7.0-alpha.1 в рабочем дереве
 
 1. Созданы таблицы `models`, `tasks`, `model_responses`, `profiles`, `votes`.
 2. Включён RLS на основных публичных таблицах.
@@ -485,11 +546,14 @@ Remote post-migration verification on 2026-06-18:
 19. Деактивированы недоступные бесплатные модели: `z-ai/glm-4.5-air:free`, `moonshotai/kimi-k2.6:free`.
 20. Создан атомарный RPC `cast_best_vote`; release-gate hardening перевёл его на `SECURITY INVOKER` с execute только для `service_role`.
 21. Добавлены target-миграции `anonymous_sessions`, `models.access_level`, расширенный `profiles` и `avatars` storage.
-22. Code Arena Lite использует `tasks.mode_slug = 'code-arena'`, но не добавляет runner/sandbox/code execution.
+22. Code Arena Lite использует `tasks.mode_slug = 'code-arena'`.
+23. Judge Mode сохраняет `tasks.judge_verdict`.
+24. `public.audit_log` создан для admin/governance событий с RLS и service_role-only доступом.
+25. Code Arena Runner запускает код через внешний Piston runner для авторизованных пользователей; пользовательский код не выполняется в server-side процессе приложения.
 
 ## Будущие сущности Image Arena / Visual Arena
 
-Image Arena не входит в текущий обязательный scope Prompt Arena MVP. Нельзя менять scope `v0.7.0-alpha.1` так, будто визуальная генерация уже нужна сейчас.
+Image Arena не входит в текущий обязательный scope `v1.7.0-alpha.1`. Нельзя менять scope так, будто визуальная генерация уже нужна сейчас.
 
 После стабильной Prompt Arena можно добавить отдельные сущности:
 

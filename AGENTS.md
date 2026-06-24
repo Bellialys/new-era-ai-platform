@@ -41,11 +41,11 @@
 ## Текущий статус проекта
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.1 - Enterprise Readiness Foundation
+**Текущая фаза:** v1.7 - Code Arena Runner
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.1.0-alpha.1`
+**Текущая версия:** `v1.7.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
@@ -53,9 +53,10 @@
 <!-- SYNC:PROJECT_STATUS_END -->
 
 > **Разграничение версий:**
+> - `v1.7.0-alpha.1` — **текущий alpha-этап**: Code Arena Runner (внешний runner для авторизованных пользователей).
 > - `v1.0.0` — **текущий стабильный релиз**: Stable Arena MVP (production smoke passed, Vercel live).
-> - `v0.9.0-alpha.1` — предыдущая alpha: Stable Arena Hardening (шаблоны, аналитика, anti-abuse).
-> - `v0.7.0-alpha.1` — Code Arena Lite.
+> - `v1.3.0` — предыдущий стабильный этап: Judge Mode.
+> - `v0.9.0-alpha.1` — Stable Arena Hardening (шаблоны, аналитика, anti-abuse).
 > - `v0.5.3` — последний полностью зафиксированный стабильный MVP-релиз до v1.0.
 
 ```text
@@ -64,18 +65,18 @@ v0.9 - Stable Arena Hardening
 # v0.9 STABLE: typecheck ✓  lint ✓  build ✓  docs:check ✓
 ```
 
-Ближайший плановый UX-подэтап:
+Текущий alpha-этап:
 
 ```text
-v0.7.1 - Arena UX and Fair Voting
-# streaming, blind voting, Code Diff, быстрый share/copy и guest anti-abuse
+v1.7 - Code Arena Runner
+# сравнение кода остаётся отдельным режимом; запуск кода идёт через внешний runner только для авторизованных пользователей
 ```
 
 Следующий главный этап:
 
 ```text
-v0.8 - History and Production Readiness
-# история сравнений, публичные ссылки, критерии оценки, preview/production smoke, observability baseline
+v1.8 - Image Arena MVP
+# только после отдельного storage/safety/release review
 ```
 
 ---
@@ -88,7 +89,7 @@ v0.8 - History and Production Readiness
 4. Не вызывать OpenRouter напрямую из frontend.
 5. Перед новой функцией выполнять `typecheck`, `lint`, `build`.
 6. Для API/routing/Supabase/OpenRouter изменений выполнять `npm run smoke`, если он применим.
-7. Не добавлять Code Arena Runner раньше **v1.7** и без отдельного sandbox/security review.
+7. Не запускать пользовательский код внутри server-side процесса приложения; в v1.7 запуск разрешён только через внешний runner с auth/rate limit.
 8. Не добавлять AI Team Mode раньше **v2.0**.
 9. Сохранять поэтапную разработку без хаоса.
 
@@ -134,6 +135,18 @@ src/app/api/health/route.ts
 
 src/app/api/vote/route.ts
 # сохранение Winner vote поверх server-side votes helper
+
+src/app/api/judge/route.ts
+# AI judge verdict для сохранённых сравнений
+
+src/app/api/code-run/route.ts
+# внешний runner для авторизованных пользователей; пользовательский код не выполняется на сервере приложения
+
+src/app/api/admin/audit/route.ts
+# чтение audit_log для admin-пользователей
+
+src/app/api/admin/usage/route.ts
+# admin-сводка usage по пользователям
 ```
 
 ### Server Lib
@@ -217,7 +230,7 @@ best-голос пишется атомарным RPC cast_best_vote.
 
 ## Важное правило по моделям
 
-В основном режиме `v0.7.0-alpha.1`:
+В основном режиме:
 
 ```text
 modelIds = Supabase models.id UUID
@@ -238,10 +251,9 @@ modelIds могут временно совпадать с server-side allowlist
 <!-- SYNC:DEFERRED_FEATURES_START -->
 Следующие функции заморожены до соответствующих этапов roadmap:
 
-- **Code Arena Runner / запуск пользовательского кода** — не раньше v1.7
-- **Judge Mode** — не раньше v1.3
-- **Leaderboard** — не раньше v1.4
 - **AI Team Mode** — не раньше v2.0
+- **Image Arena MVP** — не раньше v1.8
+- **Расширенный собственный code sandbox вместо внешнего runner** — только после отдельного sandbox/security review
 
 Добавление любой из этих функций раньше указанных версий требует явного подтверждения от пользователя.
 <!-- SYNC:DEFERRED_FEATURES_END -->

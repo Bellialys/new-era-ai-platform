@@ -7,14 +7,28 @@
 ## Текущая версия
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v0.7.0-alpha.1`
+**Текущая версия:** `v1.7.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
 ```text
-v0.7.0-alpha.1 - Code Arena Lite stabilization
-# текущая alpha-ветка: v0.6/v0.7 функциональность в verification, не stable release
+v1.7.0-alpha.1 - Code Arena Runner
+# текущая alpha-ветка: documentation/state/package/migrations/API contracts sync
 ```
+
+## v1.7.0-alpha.1 Documentation and Migration Sync - 2026-06-24
+
+### Changed
+
+- `.project/state.json`, package metadata, README, roadmap and agent docs синхронизированы вокруг `v1.7 - Code Arena Runner`.
+- Локальные миграции приведены к remote history: `20260624034630_add_judge_verdict_to_tasks.sql` и `20260624055408_add_audit_log.sql`.
+- `08-database.md` описывает `tasks.judge_verdict`, `public.audit_log`, новые миграции и release-gate note для `v1.7.0-alpha.1`.
+- `28-api-contracts.md` описывает `POST /api/judge`, `POST /api/code-run`, `GET /api/admin/audit` и `GET /api/admin/usage`.
+
+### Security
+
+- `public.audit_log` зафиксирован как RLS-enabled table без прямого доступа `anon`/`authenticated`; `service_role` имеет только SELECT/INSERT через явные policies.
+- Главная страница больше не утверждает, что Code Arena всегда запускает код в sandbox: сравнение кода и внешний runner описаны отдельно.
 
 ## v0.7.1 Streaming Implementation - 2026-06-18
 
