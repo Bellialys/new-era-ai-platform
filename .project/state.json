@@ -1,10 +1,10 @@
 {
   "$schema": "./state.schema.json",
   "project": "New Era AI Platform",
-  "currentVersion": "1.5.0-alpha.1",
-  "currentPhase": "v1.5 - Admin Panel",
+  "currentVersion": "1.6.0-alpha.1",
+  "currentPhase": "v1.6 - Enterprise Governance",
   "status": "in_development",
   "activeTaskIds": [],
-  "lastSyncedAt": "2026-06-24T00:00:00.000Z",
+  "lastSyncedAt": "2026-06-24T18:00:00.000Z",
   "baseBranch": "main"
 }
