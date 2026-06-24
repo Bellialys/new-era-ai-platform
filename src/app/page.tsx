@@ -6,7 +6,7 @@ const modes = [
   { name: "Code Arena", status: "live", href: "/code", description: "Сравнение кодовых решений без выполнения кода" },
   { name: "Multi Model Battle", status: "live", href: "/arena", description: "Формальное соревнование моделей" },
   { name: "Judge Mode", status: "live", href: "/arena", description: "Одна модель оценивает ответы других" },
-  { name: "Leaderboard", status: "soon", href: null, description: "Рейтинг моделей по голосам" },
+  { name: "Leaderboard", status: "live", href: "/leaderboard", description: "Рейтинг моделей по голосам" },
   { name: "AI Team Mode", status: "later", href: null, description: "Несколько моделей с ролями работают вместе" },
 ];
 
