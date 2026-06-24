@@ -4,6 +4,7 @@ import {
   createErrorResponse,
   logApiRequest,
   requireAdmin,
+  logAuditEvent,
 } from "@/lib/server";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
 import { resolveRequestId } from "@/lib/server/utils";
@@ -26,7 +27,7 @@ export async function PATCH(
   const { id } = await params;
 
   try {
-    await requireAdmin();
+    const { userId: actorId } = await requireAdmin();
 
     const supabase = getSupabaseServerClient();
     if (!supabase) throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
@@ -70,12 +71,26 @@ export async function PATCH(
       throw new ApiError(400, "VALIDATION_ERROR", "No valid fields to update.");
     }
 
+    const { data: before } = await supabase
+      .from("models")
+      .select("is_active, name, access_level")
+      .eq("id", id)
+      .single();
+
     const { error } = await supabase.from("models").update(updates).eq("id", id);
 
     if (error) {
       console.error("Admin model update error:", error);
       throw new ApiError(500, "INTERNAL_ERROR", "Failed to update model.");
     }
+
+    await logAuditEvent({
+      actorId: actorId,
+      action: "model.update",
+      targetType: "model",
+      targetId: id,
+      payload: { before: before ?? null, after: updates },
+    });
 
     logApiRequest("PATCH", `/api/admin/models/${id}`, 200, Date.now() - startTime, requestId);
     return NextResponse.json({ status: "success" });

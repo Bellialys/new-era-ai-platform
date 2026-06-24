@@ -4,6 +4,7 @@ import {
   createErrorResponse,
   logApiRequest,
   requireAdmin,
+  logAuditEvent,
 } from "@/lib/server";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
 import { resolveRequestId } from "@/lib/server/utils";
@@ -27,7 +28,7 @@ export async function PATCH(
   const { id } = await params;
 
   try {
-    await requireAdmin();
+    const { userId: actorId } = await requireAdmin();
 
     const supabase = getSupabaseServerClient();
     if (!supabase) throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
@@ -59,12 +60,27 @@ export async function PATCH(
       throw new ApiError(400, "VALIDATION_ERROR", "No valid fields to update.");
     }
 
+    const { data: before } = await supabase
+      .from("profiles")
+      .select("role, plan")
+      .eq("id", id)
+      .single();
+
     const { error } = await supabase.from("profiles").update(updates).eq("id", id);
 
     if (error) {
       console.error("Admin user update error:", error);
       throw new ApiError(500, "INTERNAL_ERROR", "Failed to update user.");
     }
+
+    const action = "role" in updates ? "user.role_change" : "user.plan_change";
+    await logAuditEvent({
+      actorId: actorId,
+      action,
+      targetType: "user",
+      targetId: id,
+      payload: { before: before ?? null, after: updates },
+    });
 
     logApiRequest("PATCH", `/api/admin/users/${id}`, 200, Date.now() - startTime, requestId);
     return NextResponse.json({ status: "success" });
