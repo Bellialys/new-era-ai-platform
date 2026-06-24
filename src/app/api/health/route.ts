@@ -1,7 +1,48 @@
 import { NextResponse } from "next/server";
-import { getAvailableModels, getSupabaseServerClient, logApiRequest } from "@/lib/server";
+import {
+  getAvailableModels,
+  getSupabaseServerClient,
+  logApiRequest,
+  withTimeout,
+} from "@/lib/server";
 
 type HealthStatus = "ok" | "degraded";
+
+const HEALTH_DEPENDENCY_TIMEOUT_MS = 3_500;
+
+type SupabaseHealthProbe = {
+  reachable: boolean | null;
+  activePublicModels: number | null;
+};
+
+type ModelCatalogHealthProbe = {
+  status: "ok" | "error";
+  publicModels: number | null;
+  error: string | null;
+};
+
+async function readSupabaseHealth(
+  supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>
+): Promise<SupabaseHealthProbe> {
+  const { count, error } = await withTimeout(
+    supabase
+      .from("models")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true)
+      .eq("is_public", true),
+    HEALTH_DEPENDENCY_TIMEOUT_MS,
+    "Supabase health models count"
+  );
+
+  return {
+    reachable: !error,
+    activePublicModels: error ? null : count ?? 0,
+  };
+}
+
+function toSafeHealthError(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown model catalog error";
+}
 
 export async function GET() {
   const startTime = Date.now();
@@ -18,24 +59,35 @@ export async function GET() {
 
   const supabase = getSupabaseServerClient();
 
-  if (supabase) {
-    const { count, error } = await supabase
-      .from("models")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true)
-      .eq("is_public", true);
+  const supabaseProbe = supabase
+    ? readSupabaseHealth(supabase).catch((error) => {
+        const message = toSafeHealthError(error);
+        console.warn("Supabase health probe failed; reporting degraded.", { message });
+        return { reachable: false, activePublicModels: null };
+      })
+    : Promise.resolve({ reachable: supabaseReachable, activePublicModels: supabaseModelsCount });
 
-    supabaseReachable = !error;
-    supabaseModelsCount = error ? null : count ?? 0;
-  }
+  const catalogProbe = getAvailableModels()
+    .then(
+      (models): ModelCatalogHealthProbe => ({
+        status: "ok",
+        publicModels: models.length,
+        error: null,
+      })
+    )
+    .catch((error): ModelCatalogHealthProbe => ({
+      status: "error",
+      publicModels: null,
+      error: toSafeHealthError(error),
+    }));
 
-  try {
-    const models = await getAvailableModels();
-    publicModelsCount = models.length;
-  } catch (error) {
-    catalogStatus = "error";
-    catalogError = error instanceof Error ? error.message : "Unknown model catalog error";
-  }
+  const [supabaseHealth, catalogHealth] = await Promise.all([supabaseProbe, catalogProbe]);
+
+  supabaseReachable = supabaseHealth.reachable;
+  supabaseModelsCount = supabaseHealth.activePublicModels;
+  publicModelsCount = catalogHealth.publicModels;
+  catalogStatus = catalogHealth.status;
+  catalogError = catalogHealth.error;
 
   const status: HealthStatus =
     supabaseConfigured &&
