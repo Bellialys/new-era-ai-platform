@@ -5,6 +5,8 @@
  * never import server-only modules.
  */
 
+import type { JudgeVerdict } from "@/types/arena";
+
 export type HistoryListItemView = {
   taskId: string;
   modeSlug: string;
@@ -38,6 +40,7 @@ export type HistoryTaskView = {
   createdAt: string;
   errorMessage: string | null;
   winnerResponseId: string | null;
+  judgeVerdict: JudgeVerdict | null;
 };
 
 export type HistoryListApiResponse = {

@@ -1,6 +1,33 @@
 import type { HistoryResponseView, HistoryTaskView } from "@/types/history";
+import type { JudgeVerdict } from "@/types/arena";
 import { HistoryResponseCard } from "./history-response-card";
 import { formatDateTime, modeLabel, statusLabel } from "./format";
+
+function JudgeVerdictPanel({ verdict }: { verdict: JudgeVerdict }) {
+  return (
+    <section className="rounded-3xl border border-amber-400/20 bg-amber-500/5 p-6 backdrop-blur">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">
+        Вердикт судьи
+      </h2>
+      <p className="mb-4 text-sm font-semibold text-white">
+        Победитель: <span className="text-amber-200">{verdict.winnerModelName}</span>
+      </p>
+      {Object.keys(verdict.scores).length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {Object.entries(verdict.scores).map(([modelId, score]) => (
+            <span
+              key={modelId}
+              className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-200"
+            >
+              {modelId}: {score}/10
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="text-sm leading-6 text-slate-300">{verdict.reasoning}</p>
+    </section>
+  );
+}
 
 export function HistoryDetail({
   task,
@@ -39,6 +66,8 @@ export function HistoryDetail({
           <HistoryResponseCard key={response.responseId} response={response} />
         ))}
       </section>
+
+      {task.judgeVerdict ? <JudgeVerdictPanel verdict={task.judgeVerdict} /> : null}
     </div>
   );
 }

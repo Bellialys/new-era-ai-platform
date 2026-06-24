@@ -19,6 +19,7 @@ import {
   HISTORY_PAGE_SIZE_DEFAULT,
   HISTORY_PAGE_SIZE_MAX,
 } from "@/lib/arena/constants";
+import type { JudgeVerdict } from "@/types/arena";
 import { ApiError } from "./utils";
 import { getSupabaseServerClient } from "./supabase";
 
@@ -69,6 +70,7 @@ export type HistoryDetail = {
   createdAt: string;
   errorMessage: string | null;
   winnerResponseId: string | null;
+  judgeVerdict: JudgeVerdict | null;
   responses: HistoryResponseItem[];
 };
 
@@ -84,6 +86,7 @@ type TaskListRow = {
 type TaskDetailRow = TaskListRow & {
   settings: unknown;
   error_message: string | null;
+  judge_verdict: unknown | null;
 };
 
 type ResponseRow = {
@@ -268,7 +271,7 @@ export async function getHistoryTask({
   const { data: taskData, error: taskError } = await supabase
     .from("tasks")
     .select(
-      "id, mode_slug, task_text, status, selected_models, settings, created_at, error_message"
+      "id, mode_slug, task_text, status, selected_models, settings, created_at, error_message, judge_verdict"
     )
     .eq("id", taskId)
     .eq(owner.column, owner.value)
@@ -343,6 +346,7 @@ export async function getHistoryTask({
     createdAt: task.created_at,
     errorMessage: task.error_message,
     winnerResponseId,
+    judgeVerdict: (task.judge_verdict as JudgeVerdict | null) ?? null,
     responses,
   };
 }
