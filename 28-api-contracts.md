@@ -25,6 +25,7 @@ Frontend вызывает только backend route handlers.
 - Секреты, API keys, service role keys и Authorization headers нельзя логировать.
 - `model_key` провайдера не должен быть доверенным значением из frontend.
 - Backend повторно валидирует `prompt`, `modelIds`, `modeSlug` и выбранные модели.
+- Все поля с AI-generated content (`answerText`, judge `reasoning`, verdict labels, code blocks, descriptions) остаются Untrusted Input для клиента и должны рендериться по `25-production-excellence.md`, раздел `9.1 AI Output Sanitization`.
 
 ## Rate Limiting
 
@@ -323,6 +324,7 @@ Rules:
 - `responses` must contain at least 2 items with non-empty `answerText`;
 - model names are used only for UI/result mapping; judge prompt uses blind labels;
 - rate limit: authenticated users 3 requests/min, guests 1 request/min;
+- verdict/reasoning является AI-generated structured output: backend должен валидировать его строгой схемой, а frontend рендерит как недоверенный текст по `25-production-excellence.md`, раздел `9.1`;
 - safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_BODY`, `INVALID_PROMPT`, `INVALID_RESPONSES`, `INSUFFICIENT_RESPONSES`, `JUDGE_PARSE_ERROR`, `INTERNAL_ERROR`.
 
 ## `POST /api/code-run` (v1.7)

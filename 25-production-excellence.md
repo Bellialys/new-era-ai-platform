@@ -86,6 +86,92 @@ Status: active
 - Новые модели добавляются только после проверки model id, access level, pricing/cost risk и fallback behavior.
 - Любая функция, повышающая стоимость или риск abuse, требует лимитов и observability до public release.
 
+### 9.1 AI Output Sanitization — защита от Insecure Output Handling
+
+Все ответы, полученные от OpenRouter, Judge Mode, Prompt Arena, Multi Model Battle, AI Team Mode, Code Arena и будущих AI/Code Runner компонентов, считаются Untrusted Input.
+
+AI-generated output нельзя напрямую вставлять в DOM, рендерить как доверенный HTML или использовать как исполняемый код.
+
+Обязательные требования:
+
+- Любой Markdown из AI-ответов на фронтенде должен проходить через безопасный Markdown pipeline и HTML sanitization.
+
+- Если используется HTML-rendering для Markdown, он обязан проходить через DOMPurify или эквивалентный sanitizer с запрещением:
+  - `<script>`;
+  - inline event handlers вида `onClick`, `onError`, `onLoad` и любых `on*`;
+  - `javascript:` URI;
+  - `data:` URI, кроме явно разрешённых безопасных случаев;
+  - `iframe`;
+  - `object`;
+  - `embed`;
+  - `form`;
+  - dangerous SVG/MathML payloads, если они не нужны продукту.
+
+- По умолчанию AI-output должен рендериться как текст, а не как HTML.
+
+- Для Code Arena UI и любых AI-generated code blocks код должен отображаться только внутри `<pre><code>` или эквивалентного safe code viewer.
+
+- AI-generated code нельзя автоматически исполнять в браузере, Node.js, shell, database console или server runtime без отдельного sandbox-дизайна, лимитов и approval flow.
+
+- Подсветка кода должна использовать безопасный highlighter без исполнения кода. Предпочтительно использовать server-side highlighting, например `shiki`, либо другой безопасный static highlighter.
+
+- AI-сгенерированные URL должны проходить валидацию:
+  - разрешены только `http:` и `https:`;
+  - `javascript:`, `data:`, `file:`, `blob:` блокируются по умолчанию;
+  - внешние ссылки должны открываться безопасно;
+  - phishing-like и suspicious links не должны получать повышенное доверие в UI.
+
+- AI-сгенерированные изображения, iframe, embeds и media content блокируются по умолчанию и разрешаются только через whitelist доверенных доменов.
+
+- Если AI-ответ сохраняется в БД, он должен храниться и обрабатываться как tainted content. Перед возвратом клиенту или рендером он обязан проходить server-side validation / sanitization или безопасное output encoding.
+
+- Не считать БД trusted boundary. Сохранённый AI-output остаётся недоверенным даже после записи в database.
+
+- Judge Mode verdict, который влияет на voting UI, leaderboard, score, badges или model ranking, обязан проходить строгую Zod-схему с whitelist полей.
+
+- Любые model-generated structured outputs должны валидироваться через schema validation до использования в бизнес-логике.
+
+- Любые AI-generated labels, titles, descriptions, explanations, verdicts и comments должны безопасно кодироваться при выводе в UI.
+
+- Любая будущая функция, которая позволяет AI-output влиять на UI state, voting, ranking, payments, permissions или user actions, требует отдельного security review.
+
+Минимальные требования к Judge Mode structured output:
+
+- Разрешены только ожидаемые поля.
+- Неизвестные поля должны отбрасываться.
+- Типы должны быть строгими.
+- Score/rating должен иметь min/max limits.
+- Verdict/status должен быть enum.
+- HTML внутри verdict запрещён.
+- Markdown внутри verdict разрешён только после sanitization.
+- Любое объяснение модели отображается как недоверенный текст.
+
+Примеры недопустимого поведения:
+
+- Рендерить AI Markdown через `dangerouslySetInnerHTML` без sanitization.
+- Показывать AI-generated HTML как trusted HTML.
+- Исполнять AI-generated JavaScript.
+- Автоматически запускать AI-generated shell commands.
+- Подставлять AI-generated SQL в database query.
+- Использовать AI-generated URL без проверки protocol/domain.
+- Разрешать iframe/embed из ответа модели без whitelist.
+- Принимать Judge Mode JSON без Zod validation.
+- Считать данные из БД безопасными только потому, что они уже сохранены.
+
+Self-review для AI-output изменений:
+
+Перед merge разработчик обязан проверить:
+
+- Есть ли новый путь, где AI-output попадает в UI.
+- Есть ли новый путь, где AI-output сохраняется в БД.
+- Есть ли новый путь, где AI-output влияет на голосование, рейтинг или leaderboard.
+- Используется ли sanitization / output encoding.
+- Нет ли `dangerouslySetInnerHTML` без DOMPurify или эквивалентного sanitizer.
+- Нет ли исполнения AI-generated code.
+- Есть ли Zod validation для structured output.
+- Есть ли whitelist для URL/media/embed.
+- Проходят ли `npm run state:check` и `npm run docs:check`.
+
 ## 10. Evidence and Reporting
 
 - Каждое значимое решение должно иметь explanation: почему выбран этот подход, какие альтернативы были рассмотрены и какие риски приняты.
@@ -96,6 +182,9 @@ Status: active
 ## Авторитетные ориентиры
 
 - OWASP ASVS: https://owasp.org/www-project-application-security-verification-standard/
+- OWASP Cross Site Scripting Prevention Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+- OWASP DOM based XSS Prevention Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html
+- OWASP Top 10 for LLM Applications: https://owasp.org/www-project-top-10-for-large-language-model-applications/
 - OWASP Threat Modeling: https://owasp.org/www-community/Threat_Modeling_Process
 - NIST SSDF SP 800-218: https://csrc.nist.gov/pubs/sp/800/218/final
 - Google SRE SLO: https://sre.google/sre-book/service-level-objectives/
@@ -113,6 +202,7 @@ Status: active
 [ ] privacy impact и PII-in-logs risk проверены
 [ ] capacity impact до 1M+ пользователей оценён
 [ ] threat model / OWASP review выполнены, если применимо
+[ ] AI-generated output обработан как Untrusted Input по разделу 9.1, если применимо
 [ ] performance / cost impact оценены, если применимо
 [ ] rollback / forward-fix path понятен
 [ ] финальный отчёт содержит evidence и known risks

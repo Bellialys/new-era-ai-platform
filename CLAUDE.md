@@ -31,6 +31,7 @@
 ## Ключевые ограничения
 
 - Не вызывать OpenRouter напрямую из frontend — только через backend route handlers.
+- Любой AI-generated output считать Untrusted Input; безопасный рендер, sanitization и запрет исполнения описаны в `25-production-excellence.md`, раздел `9.1 AI Output Sanitization`.
 - Не коммитить `.env.local` и секретные ключи.
 - Code Arena Lite завершён; текущий v1.7 добавляет запуск кода только через внешний runner для авторизованных пользователей.
 - Не запускать пользовательский код внутри server-side процесса приложения и не обходить auth/rate limit для `/api/code-run`.
