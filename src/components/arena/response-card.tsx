@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import type { ArenaResponseView } from "@/types/arena";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+
+const COLLAPSE_THRESHOLD = 800;
 
 type ResponseCardProps = {
   response: ArenaResponseView;
@@ -21,6 +26,8 @@ export function ResponseCard({
   blindLabel,
   onSelectWinner,
 }: ResponseCardProps) {
+  const [expanded, setExpanded] = useState(false);
+
   const displayName = blindLabel ?? response.modelName;
   const displayRole = blindLabel ? undefined : response.modelRole;
 
@@ -91,7 +98,24 @@ export function ResponseCard({
       <div className="relative mt-5">
         <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm">
           {response.status === "success" && response.answerText ? (
-            <MarkdownRenderer content={responseText} />
+            <>
+              {!expanded && responseText.length > COLLAPSE_THRESHOLD ? (
+                <div className="line-clamp-6 text-slate-200 leading-7">
+                  {responseText}
+                </div>
+              ) : (
+                <MarkdownRenderer content={responseText} />
+              )}
+              {responseText.length > COLLAPSE_THRESHOLD && (
+                <button
+                  onClick={() => setExpanded((v) => !v)}
+                  className="mt-3 text-xs font-semibold text-violet-300 transition hover:text-violet-100"
+                  type="button"
+                >
+                  {expanded ? "Свернуть" : "Показать полностью"}
+                </button>
+              )}
+            </>
           ) : (
             <p className="leading-7 text-slate-200">{responseText}</p>
           )}
