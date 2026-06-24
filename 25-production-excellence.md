@@ -60,6 +60,7 @@ Status: active
 - Для новых API, auth, billing, admin, data-export и runner функций проводить мини threat model по STRIDE.
 - Security review должен учитывать OWASP ASVS, OWASP Top 10 for LLM Applications и NIST SSDF как ориентиры зрелости.
 - Любые secrets, service-role keys, provider tokens и internal credentials запрещено передавать во frontend, логи, markdown-примеры и screenshots.
+- Для новых Supabase user-facing таблиц обязательны RLS и политики в той же миграции; подробное правило — `23-codex-quality-rules.md`, раздел `8.1 Row Level Security (RLS)`.
 - Admin/audit endpoints должны иметь explicit authorization и безопасный DTO whitelist.
 - User-generated code never runs inside the app server process; runner isolation, auth, timeouts и rate limits обязательны.
 

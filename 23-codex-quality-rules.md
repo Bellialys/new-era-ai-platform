@@ -287,6 +287,101 @@ internal_notes
 
 Миграции должны быть идемпотентными, где это возможно: использовать `IF EXISTS`, `IF NOT EXISTS`, безопасные `DROP POLICY IF EXISTS`, additive changes и forward-compatible defaults.
 
+### 8.1 Row Level Security (RLS) — обязательное требование
+
+Каждая новая Supabase-таблица, которая хранит пользовательские, гостевые, сессионные или request-owned данные, обязана иметь Row Level Security в той же миграции, где создаётся таблица.
+
+Обязательные требования:
+
+- RLS должен быть включён в той же миграции:
+
+```sql
+ALTER TABLE <table_name> ENABLE ROW LEVEL SECURITY;
+```
+
+- Для каждой таблицы должны быть явно описаны политики для всех разрешённых операций:
+  - SELECT;
+  - INSERT;
+  - UPDATE;
+  - DELETE.
+- Для SELECT / UPDATE / DELETE политики должны использовать `USING`.
+- Для INSERT / UPDATE политики должны использовать `WITH CHECK`, чтобы пользователь не мог создать или изменить строку с чужим `user_id`, `anonymous_session_id` или другим ownership-полем.
+- Для строк, принадлежащих авторизованному пользователю, доступ должен ограничиваться через Supabase auth uid:
+
+```sql
+(select auth.uid()) = user_id
+```
+
+- Для гостевых строк доступ должен ограничиваться только через проверенный server-controlled guest/session identifier. Нельзя доверять guest/session id, который напрямую пришёл из непроверенного client payload.
+- Если для гостевой сессии используется session setting, применять безопасный nullable cast pattern:
+
+```sql
+anonymous_session_id = nullif(current_setting('app.guest_id', true), '')::uuid
+```
+
+- Таблицы без пользовательских RLS-политик допускаются только для служебных случаев, если одновременно выполняются все условия:
+  - таблица не доступна напрямую для anon/authenticated clients;
+  - доступ выполняется только через доверенный server-side код;
+  - используется `service_role` или другой явно привилегированный путь;
+  - причина описана в ADR или комментарии к миграции;
+  - таблица включена в schema/security review checklist.
+- Индексы должны покрывать поля, которые используются в RLS-предикатах, особенно:
+  - `user_id`;
+  - `anonymous_session_id`;
+  - `task_id`;
+  - `session_id`;
+  - `organization_id`;
+  - `created_by`;
+  - `owner_id`.
+- Self-review каждой миграции обязан проверять:
+  - RLS включён для каждой user-facing таблицы;
+  - политики существуют для всех разрешённых операций;
+  - INSERT и UPDATE не позволяют назначить строку другому пользователю;
+  - guest access не позволяет читать или изменять данные другой гостевой сессии;
+  - `service_role` используется только server-side и имеет обоснование;
+  - поля из RLS-предикатов покрыты индексами;
+  - `schema:check` и `docs:check` проходят после изменений.
+
+Примеры безопасных политик:
+
+```sql
+CREATE POLICY "Users can view own tasks"
+ON tasks
+FOR SELECT
+TO authenticated
+USING ((select auth.uid()) = user_id);
+
+CREATE POLICY "Users can create own tasks"
+ON tasks
+FOR INSERT
+TO authenticated
+WITH CHECK ((select auth.uid()) = user_id);
+
+CREATE POLICY "Users can update own tasks"
+ON tasks
+FOR UPDATE
+TO authenticated
+USING ((select auth.uid()) = user_id)
+WITH CHECK ((select auth.uid()) = user_id);
+
+CREATE POLICY "Guests can view own session tasks"
+ON tasks
+FOR SELECT
+TO anon
+USING (
+  anonymous_session_id = nullif(current_setting('app.guest_id', true), '')::uuid
+);
+```
+
+Примеры недопустимых миграций:
+
+- создание user-facing таблицы без `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`;
+- включение RLS без описания политик;
+- добавление SELECT policy без INSERT / UPDATE `WITH CHECK`;
+- использование anon-доступа с `USING (true)` для пользовательских или сессионных данных;
+- использование `service_role` в client-side коде;
+- использование RLS-предикатов по ownership-полям без индексов.
+
 Запрещено:
 
 - динамический SQL без валидации входных данных;
