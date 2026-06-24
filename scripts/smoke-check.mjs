@@ -345,8 +345,16 @@ async function main() {
 }
 
 main()
-  .then((code) => process.exit(code))
+  .then((code) => {
+    // Set the exit code and let the event loop drain naturally instead of
+    // calling process.exit(). A synchronous process.exit() force-closes
+    // handles while Node's built-in fetch (undici) keep-alive sockets are
+    // still tearing down, which trips a libuv `UV_HANDLE_CLOSING` assertion
+    // on Windows / Node >= 24 even when the check itself passed. Idle undici
+    // sockets are unref'd, so the process still exits promptly.
+    process.exitCode = code;
+  })
   .catch((err) => {
-    console.error(`smoke-check: unexpected failure: ${err.message}`);
-    process.exit(EXIT_CODES.FAIL);
+    console.error(`smoke-check: unexpected failure: ${err?.message ?? err}`);
+    process.exitCode = EXIT_CODES.FAIL;
   });
