@@ -223,6 +223,7 @@ Backend обязан проверять:
 - лимиты и rate limiting для публичных endpoints;
 - исходящие данные через DTO whitelist: ответ API должен содержать только разрешённые поля;
 - отсутствие секретов, служебных токенов, raw auth objects, stack traces и internal-only полей в response body.
+- `/api/code-run`, external runner и любые code execution пути обязаны соответствовать `25-production-excellence.md`, раздел `6.1 Code Runner Isolation Requirements`.
 - AI-generated output в API response, structured output, Judge Mode verdict и сохранённых `tasks` / `model_responses` считается Untrusted Input; правила безопасного рендера, sanitization и output encoding описаны в `25-production-excellence.md`, раздел `9.1 AI Output Sanitization`.
 
 Стандартные error codes:
@@ -607,6 +608,7 @@ src/lib/server
 [ ] Проведён self-review архитектуры (SOLID, нет God-объектов)
 [ ] Проанализирована производительность (EXPLAIN, bundle, route latency или указано unverified)
 [ ] Проведена проверка безопасности (угрозы, OWASP/STRIDE, DTO safety)
+[ ] Code Runner / code execution изменения соответствуют `25-production-excellence.md`, раздел `6.1`, если применимо
 [ ] AI-generated output безопасно валидируется, кодируется и рендерится по `25-production-excellence.md`, раздел `9.1`, если применимо
 [ ] Код соответствует стандартам доступности (a11y), если менялся UI
 [ ] Сгенерирована или обновлена OpenAPI документация, если API менялось; если OpenAPI ещё нет, предложено её создание

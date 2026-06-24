@@ -92,7 +92,7 @@ v1.8 - Image Arena MVP
 4. Не вызывать OpenRouter напрямую из frontend.
 5. Перед новой функцией выполнять `typecheck`, `lint`, `build`.
 6. Для API/routing/Supabase/OpenRouter изменений выполнять `npm run smoke`, если он применим.
-7. Не запускать пользовательский код внутри server-side процесса приложения; в v1.7 запуск разрешён только через внешний runner с auth/rate limit.
+7. Не запускать пользовательский код внутри server-side процесса приложения; в v1.7 запуск разрешён только через внешний runner с auth/rate limit и требованиями изоляции из `25-production-excellence.md`, раздел `6.1 Code Runner Isolation Requirements`.
 8. Не добавлять AI Team Mode раньше **v2.0**.
 9. Сохранять поэтапную разработку без хаоса.
 10. Все решения должны приниматься с расчётом на масштабирование до 1M+ пользователей.
@@ -281,7 +281,7 @@ modelIds могут временно совпадать с server-side allowlist
 
 - **AI Team Mode** — не раньше v2.0
 - **Image Arena MVP** — не раньше v1.8
-- **Расширенный собственный code sandbox вместо внешнего runner** — только после отдельного sandbox/security review
+- **Расширенный собственный code sandbox вместо внешнего runner** — только после отдельного sandbox/security review и проверки `25-production-excellence.md`, раздел `6.1`
 
 Добавление любой из этих функций раньше указанных версий требует явного подтверждения от пользователя.
 <!-- SYNC:DEFERRED_FEATURES_END -->

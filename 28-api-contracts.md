@@ -360,6 +360,7 @@ Rules:
 - Piston receives a single file, empty stdin/args, `run_timeout = 5000` and `compile_timeout = 10000`;
 - response output is truncated to 5000 characters for stdout and stderr;
 - rate limit: 10 runs/min per user UUID;
+- runner isolation, no-network, no-secrets, timeout, cleanup and production enablement requirements are governed by `25-production-excellence.md`, section `6.1 Code Runner Isolation Requirements`;
 - safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `PISTON_ERROR`, `INTERNAL_ERROR`.
 
 ## `GET /api/admin/audit` (v1.6+, current in v1.7)

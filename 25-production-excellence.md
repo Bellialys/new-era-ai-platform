@@ -64,6 +64,163 @@ Status: active
 - Admin/audit endpoints должны иметь explicit authorization и безопасный DTO whitelist.
 - User-generated code never runs inside the app server process; runner isolation, auth, timeouts и rate limits обязательны.
 
+### 6.1 Code Runner Isolation Requirements — обязательные требования v1.7+
+
+Любой Code Runner для `/api/code-run`, Code Arena или будущих AI-generated code execution функций обязан выполняться вне основного Next.js/Vercel runtime.
+
+Пользовательский код и AI-generated code считаются полностью недоверенными.
+
+Минимальные обязательные требования:
+
+- Эфемерная изоляция:
+  - каждый запуск выполняется в отдельной одноразовой песочнице;
+  - песочница уничтожается после завершения, ошибки или timeout;
+  - запрещено переиспользовать runtime между разными пользователями или сессиями;
+  - предпочтительные варианты изоляции: Firecracker microVM, gVisor sandbox, Kata Containers или другой проверенный sandbox/runtime;
+  - изолированный Docker допускается только как временный MVP-вариант при включённых hardening-настройках.
+
+- No-network policy:
+  - внутри runner запрещён любой сетевой доступ;
+  - DNS также должен быть недоступен;
+  - outbound HTTP/HTTPS запрещён;
+  - доступ к metadata endpoints cloud-провайдера запрещён;
+  - доступ к Supabase, OpenRouter, Vercel, GitHub и внутренним API запрещён;
+  - для Docker MVP минимальное требование: `--network=none` или эквивалент на уровне orchestrator.
+
+- Resource limits:
+  - CPU limit: не больше 0.5 vCPU на один запуск;
+  - RAM limit: не больше 256 MB на один запуск;
+  - execution timeout: не больше 30 секунд;
+  - stdout/stderr output limit: ограничить максимальный размер вывода;
+  - disk usage limit: ограничить временную файловую систему;
+  - process count limit: запрет fork bomb / process explosion;
+  - file descriptor limit: ограничить количество открытых файлов;
+  - запретить GPU access, если он явно не нужен отдельной утверждённой архитектурой.
+
+- Orchestrator timeouts:
+  - timeout должен быть не только внутри sandbox;
+  - `/api/code-run` или backend orchestrator обязан иметь собственный timeout;
+  - при превышении timeout runner должен быть принудительно остановлен;
+  - зависший child process, container или microVM должен быть удалён;
+  - Node.js route handler не должен ждать бесконечно;
+  - timeout/error result должен возвращаться контролируемо, без stack trace и внутренних деталей инфраструктуры.
+
+- Filesystem isolation:
+  - root filesystem должен быть read-only, если runtime это поддерживает;
+  - запись разрешена только во временный isolated tmpfs/workdir;
+  - временные файлы должны удаляться автоматически после запуска;
+  - runner не должен иметь mount к project repository, host filesystem, home directory, SSH keys, Docker socket или credential files;
+  - запрещён доступ к `/var/run/docker.sock`;
+  - запрещены hostPath mounts, кроме явно утверждённых read-only runtime assets.
+
+- Input/output boundary:
+  - runner получает код и input только через контролируемый stdin/API payload;
+  - runner возвращает только stdout, stderr, exit code, execution time и controlled metadata;
+  - runner не должен возвращать raw internal logs, environment dump, stack traces инфраструктуры или host paths;
+  - stdout/stderr должны проходить size limit и safe output handling перед возвратом клиенту.
+
+- Seccomp/AppArmor/capabilities:
+  - sandbox должен использовать seccomp/AppArmor/SELinux profile или эквивалент;
+  - набор системных вызовов должен быть минимальным;
+  - Linux capabilities должны быть сброшены;
+  - privileged mode запрещён;
+  - root внутри контейнера запрещён, если runtime позволяет non-root execution;
+  - `--privileged` запрещён;
+  - host PID/IPC/network namespaces запрещены.
+
+- No secrets in runner env:
+  - runner не должен получать OpenRouter API keys;
+  - runner не должен получать Supabase credentials;
+  - runner не должен получать service_role key;
+  - runner не должен получать Vercel env secrets;
+  - runner не должен получать user session tokens;
+  - runner не должен получать GitHub tokens;
+  - environment должен содержать только минимальные технические переменные, необходимые для запуска sandbox;
+  - запрещено прокидывать весь `process.env` внутрь runner.
+
+- Language/runtime allowlist:
+  - разрешённые языки и версии должны быть явно перечислены;
+  - неизвестные runtimes запрещены по умолчанию;
+  - установка пакетов во время выполнения запрещена;
+  - network-based dependency install запрещён;
+  - package managers внутри runner должны быть отключены или недоступны, если не утверждён отдельный sandbox-дизайн.
+
+- Abuse protection:
+  - `/api/code-run` должен иметь rate limit;
+  - запуск должен быть привязан к user/session id;
+  - должна быть защита от параллельного запуска большого количества execution jobs одним пользователем;
+  - ошибки runner не должны ломать основной application runtime;
+  - repeated timeout / resource abuse должен логироваться как security signal.
+
+- Logging and privacy:
+  - логи runner не должны содержать secrets;
+  - пользовательский код не должен попадать в production logs полностью без политики retention;
+  - stdout/stderr должны логироваться осторожно или не логироваться вообще;
+  - security events должны фиксироваться отдельно от пользовательского вывода.
+
+- Production readiness gate:
+  - Code Runner нельзя включать в production без отдельного security review;
+  - перед production enablement должен быть documented threat model;
+  - должен быть documented kill switch;
+  - должен быть rollback plan;
+  - должен быть load/abuse test;
+  - должен быть smoke test для timeout, no-network, no-secrets и cleanup.
+
+Минимальные Docker MVP hardening-настройки, если временно используется Docker:
+
+- `--network=none`
+- `--read-only`
+- `--memory=256m`
+- `--cpus=0.5`
+- `--pids-limit`
+- `--cap-drop=ALL`
+- `--security-opt no-new-privileges`
+- custom seccomp profile или hardened default profile
+- non-root user
+- tmpfs для временной директории
+- без bind mount к host filesystem
+- без доступа к Docker socket
+- без secrets в env
+
+Недопустимые варианты реализации:
+
+- Выполнять пользовательский код внутри Next.js route handler напрямую.
+- Использовать `eval`, `new Function`, shell exec или child_process без sandbox.
+- Запускать пользовательский код в Vercel serverless function.
+- Давать runner доступ к OpenRouter/Supabase/Vercel/GitHub secrets.
+- Давать runner сетевой доступ.
+- Давать runner доступ к Docker socket.
+- Переиспользовать один контейнер между пользователями.
+- Не иметь timeout на уровне API/orchestrator.
+- Возвращать пользователю внутренние stack traces инфраструктуры.
+- Логировать полный пользовательский код и stdout/stderr без retention/privacy policy.
+- Включать Code Runner в production без security review.
+
+Self-review checklist для любых изменений Code Runner:
+
+Перед merge разработчик обязан проверить:
+
+- Код не выполняется внутри основного Next.js/Vercel runtime.
+- Каждый запуск изолирован и одноразовый.
+- Network полностью отключён.
+- DNS недоступен.
+- CPU/RAM/time/output/process limits настроены.
+- Timeout есть на уровне sandbox и на уровне orchestrator.
+- Runner не получает secrets.
+- Runner не получает full `process.env`.
+- Filesystem read-only или максимально ограничен.
+- Временные файлы очищаются после запуска.
+- Docker socket и host mounts недоступны.
+- Privileged mode не используется.
+- Capabilities сброшены.
+- Seccomp/AppArmor/SELinux или аналог включён.
+- stdout/stderr ограничены по размеру.
+- Ошибки возвращаются контролируемо.
+- Rate limit включён.
+- Есть kill switch.
+- Есть security review перед production enablement.
+- Проходят `npm run state:check` и `npm run docs:check`.
+
 ## 7. Performance and Cost
 
 - Новые endpoints должны иметь оценку latency budget, потенциальных N+1 запросов, индексов и внешних provider calls.
@@ -184,9 +341,13 @@ Self-review для AI-output изменений:
 - OWASP ASVS: https://owasp.org/www-project-application-security-verification-standard/
 - OWASP Cross Site Scripting Prevention Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
 - OWASP DOM based XSS Prevention Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html
+- OWASP Docker Security Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
 - OWASP Top 10 for LLM Applications: https://owasp.org/www-project-top-10-for-large-language-model-applications/
 - OWASP Threat Modeling: https://owasp.org/www-community/Threat_Modeling_Process
 - NIST SSDF SP 800-218: https://csrc.nist.gov/pubs/sp/800/218/final
+- Firecracker microVM: https://firecracker-microvm.github.io/
+- gVisor container sandbox: https://gvisor.dev/docs/
+- Docker run reference: https://docs.docker.com/engine/containers/run/
 - Google SRE SLO: https://sre.google/sre-book/service-level-objectives/
 - W3C WCAG 2.1: https://www.w3.org/TR/WCAG21/
 - OpenAPI Specification: https://swagger.io/specification/
@@ -202,6 +363,7 @@ Self-review для AI-output изменений:
 [ ] privacy impact и PII-in-logs risk проверены
 [ ] capacity impact до 1M+ пользователей оценён
 [ ] threat model / OWASP review выполнены, если применимо
+[ ] Code Runner isolation соответствует разделу 6.1, если затронут `/api/code-run` или выполнение кода
 [ ] AI-generated output обработан как Untrusted Input по разделу 9.1, если применимо
 [ ] performance / cost impact оценены, если применимо
 [ ] rollback / forward-fix path понятен
