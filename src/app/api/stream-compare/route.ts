@@ -241,64 +241,72 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      // Stream all models in parallel
-      const modelResults = await Promise.all(
-        selectedModels.map((model) => streamOneModel(cleanPrompt, model, controller, abortController.signal))
-      );
-
-      // Persist best-effort
-      const persistItems = selectedModels.map((model, i) => {
-        const r = modelResults[i];
-        return {
-          id: crypto.randomUUID(),
-          modelId: model.selectionId,
-          modelKey: model.modelKey,
-          dbModelId: model.modelId,
-          modelName: model.name,
-          status: (r.success ? "success" : "error") as "success" | "error",
-          answerText: r.success ? r.text : null,
-          latencyMs: r.latencyMs,
-          errorCode: r.errorCode,
-          errorMessage: r.errorMessage,
-          usage: r.success ? { inputTokens: r.inputTokens, outputTokens: r.outputTokens, totalTokens: null } : undefined,
-        };
-      });
-
-      let taskId: string | null = null;
-      let responseIdsByModelId: Record<string, string> = {};
+      let streamStatus = 200;
       try {
-        const saved = await saveArenaRun({
-          prompt: cleanPrompt,
-          modeSlug: MODE_SLUG_PROMPT_ARENA,
-          modelKeys: selectedModels.map((m) => m.modelKey),
-          responses: persistItems,
-          owner: { userId: identity.userId, anonymousSessionId: identity.guestId },
+        // Stream all models in parallel
+        const modelResults = await Promise.all(
+          selectedModels.map((model) => streamOneModel(cleanPrompt, model, controller, abortController.signal))
+        );
+
+        // Persist best-effort
+        const persistItems = selectedModels.map((model, i) => {
+          const r = modelResults[i];
+          return {
+            id: crypto.randomUUID(),
+            modelId: model.selectionId,
+            modelKey: model.modelKey,
+            dbModelId: model.modelId,
+            modelName: model.name,
+            status: (r.success ? "success" : "error") as "success" | "error",
+            answerText: r.success ? r.text : null,
+            latencyMs: r.latencyMs,
+            errorCode: r.errorCode,
+            errorMessage: r.errorMessage,
+            usage: r.success ? { inputTokens: r.inputTokens, outputTokens: r.outputTokens, totalTokens: null } : undefined,
+          };
         });
-        taskId = saved.taskId;
-        responseIdsByModelId = saved.responseIdsByModelId;
-      } catch (e) {
-        console.error("stream-compare persist failed:", e);
+
+        let taskId: string | null = null;
+        let responseIdsByModelId: Record<string, string> = {};
+        try {
+          const saved = await saveArenaRun({
+            prompt: cleanPrompt,
+            modeSlug: MODE_SLUG_PROMPT_ARENA,
+            modelKeys: selectedModels.map((m) => m.modelKey),
+            responses: persistItems,
+            owner: { userId: identity.userId, anonymousSessionId: identity.guestId },
+          });
+          taskId = saved.taskId;
+          responseIdsByModelId = saved.responseIdsByModelId;
+        } catch (e) {
+          console.error("stream-compare persist failed:", e);
+        }
+
+        // Build final responses array for the complete event
+        const finalResponses = persistItems.map((item) => ({
+          id: responseIdsByModelId[item.modelId] ?? item.id,
+          modelId: item.modelId,
+          modelName: item.modelName,
+          status: item.status,
+          answerText: item.answerText,
+          latencyMs: item.latencyMs,
+          errorCode: item.errorCode,
+          errorMessage: item.errorMessage,
+        }));
+
+        controller.enqueue(sse("complete", {
+          status: finalResponses.some((r) => r.status === "success") ? "success" : "error",
+          taskId,
+          responses: finalResponses,
+        }));
+
+        controller.close();
+      } catch (err) {
+        streamStatus = 500;
+        controller.error(err);
+      } finally {
+        logApiRequest("POST", "/api/stream-compare", streamStatus, Date.now() - startTime);
       }
-
-      // Build final responses array for the complete event
-      const finalResponses = persistItems.map((item) => ({
-        id: responseIdsByModelId[item.modelId] ?? item.id,
-        modelId: item.modelId,
-        modelName: item.modelName,
-        status: item.status,
-        answerText: item.answerText,
-        latencyMs: item.latencyMs,
-        errorCode: item.errorCode,
-        errorMessage: item.errorMessage,
-      }));
-
-      controller.enqueue(sse("complete", {
-        status: finalResponses.some((r) => r.status === "success") ? "success" : "error",
-        taskId,
-        responses: finalResponses,
-      }));
-
-      controller.close();
     },
     cancel() {
       abortController.abort();
