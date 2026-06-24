@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import type { ArenaModel } from "@/types/arena";
 import { PromptTemplates } from "./prompt-templates";
 
@@ -11,6 +14,7 @@ type ArenaFormProps = {
   errorMessage: string | null;
   onPromptChange: (value: string) => void;
   onToggleModel: (modelId: string) => void;
+  onSetSelectedModelIds: (ids: string[]) => void;
   onSubmit: () => void;
   onReset: () => void;
 };
@@ -25,9 +29,20 @@ export function ArenaForm({
   errorMessage,
   onPromptChange,
   onToggleModel,
+  onSetSelectedModelIds,
   onSubmit,
   onReset,
 }: ArenaFormProps) {
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
+  const categories = useMemo(() => {
+    const badges = models.flatMap((m) => (m.badge ? [m.badge] : []));
+    return ["all", ...Array.from(new Set(badges))];
+  }, [models]);
+
+  const filteredModels =
+    categoryFilter === "all" ? models : models.filter((m) => m.badge === categoryFilter);
+
   return (
     <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur">
       <div className="flex items-start justify-between gap-4">
@@ -77,6 +92,62 @@ export function ArenaForm({
             {modelsLoading ? "Загрузка..." : `Выбрано: ${selectedModelIds.length}`}
           </span>
         </div>
+
+        {/* Category filter */}
+        {categories.length > 1 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategoryFilter(cat)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  categoryFilter === cat
+                    ? "bg-violet-600 text-white"
+                    : "border border-white/15 text-slate-400 hover:border-white/30 hover:text-white"
+                }`}
+              >
+                {cat === "all" ? "Все" : cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Quick presets */}
+        {!modelsLoading && models.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span className="self-center text-xs text-slate-500">Быстрый выбор:</span>
+            <button
+              type="button"
+              onClick={() => {
+                const shuffled = [...models].sort(() => Math.random() - 0.5);
+                const pick = shuffled.slice(0, Math.min(3, models.length));
+                onSetSelectedModelIds(pick.map((m) => m.id));
+              }}
+              className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-slate-400 transition hover:border-violet-300/40 hover:text-white"
+            >
+              🎲 Случайный бой
+            </button>
+            {Array.from(new Set(models.filter((m) => m.badge).map((m) => m.badge!))).map((badge) => {
+              const badgeModels = models.filter((m) => m.badge === badge);
+              if (badgeModels.length < 2) return null;
+              return (
+                <button
+                  key={badge}
+                  type="button"
+                  onClick={() => {
+                    const pick = badgeModels.slice(0, Math.min(5, badgeModels.length));
+                    onSetSelectedModelIds(pick.map((m) => m.id));
+                  }}
+                  className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-slate-400 transition hover:border-violet-300/40 hover:text-white"
+                >
+                  {badge}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="mt-3 grid gap-3">
           {modelsLoading ? (
             <>
@@ -85,7 +156,7 @@ export function ArenaForm({
               <div className="h-16 animate-pulse rounded-2xl bg-white/10" />
             </>
           ) : (
-            models.map((model) => {
+            filteredModels.map((model) => {
               const isSelected = selectedModelIds.includes(model.id);
 
               return (

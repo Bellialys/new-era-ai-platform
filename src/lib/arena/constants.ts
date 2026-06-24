@@ -6,7 +6,7 @@ export const ARENA_CONSTANTS = {
   PROMPT_MIN_LENGTH: 3,
   PROMPT_MAX_LENGTH: 8000,
   MODEL_MIN_SELECT: 2,
-  MODEL_MAX_SELECT: 3,
+  MODEL_MAX_SELECT: 5,
   OPENROUTER_TIMEOUT_MS: 60000,
   // 2048 tokens covers most conversational responses without cutting off mid-sentence.
   OPENROUTER_MAX_TOKENS: 2048,

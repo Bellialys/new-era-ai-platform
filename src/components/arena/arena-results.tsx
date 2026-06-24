@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { ArenaResponseView } from "@/types/arena";
+import type { ArenaModel, ArenaResponseView } from "@/types/arena";
 import { ResponseCard } from "./response-card";
 
-const BLIND_LABELS = ["Модель A", "Модель B", "Модель C"];
+const BLIND_LABELS = ["Модель A", "Модель B", "Модель C", "Модель D", "Модель E"];
 
 type ArenaResultsProps = {
   responses: ArenaResponseView[];
@@ -16,9 +16,18 @@ type ArenaResultsProps = {
   prompt: string;
   taskId: string | null;
   blindMode: boolean;
+  sessionWins: Record<string, number>;
+  allModels: ArenaModel[];
   onToggleBlindMode: () => void;
   onSelectWinner: (responseId: string) => void | Promise<void>;
 };
+
+function getResponseGridClass(count: number): string {
+  if (count <= 2) return "grid-cols-1 md:grid-cols-2";
+  if (count <= 3) return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+  if (count <= 4) return "grid-cols-1 sm:grid-cols-2";
+  return "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3";
+}
 
 export function ArenaResults({
   responses,
@@ -32,6 +41,8 @@ export function ArenaResults({
   prompt,
   taskId,
   blindMode,
+  sessionWins,
+  allModels,
   onToggleBlindMode,
   onSelectWinner,
 }: ArenaResultsProps) {
@@ -178,18 +189,38 @@ export function ArenaResults({
         </div>
       ) : null}
 
-      {responses.map((response, index) => (
-        <ResponseCard
-          key={response.id}
-          response={response}
-          isWinner={winnerResponseId === response.id}
-          canSaveWinner={canSaveWinner}
-          isSavingWinner={savingVoteResponseId === response.id}
-          isVoteLocked={voteStatus === "saving"}
-          blindLabel={showBlind ? (BLIND_LABELS[index] ?? `Модель ${index + 1}`) : undefined}
-          onSelectWinner={onSelectWinner}
-        />
-      ))}
+      {/* Session win stats */}
+      {Object.keys(sessionWins).length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-2.5 text-xs">
+          <span className="font-semibold text-amber-200">Счёт сессии:</span>
+          {Object.entries(sessionWins)
+            .sort(([, a], [, b]) => b - a)
+            .map(([modelId, wins]) => {
+              const model = allModels.find((m) => m.id === modelId);
+              const name = model?.name ?? modelId;
+              return (
+                <span key={modelId} className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-100">
+                  {name}: {wins} {wins === 1 ? "победа" : wins < 5 ? "победы" : "побед"}
+                </span>
+              );
+            })}
+        </div>
+      )}
+
+      <div className={`grid gap-4 ${getResponseGridClass(responses.length)}`}>
+        {responses.map((response, index) => (
+          <ResponseCard
+            key={response.id}
+            response={response}
+            isWinner={winnerResponseId === response.id}
+            canSaveWinner={canSaveWinner}
+            isSavingWinner={savingVoteResponseId === response.id}
+            isVoteLocked={voteStatus === "saving"}
+            blindLabel={showBlind ? (BLIND_LABELS[index] ?? `Модель ${index + 1}`) : undefined}
+            onSelectWinner={onSelectWinner}
+          />
+        ))}
+      </div>
     </section>
   );
 }

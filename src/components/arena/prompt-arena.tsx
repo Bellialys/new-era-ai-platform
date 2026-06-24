@@ -132,7 +132,7 @@ function GuestCard({
 // PromptArena
 // ---------------------------------------------------------------------------
 
-const MAX_MODELS_ERROR_MESSAGE = "В MVP можно выбрать максимум три модели.";
+const MAX_MODELS_ERROR_MESSAGE = `Можно выбрать максимум ${MODEL_MAX_SELECT} моделей.`;
 
 function getDefaultModelIds(models: ArenaModel[]) {
   return models.slice(0, MODEL_MAX_SELECT).map((model) => model.id);
@@ -273,6 +273,7 @@ export function PromptArena() {
   const [blindMode, setBlindMode] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionWins, setSessionWins] = useState<Record<string, number>>({});
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -704,6 +705,13 @@ export function PromptArena() {
       }
 
       setWinnerResponseId(responseId);
+      const winnerModel = responses.find((r) => r.id === responseId);
+      if (winnerModel) {
+        setSessionWins((prev) => ({
+          ...prev,
+          [winnerModel.modelId]: (prev[winnerModel.modelId] ?? 0) + 1,
+        }));
+      }
       setVoteStatus("success");
       setVoteMessage("Winner vote сохранён.");
     } catch (error) {
@@ -715,6 +723,12 @@ export function PromptArena() {
     } finally {
       setSavingVoteResponseId(null);
     }
+  }
+
+  function handleSetSelectedModelIds(ids: string[]) {
+    clearStaleResults();
+    setErrorMessage(null);
+    setSelectedModelIds(ids);
   }
 
   function handleReset() {
@@ -801,6 +815,7 @@ export function PromptArena() {
           errorMessage={errorMessage || modelsError}
           onPromptChange={handlePromptChange}
           onToggleModel={handleToggleModel}
+          onSetSelectedModelIds={handleSetSelectedModelIds}
           onSubmit={handleSubmit}
           onReset={handleReset}
         />
@@ -819,6 +834,8 @@ export function PromptArena() {
           prompt={prompt}
           taskId={taskId}
           blindMode={blindMode}
+          sessionWins={sessionWins}
+          allModels={availableModels}
           onToggleBlindMode={() => setBlindMode((v) => !v)}
           onSelectWinner={handleSelectWinner}
         />
