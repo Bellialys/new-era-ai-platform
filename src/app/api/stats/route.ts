@@ -3,17 +3,21 @@ import {
   resolveRequestIdentity,
   getSupabaseServerClient,
   createErrorResponse,
+  logApiRequest,
 } from "@/lib/server";
 
 // Returns per-model win counts and total comparisons for the current user
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const startTime = Date.now();
   const identity = await resolveRequestIdentity(request);
   if (identity.kind === "none") {
+    logApiRequest("GET", "/api/stats", 401, Date.now() - startTime);
     return NextResponse.json({ error: { code: "AUTH_REQUIRED" } }, { status: 401 });
   }
 
   const supabase = getSupabaseServerClient();
   if (!supabase) {
+    logApiRequest("GET", "/api/stats", 200, Date.now() - startTime);
     return NextResponse.json({ stats: null });
   }
 
@@ -77,6 +81,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const totalTasks = taskIds.length;
     const totalVotes = winnerStats.reduce((sum, s) => sum + s.count, 0);
 
+    logApiRequest("GET", "/api/stats", 200, Date.now() - startTime);
     return NextResponse.json({
       stats: {
         totalTasks,
@@ -87,6 +92,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
   } catch (err) {
     const safe = createErrorResponse(err);
+    logApiRequest("GET", "/api/stats", 500, Date.now() - startTime);
     return NextResponse.json(safe, { status: 500 });
   }
 }

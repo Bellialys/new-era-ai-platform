@@ -21,6 +21,7 @@ import {
   checkRateLimit,
   resolveRequestIdentity,
   getApiKey,
+  logApiRequest,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -173,9 +174,11 @@ interface StreamCompareRequest {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
+  const startTime = Date.now();
   // Resolve identity & validate before opening the stream
   const identity = await resolveRequestIdentity(request);
   if (identity.kind === "none") {
+    logApiRequest("POST", "/api/stream-compare", 401, Date.now() - startTime);
     return new Response(
       JSON.stringify({ status: "error", error: { code: "AUTH_REQUIRED", message: "Sign in or continue as a guest." } }),
       { status: 401, headers: { "Content-Type": "application/json" } }
@@ -190,6 +193,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     isGuest ? GUEST_COMPARE_RATE_LIMIT_WINDOW_MS : COMPARE_RATE_LIMIT_WINDOW_MS
   );
   if (rateLimit.limited) {
+    logApiRequest("POST", "/api/stream-compare", 429, Date.now() - startTime);
     return new Response(
       JSON.stringify({ status: "error", error: { code: "RATE_LIMIT", message: "Too many requests." } }),
       { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } }
@@ -198,6 +202,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   let body: unknown;
   try { body = await request.json(); } catch {
+    logApiRequest("POST", "/api/stream-compare", 400, Date.now() - startTime);
     return new Response(JSON.stringify({ status: "error", error: { code: "INVALID_JSON" } }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
@@ -205,17 +210,20 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const modeValidation = validateModeSlug(modeSlug, MODE_SLUG_PROMPT_ARENA);
   if (!modeValidation.valid) {
+    logApiRequest("POST", "/api/stream-compare", 400, Date.now() - startTime);
     return new Response(JSON.stringify({ status: "error", error: { code: "INVALID_MODE", message: modeValidation.error } }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
   const promptValidation = validatePrompt(prompt, PROMPT_MIN_LENGTH, PROMPT_MAX_LENGTH);
   if (!promptValidation.valid) {
+    logApiRequest("POST", "/api/stream-compare", 400, Date.now() - startTime);
     return new Response(JSON.stringify({ status: "error", error: { code: "VALIDATION_ERROR", message: promptValidation.error } }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
   const cleanPrompt = promptValidation.value ?? "";
 
   const modelIdValidation = validateModelIds(modelIds, MODEL_MIN_SELECT, MODEL_MAX_SELECT);
   if (!modelIdValidation.valid) {
+    logApiRequest("POST", "/api/stream-compare", 400, Date.now() - startTime);
     return new Response(JSON.stringify({ status: "error", error: { code: "VALIDATION_ERROR", message: modelIdValidation.error } }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
   const selectedModelIds = modelIdValidation.value ?? [];
@@ -225,6 +233,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     selectedModels = await resolveSelectedModels(selectedModelIds, identity);
   } catch (err) {
     const ae = err instanceof ApiError ? err : new ApiError(403, "MODEL_NOT_ALLOWED", "Model not allowed.");
+    logApiRequest("POST", "/api/stream-compare", ae.statusCode, Date.now() - startTime);
     return new Response(JSON.stringify({ status: "error", error: { code: ae.errorCode, message: ae.message } }), { status: ae.statusCode, headers: { "Content-Type": "application/json" } });
   }
 

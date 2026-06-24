@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServerClient, createErrorResponse } from "@/lib/server";
+import { getSupabaseServerClient, createErrorResponse, logApiRequest } from "@/lib/server";
 
 interface RouteContext {
   params: Promise<{ taskId: string }>;
 }
 
 export async function GET(request: NextRequest, context: RouteContext): Promise<NextResponse> {
+  const startTime = Date.now();
   const { taskId } = await context.params;
 
   if (!taskId || !/^[0-9a-f-]{36}$/.test(taskId)) {
+    logApiRequest("GET", "/api/tasks/[taskId]", 400, Date.now() - startTime);
     return NextResponse.json({ error: { code: "INVALID_ID" } }, { status: 400 });
   }
 
   const supabase = getSupabaseServerClient();
   if (!supabase) {
+    logApiRequest("GET", "/api/tasks/[taskId]", 503, Date.now() - startTime);
     return NextResponse.json({ error: { code: "DB_UNAVAILABLE" } }, { status: 503 });
   }
 
@@ -29,6 +32,7 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
       .single();
 
     if (taskError || !task) {
+      logApiRequest("GET", "/api/tasks/[taskId]", 404, Date.now() - startTime);
       return NextResponse.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
     }
 
@@ -42,6 +46,7 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
       error_code: string | null; error_message: string | null;
     }[]) ?? [];
 
+    logApiRequest("GET", "/api/tasks/[taskId]", 200, Date.now() - startTime);
     return NextResponse.json({
       task: {
         id: task.id,
@@ -66,6 +71,7 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
     });
   } catch (err) {
     const safe = createErrorResponse(err);
+    logApiRequest("GET", "/api/tasks/[taskId]", 500, Date.now() - startTime);
     return NextResponse.json(safe, { status: 500 });
   }
 }

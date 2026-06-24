@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getAvailableModels, getSupabaseServerClient } from "@/lib/server";
+import { getAvailableModels, getSupabaseServerClient, logApiRequest } from "@/lib/server";
 
 type HealthStatus = "ok" | "degraded";
 
 export async function GET() {
+  const startTime = Date.now();
   const supabaseConfigured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   );
@@ -45,6 +46,7 @@ export async function GET() {
       ? "ok"
       : "degraded";
 
+  logApiRequest("GET", "/api/health", 200, Date.now() - startTime);
   return NextResponse.json({
     status,
     version: process.env.npm_package_version ?? null,
