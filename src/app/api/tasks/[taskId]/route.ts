@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
     const { data: task, error: taskError } = await supabase
       .from("tasks")
       .select(
-        `id, mode_slug, prompt_text, title, status, created_at, settings,
+        `id, mode_slug, prompt_text, title, status, created_at, settings, judge_verdict,
          model_responses(id, model_key, display_name, status, response_text, latency_ms, error_code, error_message),
          votes(id, winner_response_id)`
       )
@@ -57,6 +57,7 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
         createdAt: task.created_at,
         settings: task.settings ?? {},
         winnerResponseId,
+        judgeVerdict: (task.judge_verdict as Record<string, unknown> | null) ?? null,
         responses: responses.map((r) => ({
           id: r.id,
           modelKey: r.model_key,

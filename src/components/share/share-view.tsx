@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CodeDiffView } from "@/components/code-arena/code-diff-view";
-import type { ArenaResponseView } from "@/types/arena";
+import type { ArenaResponseView, JudgeVerdict } from "@/types/arena";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
 // ---------------------------------------------------------------------------
@@ -29,6 +29,7 @@ type TaskDetail = {
   createdAt: string;
   settings: Record<string, unknown>;
   winnerResponseId: string | null;
+  judgeVerdict: JudgeVerdict | null;
   responses: TaskResponse[];
 };
 
@@ -61,6 +62,35 @@ const MODE_LABELS: Record<string, string> = {
   "prompt-arena": "Prompt Arena",
   "code-arena": "Code Arena",
 };
+
+// ---------------------------------------------------------------------------
+// Judge verdict panel
+// ---------------------------------------------------------------------------
+function JudgeVerdictPanel({ verdict }: { verdict: JudgeVerdict }) {
+  return (
+    <div className="rounded-3xl border border-amber-400/20 bg-amber-500/5 p-5">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">
+        Вердикт судьи
+      </h2>
+      <p className="mb-3 text-sm font-semibold text-white">
+        Победитель: <span className="text-amber-200">{verdict.winnerModelName}</span>
+      </p>
+      {Object.keys(verdict.scores).length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {Object.entries(verdict.scores).map(([modelId, score]) => (
+            <span
+              key={modelId}
+              className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-200"
+            >
+              {modelId}: {score}/10
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="text-sm leading-6 text-slate-300">{verdict.reasoning}</p>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Response card (read-only)
@@ -232,6 +262,11 @@ export function ShareView({ taskId }: { taskId: string }) {
             />
           ))}
         </div>
+
+        {/* Judge verdict */}
+        {task.judgeVerdict ? (
+          <JudgeVerdictPanel verdict={task.judgeVerdict} />
+        ) : null}
 
         {/* Code diff (code-arena only) */}
         {isCode && task.responses.length >= 2 && (
