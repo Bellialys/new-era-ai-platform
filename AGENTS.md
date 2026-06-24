@@ -45,18 +45,18 @@
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.0.0-alpha.1`
+**Текущая версия:** `v1.0.0`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
-**Статус проекта:** `in_development`
+**Статус проекта:** `stable`
 <!-- SYNC:PROJECT_STATUS_END -->
 
 > **Разграничение версий:**
-> - `v0.9.0-alpha.1` — текущая alpha: Stable Arena Hardening (шаблоны, аналитика, anti-abuse).
-> - `v0.7.1-alpha.1` — Arena UX (streaming, blind mode, code diff).
+> - `v1.0.0` — **текущий стабильный релиз**: Stable Arena MVP (production smoke passed, Vercel live).
+> - `v0.9.0-alpha.1` — предыдущая alpha: Stable Arena Hardening (шаблоны, аналитика, anti-abuse).
 > - `v0.7.0-alpha.1` — Code Arena Lite.
-> - `v0.5.3` — последний полностью зафиксированный стабильный MVP-релиз.
+> - `v0.5.3` — последний полностью зафиксированный стабильный MVP-релиз до v1.0.
 
 ```text
 v0.9 - Stable Arena Hardening
