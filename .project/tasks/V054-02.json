@@ -92,5 +92,5 @@
       "note": "Offline checks pass (typecheck, lint, docs:check, state:check). Build verified via Vercel production deployment 25a651f (READY). Smoke verified via live production endpoint."
     }
   ],
-  "notes": "Closes audit nuances: server-authoritative vote identity via @supabase/ssr, middleware session refresh, vote rate-limit, atomic cast_best_vote RPC, route error/loading/not-found boundaries, removal of the already-documented-as-removed /arena-voting alias, and a Node .nvmrc pin. Migration reconciliation and protected Preview verification are complete; remains in verify until commit/release sign-off."
+  "notes": "Closes audit nuances: server-authoritative vote identity via @supabase/ssr, middleware session refresh, vote rate-limit, atomic cast_best_vote RPC, route error/loading/not-found boundaries, removal of the already-documented-as-removed /arena-voting alias, and a Node .nvmrc pin. Migration reconciliation and protected Preview verification complete; closed as done after production smoke."
 }

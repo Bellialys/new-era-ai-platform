@@ -51,5 +51,5 @@
       "note": "Offline checks pass (typecheck, lint, docs:check, state:check). Build verified via Vercel production deployment 25a651f (READY). Smoke verified via live production endpoint."
     }
   ],
-  "notes": "Read-only history over existing tasks/model_responses/votes tables — no migration required. Identity is scoped in every query (service role bypasses RLS). Version/phase promotion to v0.8 is deferred until the owner closes the v0.7 live gate. Follow-up: backfill x-request-id into compare/code-compare/vote/guest/models/profile routes; optional covering indexes tasks(user_id, created_at desc) and tasks(anonymous_session_id, created_at desc)."
+  "notes": "Read-only history over existing tasks/model_responses/votes tables — no migration required. Identity is scoped in every query (service role bypasses RLS). Follow-up: backfill x-request-id into compare/code-compare/vote/guest/models/profile routes; optional covering indexes tasks(user_id, created_at desc) and tasks(anonymous_session_id, created_at desc)."
 }
