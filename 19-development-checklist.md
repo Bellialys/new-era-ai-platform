@@ -2,25 +2,25 @@
 
 ## Назначение файла
 
-Этот файл показывает, что уже готово и что делать дальше.
+Этот файл показывает практический checklist разработки. Порядок этапов не дублируется здесь вручную: главным источником остаётся `14-roadmap.md`, а текущая версия и фаза берутся из `.project/state.json`.
 
 Главный источник статуса и порядка этапов: `14-roadmap.md`.
 
 ## Текущий статус
 
 ```text
-v0.5.3 - Voting MVP stabilization
-# текущий стабильный MVP-релиз перед v0.6
+v1.7.0-alpha.1 - Code Arena Runner
+# текущий alpha-этап: внешний runner доступен авторизованным пользователям; release gate ещё должен быть закрыт перед stable sign-off
 ```
 
 Следующий этап:
 
 ```text
-v0.6 - Auth, Guest Mode and Profile
-# подробный план: 20-auth-guest-profile-plan.md
+v1.8 - Image Arena MVP
+# только после storage/safety/release review
 ```
 
-## Готово
+## Базово готово
 
 - [x] Project documentation.
 - [x] Next.js base.
@@ -48,14 +48,21 @@ v0.6 - Auth, Guest Mode and Profile
 - [x] Smoke-check script `npm run smoke`.
 - [x] Минимальный GitHub Actions CI.
 - [x] `package-lock.json`.
+- [x] Auth/Guest/Profile foundation.
+- [x] History foundation.
+- [x] Code Arena Lite.
+- [x] Judge Mode.
+- [x] Leaderboard.
+- [x] Admin audit/usage routes.
+- [x] Code Arena Runner через внешний runner для авторизованных пользователей.
 
-## Не готово
+## Текущий release-gate фокус
 
-- [ ] Полный Auth/Guest/Profile этап `v0.6`.
-- [ ] Страница истории `v0.7`.
-- [ ] Production deploy stabilization `v0.8`.
-- [ ] Stable Prompt Arena hardening `v0.9`.
-- [ ] Stable Prompt Arena `v1.0`.
+- [ ] Подтвердить `npm run verify`.
+- [ ] Подтвердить `state:check` и `docs:check`.
+- [ ] Подтвердить schema/migration checks, если доступны Supabase env.
+- [ ] Подтвердить live smoke external runner/admin routes на целевом окружении.
+- [ ] Зафиксировать blocked/unverified checks в отчёте.
 
 ## Проверка перед каждым commit
 
@@ -71,8 +78,28 @@ npm run build
 
 npm run smoke
 # проверяет /api/health и /api/models
+
+npm run state:check
+# проверяет project state и task-файлы
+
+npm run docs:check
+# проверяет документацию и sync markers
+
+npm audit --audit-level=moderate
+# проверяет зависимости
 ```
+
+## Checklist для docs/process задач
+
+- [ ] Прочитать `AGENTS.md`, `24-codex-active-rule-set.md`, `23-codex-quality-rules.md`, `CLAUDE.md`.
+- [ ] Если меняется больше 5 файлов — дать Stop Signal и дождаться подтверждения.
+- [ ] Сформулировать plan self-review: scope, риски, альтернативы, affected docs.
+- [ ] Не редактировать auto-sync блоки вручную без необходимости.
+- [ ] Проверить смысловую согласованность `AGENTS`, `CLAUDE`, `23`, `24`, `25-definition-of-done`, `25-production-excellence`, `36`.
+- [ ] Перед commit выполнить staged diff review, `git diff --cached --check`, secret scan, `state:check`, `docs:check`.
+- [ ] Commit message — Conventional Commit на английском.
+- [ ] В отчёте указать commit hash, проверки, blocked/unverified items.
 
 ## Следующий практический фокус
 
-Работать по `20-auth-guest-profile-plan.md` и не начинать Code Arena Runner, Judge Mode, Leaderboard или AI Team Mode до стабильной Prompt Arena.
+Закрывать release gate текущего `v1.7 - Code Arena Runner`, не начинать `v1.8 - Image Arena MVP` без отдельного storage/safety/release review и не начинать AI Team Mode раньше `v2.0`.

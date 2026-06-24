@@ -63,6 +63,27 @@
 - экспорт основных operational reports;
 - documented support workflow.
 
+## Agent Operating Maturity
+
+Качество AI-агентов является частью enterprise readiness. Агент должен оставлять проверяемый след решений, а не только итоговый patch.
+
+| Уровень | Цель | Минимальный результат |
+|---|---|---|
+| L0 Local Edits | Агент корректно меняет файлы локально | staged diff review, no secrets, docs/code scope понятен |
+| L1 Verified Work | Изменения проверены локально | `state:check`, `docs:check`, typecheck/lint/build где применимо |
+| L2 Release-safe Workflow | Работа пригодна для preview/release | risk register, rollback/forward-fix note, smoke/schema checks где применимо |
+| L3 Operational Evidence | Решение можно сопровождать | request-id/logging/performance/security notes, known unverified checks |
+| L4 Enterprise Auditability | Решение можно показывать enterprise reviewer | ADR/decision log, threat model, compliance/privacy notes, CI/deploy evidence |
+
+Agent report для сложных задач должен включать:
+
+- research/best-practice references;
+- analysis summary и альтернативы;
+- implementation summary по файлам;
+- test and verification matrix;
+- security, privacy, performance и operations notes;
+- commit hashes и CI/push status.
+
 ## Standards Alignment
 
 Эти стандарты используются как ориентиры зрелости, а не как обязательная сертификация на ранних этапах:

@@ -180,6 +180,37 @@ npm run verify
 7. При смене версии — `npm run state:version -- <x.y.z>`, затем `npm run docs:sync`.
 8. Перед commit/PR — `npm run verify`.
 
+## AI-agent documentation changes
+
+Если меняются правила работы агентов, quality gates, Definition of Done или production standards, Codex должен проверять не только SYNC-маркеры, но и смысловую согласованность:
+
+- `AGENTS.md`;
+- `CLAUDE.md`;
+- `23-codex-quality-rules.md`;
+- `24-codex-active-rule-set.md`;
+- `25-definition-of-done.md`;
+- `25-production-excellence.md`;
+- `36-document-sync-policy.md`;
+- `.project/state.json`;
+- `14-roadmap.md`.
+
+Правила:
+
+- auto-sync блоки нельзя редактировать вручную, если их можно обновить через `docs:sync`;
+- если задача затрагивает больше 5 файлов, сначала нужен Stop Signal и подтверждённый план;
+- docs-only изменения всё равно требуют self-review, staged diff review, secret scan, `state:check` и `docs:check`;
+- если active task id отсутствует и пользователь просит только docs/process update, не создавать task/state churn без отдельной необходимости;
+- документация должна фиксировать не только “что делать”, но и “как отчитываться”: reasoning summary, decision log, checks, blocked/unverified items и commit hashes.
+
+Рекомендуемый docs/process verification flow:
+
+```bash
+npm run state:check
+npm run docs:check
+node scripts/sync/index.mjs --dry-run
+git diff --cached --check
+```
+
 ## Активные и устаревшие документы
 
 - **Активные** документы перечислены в `document-map.json` (`activeDocuments`).

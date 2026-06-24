@@ -16,6 +16,18 @@ v1.7.0-alpha.1 - Code Arena Runner
 # текущая alpha-ветка: documentation/state/package/migrations/API contracts sync
 ```
 
+## Documentation Governance Hardening - 2026-06-24
+
+### Added
+
+- Добавлен `25-production-excellence.md` как активный production-grade стандарт для observability, CI/CD, resilience, privacy, capacity planning, security, release evidence и agent reporting.
+- `CLAUDE.md`, `AGENTS.md` и `24-codex-active-rule-set.md` закрепляют режим глубокого анализа, priority `23-codex-quality-rules.md`, Stop Signal для >5 файлов и расширенный Research -> Review -> CI -> Report workflow.
+- `23-codex-quality-rules.md` расширен ADR, JSDoc, no-unjustified-any, STRIDE, OpenAPI, DTO whitelist, EXPLAIN/PITR, performance budgets, WCAG 2.1 AA, structured logging, typed env и 90% target coverage правилами.
+
+### Changed
+
+- `25-definition-of-done.md`, `36-document-sync-policy.md`, `41-enterprise-readiness-roadmap.md` и `19-development-checklist.md` синхронизированы с production-grade agent workflow и текущим этапом `v1.7`.
+
 ## v1.7.0-alpha.1 Documentation and Migration Sync - 2026-06-24
 
 ### Changed
