@@ -53,27 +53,31 @@ export default function HomePage() {
                 className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-4">
-                  <div>
-                    {mode.href ? (
-                      <Link href={mode.href} className="font-semibold text-white transition hover:text-violet-200">
-                        {mode.name}
-                      </Link>
-                    ) : (
-                      <span className="font-semibold text-white">{mode.name}</span>
-                    )}
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-white">{mode.name}</span>
                     <span className="mt-0.5 block text-xs text-slate-500">{mode.description}</span>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      mode.status === "live"
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : mode.status === "soon"
-                        ? "bg-violet-500/15 text-violet-300"
-                        : "bg-white/10 text-slate-400"
-                    }`}
-                  >
-                    {mode.status === "live" ? "Доступно" : mode.status === "soon" ? "Скоро" : "Позже"}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {mode.href && mode.status === "live" && (
+                      <Link
+                        href={mode.href}
+                        className="rounded-full border border-violet-300/30 bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-200 transition hover:border-violet-300/60 hover:bg-violet-500/30"
+                      >
+                        Открыть →
+                      </Link>
+                    )}
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        mode.status === "live"
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : mode.status === "soon"
+                          ? "bg-violet-500/15 text-violet-300"
+                          : "bg-white/10 text-slate-400"
+                      }`}
+                    >
+                      {mode.status === "live" ? "Доступно" : mode.status === "soon" ? "Скоро" : "Позже"}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
