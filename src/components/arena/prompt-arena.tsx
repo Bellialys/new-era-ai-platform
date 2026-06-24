@@ -23,6 +23,7 @@ import type {
 import { ArenaForm } from "./arena-form";
 import { ArenaResults } from "./arena-results";
 import { AccessGate } from "./access-gate";
+import { UsageIndicator } from "./usage-indicator";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -802,6 +803,9 @@ export function PromptArena() {
           </Link>
         </div>
       )}
+
+      {/* Usage indicator */}
+      <UsageIndicator />
 
       {/* Arena form + results */}
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
