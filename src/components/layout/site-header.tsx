@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthStatus } from "@/components/auth/auth-status";
+import { AdminNavLink } from "@/components/layout/admin-nav-link";
 
 interface SiteHeaderProps {
   /** Дополнительный контент (подзаголовок, бейдж режима и т.п.) */
@@ -20,6 +21,7 @@ export function SiteHeader({ children }: SiteHeaderProps) {
           >
             Рейтинг
           </Link>
+          <AdminNavLink />
         </nav>
         {children}
       </div>
