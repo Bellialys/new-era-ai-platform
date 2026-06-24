@@ -11,6 +11,8 @@ const NAV_LINKS = [
   { href: "/admin", label: "Дашборд" },
   { href: "/admin/models", label: "Модели" },
   { href: "/admin/users", label: "Пользователи" },
+  { href: "/admin/usage", label: "Использование" },
+  { href: "/admin/audit", label: "Аудит" },
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
