@@ -11,15 +11,15 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.0 - Stable Arena MVP
+**Текущая фаза:** v1.1 - Enterprise Readiness Foundation
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
-**Статус проекта:** `stable`
+**Статус проекта:** `in_development`
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.0.0`
+**Текущая версия:** `v1.1.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
@@ -107,7 +107,7 @@ v0.8 - History and Production Readiness
 | `v0.8` | History and Production Readiness | История сравнений, публичные ссылки, критерии оценки, preview/production smoke, observability baseline | Завершён |
 | `v0.9` | Stable Arena Hardening | Финальная стабилизация Prompt Arena + Code Arena Lite перед v1.0 | Завершён |
 | `v1.0` | Stable Arena MVP | Первая стабильная публичная версия MVP | **Завершён** |
-| `v1.1` | Enterprise Readiness Foundation | SLO, monitoring, incident process, privacy/compliance baseline, supply-chain checks | Позже |
+| `v1.1` | Enterprise Readiness Foundation | SLO, monitoring, incident process, privacy/compliance baseline, supply-chain checks | **В разработке** |
 | `v1.2` | Multi Model Battle | Формальные бои моделей | Позже |
 | `v1.3` | Judge Mode | Модель-судья оценивает ответы | Позже |
 | `v1.4` | Leaderboard | Рейтинг моделей | Позже |

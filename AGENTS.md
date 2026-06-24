@@ -41,15 +41,15 @@
 ## Текущий статус проекта
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.0 - Stable Arena MVP
+**Текущая фаза:** v1.1 - Enterprise Readiness Foundation
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.0.0`
+**Текущая версия:** `v1.1.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
-**Статус проекта:** `stable`
+**Статус проекта:** `in_development`
 <!-- SYNC:PROJECT_STATUS_END -->
 
 > **Разграничение версий:**
