@@ -1,9 +1,9 @@
 {
   "$schema": "./state.schema.json",
   "project": "New Era AI Platform",
-  "currentVersion": "1.3.0",
-  "currentPhase": "v1.3 - Judge Mode (stable)",
-  "status": "stable",
+  "currentVersion": "1.4.0-alpha.1",
+  "currentPhase": "v1.4 - Leaderboard",
+  "status": "in_development",
   "activeTaskIds": [],
   "lastSyncedAt": "2026-06-24T00:00:00.000Z",
   "baseBranch": "main"

@@ -110,7 +110,7 @@ v0.8 - History and Production Readiness
 | `v1.1` | Enterprise Readiness Foundation | SLO, monitoring, incident process, privacy/compliance baseline, supply-chain checks | **В разработке** |
 | `v1.2` | Multi Model Battle | Формальные бои моделей | Позже |
 | `v1.3` | Judge Mode | Модель-судья оценивает ответы | Позже |
-| `v1.4` | Leaderboard | Рейтинг моделей | Позже |
+| `v1.4` | Leaderboard | Рейтинг моделей | **В разработке** |
 | `v1.5` | Admin Panel and Limits | Управление моделями, лимитами и тарифами | Позже |
 | `v1.6` | Enterprise Governance and Billing | роли, аудит, лимиты, billing-ready governance | Позже |
 | `v1.7` | Code Arena Runner | Безопасный запуск кода в sandbox | Позже |
