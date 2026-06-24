@@ -81,9 +81,15 @@ export function ArenaForm({
         value={prompt}
         maxLength={maxPromptLength}
         onChange={(event) => onPromptChange(event.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !isLoading && !modelsLoading) {
+            onSubmit();
+          }
+        }}
         className="mt-2 min-h-40 w-full rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-sm text-white outline-none ring-0 transition placeholder:text-slate-500 focus:border-violet-300/60"
         placeholder="Например: сравни Next.js и Nuxt для MVP AI-платформы"
       />
+      <p className="mt-1.5 text-xs text-slate-500">Ctrl+Enter для отправки</p>
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-4">
