@@ -8,6 +8,7 @@
  */
 
 import { getSupabaseServerClient } from "./supabase";
+import { badgeFromTags } from "./model-catalog";
 
 export type LeaderboardEntry = {
   modelId: string;
@@ -21,8 +22,9 @@ export type LeaderboardEntry = {
 
 type ModelRow = {
   id: string;
-  name: string;
-  badge: unknown;
+  display_name: string;
+  role_tags: string[] | null;
+  price_label: string | null;
 };
 
 type ResponseRow = {
@@ -87,7 +89,7 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const modelIds = [...battlesByModel.keys()];
   const { data: modelsData, error: modelsError } = await supabase
     .from("models")
-    .select("id, name, badge")
+    .select("id, display_name, role_tags, price_label")
     .in("id", modelIds);
 
   if (modelsError) {
@@ -99,12 +101,11 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     .map((m) => {
       const totalBattles = battlesByModel.get(m.id) ?? 0;
       const wins = winsByModel.get(m.id) ?? 0;
+      const badge = badgeFromTags(m.role_tags, m.price_label);
       return {
         modelId: m.id,
-        modelName: m.name,
-        badge: Array.isArray(m.badge)
-          ? (m.badge as unknown[]).filter((b): b is string => typeof b === "string")
-          : [],
+        modelName: m.display_name,
+        badge: badge ? [badge] : [],
         wins,
         totalBattles,
         winRate: totalBattles > 0 ? wins / totalBattles : 0,

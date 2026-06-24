@@ -53,7 +53,8 @@ export async function PATCH(
       if (!v || v.length > 100) {
         throw new ApiError(400, "VALIDATION_ERROR", "name must be a non-empty string (max 100 chars).");
       }
-      updates["name"] = v;
+      // The public API field is `name`, but the models table column is `display_name`.
+      updates["display_name"] = v;
     }
 
     if ("access_level" in body) {
@@ -73,7 +74,7 @@ export async function PATCH(
 
     const { data: before } = await supabase
       .from("models")
-      .select("is_active, name, access_level")
+      .select("is_active, display_name, access_level")
       .eq("id", id)
       .single();
 

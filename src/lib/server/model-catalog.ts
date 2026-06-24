@@ -65,7 +65,7 @@ function roleFromTags(tags: string[] | null): string {
   return matched ? ROLE_LABELS[matched] : "General-модель";
 }
 
-function badgeFromTags(tags: string[] | null, priceLabel: string | null): string | undefined {
+export function badgeFromTags(tags: string[] | null, priceLabel: string | null): string | undefined {
   if (tags?.includes("coding")) return "Free Coding";
   if (tags?.includes("reasoning")) return "Free Reasoning";
   if (tags?.includes("fast")) return "Free Fast";

@@ -6,13 +6,15 @@ import {
   requireAdmin,
 } from "@/lib/server";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
+import { badgeFromTags } from "@/lib/server/model-catalog";
 import { resolveRequestId } from "@/lib/server/utils";
 
 type ModelRow = {
   id: string;
-  name: string;
+  display_name: string;
   model_key: string;
-  badge: unknown;
+  role_tags: string[] | null;
+  price_label: string | null;
   is_active: boolean;
   access_level: string;
 };
@@ -32,7 +34,10 @@ export async function GET(request: NextRequest) {
     if (!supabase) throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
 
     const [{ data: modelsData, error: modelsError }, { data: responsesData }] = await Promise.all([
-      supabase.from("models").select("id, name, model_key, badge, is_active, access_level").order("name"),
+      supabase
+        .from("models")
+        .select("id, display_name, model_key, role_tags, price_label, is_active, access_level")
+        .order("display_name"),
       supabase.from("model_responses").select("model_id"),
     ]);
 
@@ -46,17 +51,18 @@ export async function GET(request: NextRequest) {
       responsesByModel.set(row.model_id, (responsesByModel.get(row.model_id) ?? 0) + 1);
     }
 
-    const models = ((modelsData ?? []) as ModelRow[]).map((m) => ({
-      id: m.id,
-      name: m.name,
-      model_key: m.model_key,
-      badge: Array.isArray(m.badge)
-        ? (m.badge as unknown[]).filter((b): b is string => typeof b === "string")
-        : [],
-      is_active: m.is_active,
-      access_level: m.access_level ?? "registered",
-      totalResponses: responsesByModel.get(m.id) ?? 0,
-    }));
+    const models = ((modelsData ?? []) as ModelRow[]).map((m) => {
+      const badge = badgeFromTags(m.role_tags, m.price_label);
+      return {
+        id: m.id,
+        name: m.display_name,
+        model_key: m.model_key,
+        badge: badge ? [badge] : [],
+        is_active: m.is_active,
+        access_level: m.access_level ?? "registered",
+        totalResponses: responsesByModel.get(m.id) ?? 0,
+      };
+    });
 
     logApiRequest("GET", "/api/admin/models", 200, Date.now() - startTime, requestId);
     return NextResponse.json({ status: "success", models });
