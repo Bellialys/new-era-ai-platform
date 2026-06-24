@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 
 const modes = [
   { name: "Prompt Arena", status: "live", href: "/arena", description: "Сравнение ответов нескольких AI на одну задачу" },
-  { name: "Code Arena", status: "live", href: "/code", description: "Сравнение кодовых решений без выполнения кода" },
+  { name: "Code Arena", status: "live", href: "/code", description: "Сравнение кодовых решений с запуском кода в sandbox" },
   { name: "Multi Model Battle", status: "live", href: "/arena", description: "Формальное соревнование моделей" },
   { name: "Judge Mode", status: "live", href: "/arena", description: "Одна модель оценивает ответы других" },
   { name: "Leaderboard", status: "live", href: "/leaderboard", description: "Рейтинг моделей по голосам" },

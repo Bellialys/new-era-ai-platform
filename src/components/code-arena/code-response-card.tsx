@@ -1,4 +1,5 @@
 import type { ArenaResponseView } from "@/types/arena";
+import { RunPanel } from "@/components/arena/run-panel";
 
 type CodeResponseCardProps = {
   response: ArenaResponseView;
@@ -7,6 +8,8 @@ type CodeResponseCardProps = {
   isSavingWinner: boolean;
   isVoteLocked: boolean;
   blindLabel?: string;
+  language: string;
+  isAuthenticated: boolean;
   onSelectWinner: (responseId: string) => void | Promise<void>;
 };
 
@@ -17,6 +20,8 @@ export function CodeResponseCard({
   isSavingWinner,
   isVoteLocked,
   blindLabel,
+  language,
+  isAuthenticated,
   onSelectWinner,
 }: CodeResponseCardProps) {
   const displayName = blindLabel ?? response.modelName;
@@ -102,6 +107,13 @@ export function CodeResponseCard({
           {response.answerText ?? (response.isStreaming ? "Генерируем..." : "")}
         </pre>
       </div>
+
+      <RunPanel
+        code={response.answerText ?? ""}
+        language={language}
+        responseId={response.id}
+        isAuthenticated={isAuthenticated}
+      />
     </div>
   );
 }

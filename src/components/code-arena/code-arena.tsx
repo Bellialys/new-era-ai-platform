@@ -576,6 +576,8 @@ export function CodeArena() {
               isSavingWinner={savingVoteResponseId === response.id}
               isVoteLocked={voteStatus === "saving"}
               blindLabel={(blindMode && !winnerResponseId) ? (["Модель A", "Модель B", "Модель C"][index] ?? `Модель ${index + 1}`) : undefined}
+              language={currentLanguage}
+              isAuthenticated={identityMode === "user"}
               onSelectWinner={handleSelectWinner}
             />
           ))}
