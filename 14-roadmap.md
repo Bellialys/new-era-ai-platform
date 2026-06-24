@@ -11,15 +11,15 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.1 - Enterprise Readiness Foundation
+**Текущая фаза:** v1.3 - Judge Mode (stable)
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
-**Статус проекта:** `in_development`
+**Статус проекта:** `stable`
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.1.0-alpha.1`
+**Текущая версия:** `v1.3.0`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
