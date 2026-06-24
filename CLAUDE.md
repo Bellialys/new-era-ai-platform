@@ -33,6 +33,7 @@
 - Не вызывать OpenRouter напрямую из frontend — только через backend route handlers.
 - Любой AI-generated output считать Untrusted Input; безопасный рендер, sanitization и запрет исполнения описаны в `25-production-excellence.md`, раздел `9.1 AI Output Sanitization`.
 - Не коммитить `.env.local` и секретные ключи.
+- Для Next.js App Router data fetching, mutations и UI state применять cache/revalidation policy из `23-codex-quality-rules.md`, раздел `17`.
 - Code Arena Lite завершён; текущий v1.7 добавляет запуск кода только через внешний runner для авторизованных пользователей.
 - Для `/api/code-run` не запускать пользовательский код внутри server-side процесса приложения; не обходить auth/rate limit и требования `25-production-excellence.md`, раздел `6.1 Code Runner Isolation Requirements`.
 - AI Team Mode не добавлять раньше v2.0; Image Arena не добавлять раньше v1.8 и без отдельного storage/safety review.

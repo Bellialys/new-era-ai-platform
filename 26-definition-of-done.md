@@ -51,6 +51,7 @@
 - Auth/guest/admin requirements и error codes задокументированы.
 - Rate limit и request-id/logging impact оценены.
 - STRIDE/threat-model summary зафиксирован.
+- Для mutation route handlers описана cache/revalidation strategy по `23-codex-quality-rules.md`, раздел `17`, если endpoint влияет на UI или user/session data.
 
 ### Supabase / database changes
 
@@ -65,6 +66,7 @@
 - Проверены keyboard access, labels, focus indicators и loading/error/success states.
 - A11y target — WCAG 2.1 AA; отклонения записаны как risk/debt.
 - Mobile layout и основные viewport states проверены или явно отмечены как unverified.
+- Server Components используются по умолчанию, а `use client` и revalidation strategy обоснованы по `23-codex-quality-rules.md`, раздел `17`, если UI читает или обновляет данные.
 
 ## Evidence в итоговом отчёте
 

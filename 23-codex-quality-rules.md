@@ -610,6 +610,7 @@ src/lib/server
 [ ] Проведена проверка безопасности (угрозы, OWASP/STRIDE, DTO safety)
 [ ] Code Runner / code execution изменения соответствуют `25-production-excellence.md`, раздел `6.1`, если применимо
 [ ] AI-generated output безопасно валидируется, кодируется и рендерится по `25-production-excellence.md`, раздел `9.1`, если применимо
+[ ] Next.js App Router cache/revalidation strategy проверена по разделу `17`, если менялись data fetching, route handlers, mutations или UI state
 [ ] Код соответствует стандартам доступности (a11y), если менялся UI
 [ ] Сгенерирована или обновлена OpenAPI документация, если API менялось; если OpenAPI ещё нет, предложено её создание
 [ ] Staged diff просмотрен вручную
@@ -638,3 +639,108 @@ Codex не должен угадывать бизнес-логику и писа
 При малейшей неясности бизнес-логики агент обязан предложить 2-3 варианта трактовки с плюсами/минусами и рекомендуемым вариантом, а не просто спросить «что делать?».
 
 Перед остановкой агент должен предложить решение и его обоснование, демонстрируя, что он провёл анализ.
+
+## 17. Next.js 16 App Router — cache, mutations and revalidation policy
+
+Проект использует Next.js App Router. Любые изменения данных в Arena, Voting, Auth, Judge Mode, Leaderboard и будущих режимах должны явно учитывать cache и revalidation.
+
+Обязательные требования:
+
+- По умолчанию использовать Server Components.
+
+- `use client` допускается только если компонент действительно требует:
+  - browser state;
+  - event handlers;
+  - client-side interactivity;
+  - browser-only API;
+  - optimistic UI.
+
+- Client Components не должны использоваться как default choice.
+
+- Все `POST` / `PUT` / `PATCH` / `DELETE` операции, которые меняют данные, обязаны явно инвалидировать связанные данные через:
+  - `revalidatePath()`;
+  - `revalidateTag()`;
+  - либо другой утверждённый cache invalidation mechanism.
+
+- Голосование, создание задач, создание AI responses, Judge Mode verdicts и изменения leaderboard должны иметь явную revalidation strategy.
+
+- Для динамических Arena данных использовать:
+  - `cache: 'no-store'`;
+  - или route/page-level dynamic strategy, если данные не должны кэшироваться.
+
+- Для справочника моделей допускается controlled caching:
+
+```ts
+next: { revalidate: X }
+```
+
+где `X` выбран осознанно и документирован в коде или ADR.
+
+- API routes с мутациями должны быть dynamic и не должны отдавать stale data.
+
+- Для route handlers с пользовательскими/session-specific данными использовать:
+
+```ts
+export const dynamic = 'force-dynamic';
+```
+
+если есть риск некорректного кэширования.
+
+- Нельзя полагаться на implicit caching behavior, если endpoint влияет на пользовательские данные, голосование, рейтинг или AI responses.
+
+- Любой новый data-fetching код должен явно отвечать на вопросы:
+  - эти данные static, revalidated или dynamic?
+  - кто владелец данных?
+  - может ли пользователь увидеть stale или чужие данные?
+  - нужна ли revalidation после mutation?
+
+- Любой PR, который добавляет mutation flow, обязан указывать:
+  - какие paths/tags инвалидируются;
+  - почему выбран этот способ;
+  - как проверено отсутствие stale UI.
+
+Примеры обязательной revalidation:
+
+- После vote:
+  - обновить task result;
+  - обновить leaderboard / model stats, если они зависят от vote.
+
+- После compare request:
+  - обновить список задач пользователя/session;
+  - обновить detail page конкретной задачи.
+
+- После Judge Mode verdict:
+  - обновить verdict panel;
+  - обновить voting UI;
+  - обновить leaderboard, если verdict влияет на score.
+
+Примеры недопустимого поведения:
+
+- `POST` endpoint меняет данные, но UI обновляется только после manual refresh.
+- Voting UI показывает старый score после успешного vote.
+- Leaderboard кэшируется без revalidation после изменения рейтинга.
+- User/session-specific data fetch использует static cache.
+- Client Component используется только потому, что разработчику так проще.
+- Fetch strategy не указана для критичных Arena данных.
+
+Self-review checklist для Next.js data changes:
+
+Перед merge разработчик обязан проверить:
+
+- Новая мутация имеет revalidation strategy.
+- Dynamic пользовательские данные не кэшируются как static.
+- User/session-specific данные не могут попасть к другому пользователю через cache.
+- `use client` используется только там, где это нужно.
+- Server Components используются по умолчанию.
+- Route handlers с мутациями не возвращают stale data.
+- Leaderboard / Voting / Judge Mode UI обновляются после изменений.
+- Проходят `npm run state:check` и `npm run docs:check`.
+
+Официальные ориентиры:
+
+- Next.js App Router caching: https://nextjs.org/docs/app/getting-started/caching
+- Next.js App Router revalidating: https://nextjs.org/docs/app/getting-started/revalidating
+- Next.js `revalidatePath`: https://nextjs.org/docs/app/api-reference/functions/revalidatePath
+- Next.js `revalidateTag`: https://nextjs.org/docs/app/api-reference/functions/revalidateTag
+- Next.js `use client`: https://nextjs.org/docs/app/api-reference/directives/use-client
+- Next.js route segment config: https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config

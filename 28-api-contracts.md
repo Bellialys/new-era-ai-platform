@@ -26,6 +26,7 @@ Frontend вызывает только backend route handlers.
 - `model_key` провайдера не должен быть доверенным значением из frontend.
 - Backend повторно валидирует `prompt`, `modelIds`, `modeSlug` и выбранные модели.
 - Все поля с AI-generated content (`answerText`, judge `reasoning`, verdict labels, code blocks, descriptions) остаются Untrusted Input для клиента и должны рендериться по `25-production-excellence.md`, раздел `9.1 AI Output Sanitization`.
+- Mutating endpoints должны иметь согласованную UI/cache invalidation strategy по `23-codex-quality-rules.md`, раздел `17`, если результат влияет на Arena, Voting, Judge Mode, Leaderboard или user/session views.
 
 ## Rate Limiting
 

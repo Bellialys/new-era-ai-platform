@@ -99,6 +99,7 @@ v1.8 - Image Arena MVP
 11. Любой код должен быть сопровождаемым: полная типизация, отсутствие `any` без обоснования, документированные публичные интерфейсы.
 12. При реализации новой функции проводить мини-анализ: «Как это делают в Google/Meta/Stripe?» (если применимо).
 13. Любой AI-generated output считается Untrusted Input и рендерится только по правилам `25-production-excellence.md`, раздел `9.1 AI Output Sanitization`.
+14. Любые Next.js App Router data/mutation изменения должны учитывать cache и revalidation по `23-codex-quality-rules.md`, раздел `17`.
 
 ## Режим работы AI-агентов
 
