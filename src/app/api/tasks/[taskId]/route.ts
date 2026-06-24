@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
       .select(
         `id, mode_slug, prompt_text, title, status, created_at, settings, judge_verdict,
          model_responses(id, model_key, display_name, status, response_text, latency_ms, error_code, error_message),
-         votes(id, winner_response_id)`
+         votes(id, model_response_id, vote_type)`
       )
       .eq("id", taskId)
       .single();
@@ -36,9 +36,10 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
       return NextResponse.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
     }
 
-    // Find winner response id from votes
-    const votesArr = (task.votes as { id: string; winner_response_id: string | null }[] | null) ?? [];
-    const winnerResponseId = votesArr.find((v) => v.winner_response_id)?.winner_response_id ?? null;
+    // Find winner response id from the 'best' vote. Votes have no winner column;
+    // a best vote references the winning model_responses row via model_response_id.
+    const votesArr = (task.votes as { id: string; model_response_id: string | null; vote_type: string }[] | null) ?? [];
+    const winnerResponseId = votesArr.find((v) => v.vote_type === "best")?.model_response_id ?? null;
 
     const responses = (task.model_responses as {
       id: string; model_key: string; display_name: string | null;

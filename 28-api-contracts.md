@@ -953,8 +953,7 @@ Rules:
 - Если Supabase-клиент не сконфигурирован — `200` с телом `{ "stats": null }`. Rate limit отсутствует.
 - `modeCounts` — объект `{ mode_slug: count }`; пустой `{}`, если задач нет.
 - `topModels` — до 10 элементов, отсортировано по убыванию `count`; имя из `model_responses.display_name`, при отсутствии — `model_key`, иначе `"Unknown"`.
-- `totalVotes` — сумма `count` по `topModels`; список task_id для подсчёта ограничен `limit(500)`.
-- ⚠️ **Known issue (schema drift):** обработчик запрашивает `votes.winner_response_id` (`.not("winner_response_id", "is", null)`), но такой колонки в `votes` нет (актуально `votes.model_response_id` + `vote_type = 'best'`). Поэтому при наличии хотя бы одной задачи запрос падает и эндпоинт отдаёт `500 INTERNAL_ERROR`. Требуется тот же фикс, что применён к leaderboard.
+- `totalVotes` — сумма `count` по `topModels`; список task_id для подсчёта ограничен `limit(500)`. Победы считаются по голосам `vote_type = 'best'` (через `votes.model_response_id` → `model_responses`).
 - safe errors include `AUTH_REQUIRED`, `INTERNAL_ERROR`.
 
 ## `GET /api/usage`
@@ -1061,7 +1060,7 @@ Rules:
 - `taskId` обязан соответствовать `/^[0-9a-f-]{36}$/`; иначе `400 INVALID_ID`. Если Supabase-клиент недоступен → `503 DB_UNAVAILABLE`.
 - `title` → `null`, `settings` → `{}`, `judgeVerdict` → `null` при отсутствии. В `responses[]`: `modelName` = `display_name` или `model_key`; `answerText` → `null`; `latencyMs`/`errorCode`/`errorMessage` опускаются, если отсутствуют.
 - Коды `400/404/503` возвращаются в форме `{ "error": { "code": "..." } }`; путь `500` — в форме `{ "status": "error", "errorCode": "INTERNAL_ERROR", "message": "..." }`.
-- ⚠️ **Known issue (schema drift):** вложенный select `votes(id, winner_response_id)` обращается к несуществующей колонке `votes.winner_response_id`; PostgREST-ошибка попадает в ветку `taskError` → эндпоинт возвращает `404 NOT_FOUND` для **любого** валидного `taskId`. `winnerResponseId` нужно вычислять из `votes.model_response_id` + `vote_type = 'best'`.
+- `winnerResponseId` — `model_response_id` из голоса с `vote_type = 'best'` (через вложенный `votes(id, model_response_id, vote_type)`), иначе `null`.
 - safe errors include `INVALID_ID`, `DB_UNAVAILABLE`, `NOT_FOUND`, `INTERNAL_ERROR`.
 
 ## `POST /api/guest`
