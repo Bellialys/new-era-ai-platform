@@ -113,7 +113,7 @@ v0.8 - History and Production Readiness
 | `v1.4` | Leaderboard | Рейтинг моделей | **В разработке** |
 | `v1.5` | Admin Panel and Limits | Управление моделями, лимитами и тарифами | **В разработке** |
 | `v1.6` | Enterprise Governance and Billing | роли, аудит, лимиты, billing-ready governance | **В разработке** |
-| `v1.7` | Code Arena Runner | Безопасный запуск кода в sandbox | Позже |
+| `v1.7` | Code Arena Runner | Безопасный запуск кода в sandbox | **В разработке** |
 | `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | Позже |
 | `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей | Позже |
 
