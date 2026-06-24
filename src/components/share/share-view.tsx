@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CodeDiffView } from "@/components/code-arena/code-diff-view";
 import type { ArenaResponseView } from "@/types/arena";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
 // ---------------------------------------------------------------------------
 // Types from API
@@ -109,10 +110,12 @@ function ShareResponseCard({ response, isWinner }: { response: TaskResponse; isW
       {response.status === "error" ? (
         <p className="text-sm text-red-300">{response.errorMessage ?? "Ошибка"}</p>
       ) : (
-        <div className="rounded-2xl border border-white/5 bg-slate-950/60 p-4">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">
-            {response.answerText ?? ""}
-          </p>
+        <div className="rounded-2xl border border-white/5 bg-slate-950/60 p-4 text-sm">
+          {response.answerText ? (
+            <MarkdownRenderer content={response.answerText} />
+          ) : (
+            <p className="leading-relaxed text-slate-200"></p>
+          )}
         </div>
       )}
     </div>

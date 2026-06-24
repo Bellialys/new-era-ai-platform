@@ -1,4 +1,5 @@
 import type { ArenaResponseView } from "@/types/arena";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
 type ResponseCardProps = {
   response: ArenaResponseView;
@@ -88,8 +89,12 @@ export function ResponseCard({
       </div>
 
       <div className="relative mt-5">
-        <div className="overflow-x-auto whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
-          {responseText}
+        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm">
+          {response.status === "success" && response.answerText ? (
+            <MarkdownRenderer content={responseText} />
+          ) : (
+            <p className="leading-7 text-slate-200">{responseText}</p>
+          )}
         </div>
         {response.status === "success" && !response.isStreaming && response.answerText ? (
           <button

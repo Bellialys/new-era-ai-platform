@@ -1,4 +1,5 @@
 import type { HistoryResponseView } from "@/types/history";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
 /**
  * Read-only counterpart of components/arena/response-card.tsx. Shows a stored
@@ -51,8 +52,12 @@ export function HistoryResponseCard({ response }: { response: HistoryResponseVie
         </div>
       </div>
 
-      <div className="mt-5 overflow-x-auto whitespace-pre-line rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-7 text-slate-200">
-        {bodyText}
+      <div className="mt-5 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm">
+        {isSuccess && response.responseText ? (
+          <MarkdownRenderer content={bodyText} />
+        ) : (
+          <p className="leading-7 text-slate-200">{bodyText}</p>
+        )}
       </div>
     </article>
   );
