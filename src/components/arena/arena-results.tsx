@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ArenaModel, ArenaResponseView } from "@/types/arena";
 import { ResponseCard } from "./response-card";
+import { JudgePanel } from "./judge-panel";
 
 const BLIND_LABELS = ["Модель A", "Модель B", "Модель C", "Модель D", "Модель E"];
 
@@ -221,6 +222,17 @@ export function ArenaResults({
           />
         ))}
       </div>
+
+      {/* Judge Mode panel */}
+      {!isLoading && responses.length >= 2 && (
+        <JudgePanel
+          taskId={taskId}
+          prompt={prompt}
+          responses={responses}
+          blindMode={blindMode}
+          winnerResponseId={winnerResponseId}
+        />
+      )}
     </section>
   );
 }
