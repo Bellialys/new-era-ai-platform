@@ -111,8 +111,10 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   return (
     <div className={className}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        remarkPlugins={[remarkGfm] as any}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        rehypePlugins={[rehypeHighlight] as any}
         components={components}
       >
         {content}
