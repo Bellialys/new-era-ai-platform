@@ -43,6 +43,14 @@ export const ARENA_CONSTANTS = {
   CODE_RUN_RATE_LIMIT_WINDOW_MS: 60_000,
   PISTON_API_URL: "https://emkc.org/api/v2/piston/execute",
 
+  // Image Arena constants (v1.8)
+  IMAGE_MAX_PROMPT_CHARS: 1000,
+  IMAGE_MAX_MODELS: 3,
+  IMAGE_RATE_LIMIT_MAX: 5,
+  IMAGE_RATE_LIMIT_WINDOW_MS: 60_000,
+  OPENROUTER_IMAGE_API_URL: "https://openrouter.ai/api/v1/images/generations",
+  IMAGE_SIZE: "1024x1024",
+
   // Judge Mode constants (v1.3)
   JUDGE_RATE_LIMIT_WINDOW_MS: 60_000,
   JUDGE_RATE_LIMIT_MAX_REQUESTS: 3,
@@ -126,6 +134,15 @@ export const {
   CODE_RUN_RATE_LIMIT_MAX,
   CODE_RUN_RATE_LIMIT_WINDOW_MS,
   PISTON_API_URL,
+} = ARENA_CONSTANTS;
+
+export const {
+  IMAGE_MAX_PROMPT_CHARS,
+  IMAGE_MAX_MODELS,
+  IMAGE_RATE_LIMIT_MAX,
+  IMAGE_RATE_LIMIT_WINDOW_MS,
+  OPENROUTER_IMAGE_API_URL,
+  IMAGE_SIZE,
 } = ARENA_CONSTANTS;
 
 export const {
