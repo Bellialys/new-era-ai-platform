@@ -7,6 +7,7 @@ const modes = [
   { name: "Multi Model Battle", status: "live", href: "/arena", description: "Формальное соревнование моделей" },
   { name: "Judge Mode", status: "live", href: "/arena", description: "Одна модель оценивает ответы других" },
   { name: "Leaderboard", status: "live", href: "/leaderboard", description: "Рейтинг моделей по голосам" },
+  { name: "Image Arena", status: "live", href: "/image", description: "Сравнение изображений от AI-моделей" },
   { name: "AI Team Mode", status: "later", href: null, description: "Несколько моделей с ролями работают вместе" },
 ];
 
@@ -20,7 +21,7 @@ export default function HomePage() {
       <section className="grid flex-1 items-center gap-10 py-16 lg:grid-cols-[1.1fr_0.9fr]">
         <div>
           <p className="mb-4 inline-flex rounded-full border border-violet-300/30 bg-violet-500/10 px-4 py-2 text-sm text-violet-100">
-            v1.7 — Code Arena Runner · External Sandbox · Auth Required
+            v1.8 — Image Arena · AI Image Generation · Auth Required
           </p>
           <h1 className="max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
             AI-платформа для сравнения нескольких моделей на одной задаче
