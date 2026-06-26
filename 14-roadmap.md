@@ -11,7 +11,7 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.7 - Code Arena Runner
+**Текущая фаза:** v1.8 - Image Arena MVP
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
@@ -19,13 +19,13 @@
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.7.0-alpha.1`
+**Текущая версия:** `v1.8.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
 ```text
-v1.7.0-alpha.1 - Code Arena Runner
-# текущая рабочая ветка: внешний runner доступен авторизованным пользователям; этап остаётся in_development до полного release gate
+v1.8.0-alpha.1 - Image Arena MVP
+# текущая рабочая ветка: Image Arena MVP; сравнение изображений от AI-моделей для авторизованных пользователей
 ```
 
 Сейчас уже есть:
@@ -78,8 +78,8 @@ v1.7.0-alpha.1 - Code Arena Runner
 Следующий главный этап:
 
 ```text
-v1.8 - Image Arena MVP
-# сравнение изображений от image-моделей только после storage/safety/release review
+v2.0 - AI Team Mode
+# командная работа нескольких AI-моделей
 ```
 
 Детальные планы текущих направлений вынесены в файлы:
@@ -121,8 +121,8 @@ v1.8 - Image Arena MVP
 | `v1.4` | Leaderboard | Рейтинг моделей | Завершён |
 | `v1.5` | Admin Panel and Limits | Управление моделями, лимитами и тарифами | Завершён |
 | `v1.6` | Enterprise Governance and Billing | роли, аудит, лимиты, billing-ready governance | Завершён |
-| `v1.7` | Code Arena Runner | Запуск кода через внешний runner для авторизованных пользователей | **В разработке** |
-| `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | Позже |
+| `v1.7` | Code Arena Runner | Запуск кода через внешний runner для авторизованных пользователей | Завершён |
+| `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | **В разработке** |
 | `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей | Позже |
 
 ## v0.1 - Project Documentation
