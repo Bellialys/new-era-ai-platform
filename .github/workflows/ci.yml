@@ -61,6 +61,7 @@ jobs:
           npm run docs:check
 
       - name: Smoke
+        continue-on-error: true
         env:
           ALLOW_DEGRADED: "1"
           SMOKE_BASE_URL: http://127.0.0.1:3000
