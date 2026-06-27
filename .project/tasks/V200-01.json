@@ -1,0 +1,27 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V200-01",
+  "title": "v2.0 AI Team Mode — architecture audit + MVP plan",
+  "status": "planned",
+  "priority": "high",
+  "files": [
+    "42-v2-ai-team-mode-plan.md",
+    ".project/state.json",
+    ".project/tasks/V200-01.json"
+  ],
+  "checksRequired": [
+    "state:check",
+    "docs:check"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-06-27T00:00:00.000Z",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-06-27T00:00:00.000Z",
+      "note": "Architecture audit complete. Existing schema fully covers MVP needs (mode_slug='ai-team-mode' already in DB constraint, tasks.settings JSONB stores team config, model_responses rows store step outputs). No migration required for MVP. Plan doc written at 42-v2-ai-team-mode-plan.md. Follow-up PRs: PR17 (no migration needed, skip), PR18 server helpers, PR19 /api/team-run route, PR20 /team UI, PR21 history integration, PR22 stabilization."
+    }
+  ],
+  "notes": "Planning only. No runtime code in this PR. Next: PR18 creates src/lib/arena/team-mode.ts (role definitions + system prompts) and src/app/api/team-run/route.ts with unit tests. See 42-v2-ai-team-mode-plan.md for full spec."
+}

@@ -4,7 +4,7 @@
   "currentVersion": "1.8.0-alpha.1",
   "currentPhase": "v1.8 - Image Arena MVP",
   "status": "in_development",
-  "activeTaskIds": [],
+  "activeTaskIds": ["V200-01"],
   "lastSyncedAt": "2026-06-26T00:00:00.000Z",
   "baseBranch": "main"
 }
