@@ -3,6 +3,20 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/layout/site-header";
 import { TeamRunForm } from "./team-run-form";
 
+function TeamModeDisabled() {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-10 text-center backdrop-blur">
+      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-400">
+        Скоро
+      </span>
+      <h2 className="mt-4 text-xl font-bold text-white">Team Mode — скоро</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-400">
+        Team Mode появится в v2.0. Следите за обновлениями.
+      </p>
+    </div>
+  );
+}
+
 export const metadata: Metadata = {
   title: "Team Mode — Новая эпоха",
   description:
@@ -10,6 +24,8 @@ export const metadata: Metadata = {
 };
 
 export default function TeamPage() {
+  const isTeamModeEnabled = process.env.NEXT_PUBLIC_ENABLE_TEAM_MODE === "true";
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <SiteHeader>
@@ -44,7 +60,7 @@ export default function TeamPage() {
         </div>
       </div>
 
-      <TeamRunForm />
+      {isTeamModeEnabled ? <TeamRunForm /> : <TeamModeDisabled />}
 
       <footer className="mt-12 border-t border-white/5 pt-6 text-center text-xs text-slate-600">
         <p>
