@@ -6,9 +6,11 @@ import {
   buildTeamStepPrompt,
   normalizeTeamAnswer,
   runTeamMode,
+  TEAM_DEFAULT_MODEL_ID,
   type TeamRoleId,
   type TeamStepResult,
 } from "./team-mode";
+import { ALLOWED_MODELS } from "../server/models";
 
 // ---------------------------------------------------------------------------
 // Role configuration
@@ -313,5 +315,16 @@ describe("team-mode security invariants", () => {
       expect(modelArg).toBe("trusted/model");
       expect(modelArg).not.toBe("evil/injected-model");
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 consistency: TEAM_DEFAULT_MODEL_ID must be in ALLOWED_MODELS
+// ---------------------------------------------------------------------------
+
+describe("TEAM_DEFAULT_MODEL_ID — allowlist consistency", () => {
+  it("TEAM_DEFAULT_MODEL_ID is present in ALLOWED_MODELS", () => {
+    const ids = ALLOWED_MODELS.map((m) => m.id);
+    expect(ids).toContain(TEAM_DEFAULT_MODEL_ID);
   });
 });

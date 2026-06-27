@@ -38,6 +38,7 @@ import {
   TEAM_RUN_RATE_LIMIT_WINDOW_MS,
   getTeamRole,
 } from "@/lib/arena/team-mode";
+import { ALLOWED_MODELS } from "@/lib/server/models";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -303,11 +304,20 @@ describe("POST /api/team-run — successful execution", () => {
     }
   });
 
-  it("uses caller-supplied modelId when provided", async () => {
+  it("uses caller-supplied modelId when it is in ALLOWED_MODELS", async () => {
+    const allowedId = ALLOWED_MODELS[1].id; // second model from the allowlist
+    await POST(makeRequest({ ...VALID_BODY, modelId: allowedId }));
+
+    for (const call of fetchOpenRouterMock.mock.calls as [string, string][]) {
+      expect(call[1]).toBe(allowedId);
+    }
+  });
+
+  it("falls back to TEAM_DEFAULT_MODEL_ID when caller supplies a model not in ALLOWED_MODELS", async () => {
     await POST(makeRequest({ ...VALID_BODY, modelId: "anthropic/claude-haiku" }));
 
     for (const call of fetchOpenRouterMock.mock.calls as [string, string][]) {
-      expect(call[1]).toBe("anthropic/claude-haiku");
+      expect(call[1]).toBe(TEAM_DEFAULT_MODEL_ID);
     }
   });
 

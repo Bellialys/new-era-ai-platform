@@ -19,7 +19,7 @@ export default function ImagePage() {
           <span className="rounded-full bg-violet-500/20 px-3 py-1 text-xs font-bold text-violet-200">
             Image Arena
           </span>
-          <span className="text-xs text-slate-500">Alpha · v1.8</span>
+          <span className="text-xs text-slate-500">Alpha · v2.0</span>
         </div>
         <h1 className="mt-4 text-3xl font-black text-white sm:text-4xl">
           Сравни, кто рисует лучше
