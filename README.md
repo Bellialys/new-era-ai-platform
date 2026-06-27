@@ -9,7 +9,7 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.7 - Code Arena Runner
+**Текущая фаза:** v2.0 - AI Team Mode
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
@@ -17,10 +17,10 @@
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.7.0-alpha.1`
+**Текущая версия:** `v2.0.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
-Текущая рабочая версия проекта: **v1.7.0-alpha.1 - Code Arena Runner**.
+Текущая рабочая версия проекта: **v2.0.0-alpha.1 - AI Team Mode**.
 
 Статус синхронизирован с `.project/state.json`; порядок будущих этапов описан в `14-roadmap.md`.
 
@@ -59,15 +59,17 @@
 - Auth SSR, login/signup/logout, reset/update password flow;
 - профиль, базовая статистика, avatar upload и email change request;
 - Code Arena: сравнение кодовых решений отдельно от запуска; запуск кода доступен авторизованным пользователям через внешний Piston runner;
+- backend route `POST /api/team-run` с auth gate, rate limiting и DI-паттерном для engine;
+- страница `/team` — AI Team Mode UI с feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`;
 - `package-lock.json`;
 - текущий `typecheck` проходит; остальные проверки должны пройти перед stable/release.
 
 Пока не готово как стабильный пользовательский этап:
 
-- release-gate для `v1.7.0-alpha.1`: повторная проверка docs/state/typecheck/lint/build/schema;
+- release-gate для `v2.0.0-alpha.1`: повторная проверка docs/state/typecheck/lint/build;
 - live smoke внешнего runner и admin routes на целевом окружении;
 - Image Arena;
-- AI Team Mode.
+- публичный выход AI Team Mode (сейчас в alpha за feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`).
 
 ## Главная цель
 
