@@ -17,6 +17,9 @@ import {
   TEAM_RUN_RATE_LIMIT_MAX,
   TEAM_RUN_RATE_LIMIT_WINDOW_MS,
 } from "@/lib/arena/team-mode";
+import { ALLOWED_MODELS } from "@/lib/server/models";
+
+const TEAM_ALLOWED_MODEL_IDS = new Set(ALLOWED_MODELS.map((m) => m.id));
 
 // 4 sequential LLM calls — allow up to 60s.
 export const maxDuration = 60;
@@ -112,11 +115,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // modelId is optional — only accepted as a model selector, never as an API key or endpoint.
-    const modelId =
-      typeof b.modelId === "string" && b.modelId.trim().length > 0
-        ? b.modelId.trim()
-        : TEAM_DEFAULT_MODEL_ID;
+    // modelId is optional — accepted only when it matches the allowlist; otherwise the
+    // server default is used. This prevents callers from forcing arbitrary OpenRouter keys.
+    const requestedModelId = typeof b.modelId === "string" ? b.modelId.trim() : "";
+    const modelId = TEAM_ALLOWED_MODEL_IDS.has(requestedModelId)
+      ? requestedModelId
+      : TEAM_DEFAULT_MODEL_ID;
 
     // Execute team mode. callModel wraps fetchOpenRouterResponse with the server-side API key.
     // System prompts are defined in team-mode.ts — they are not read from the request body.

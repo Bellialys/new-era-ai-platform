@@ -3,7 +3,7 @@
 // All dependencies that require network/env are injected by the caller (PR19 route).
 
 export const MODE_SLUG_AI_TEAM = "ai-team-mode" as const;
-export const TEAM_DEFAULT_MODEL_ID = "google/gemini-flash-1.5";
+export const TEAM_DEFAULT_MODEL_ID = "meta-llama/llama-3.3-70b-instruct:free";
 export const TEAM_RUN_TASK_MIN_LENGTH = 10;
 export const TEAM_RUN_TASK_MAX_LENGTH = 4000;
 export const TEAM_RUN_RATE_LIMIT_MAX = 3;
