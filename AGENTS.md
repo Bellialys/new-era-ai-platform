@@ -44,11 +44,11 @@
 ## Текущий статус проекта
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.7 - Code Arena Runner
+**Текущая фаза:** v2.0 - AI Team Mode
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.7.0-alpha.1`
+**Текущая версия:** `v2.0.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->

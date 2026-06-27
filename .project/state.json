@@ -1,10 +1,10 @@
 {
   "$schema": "./state.schema.json",
   "project": "New Era AI Platform",
-  "currentVersion": "1.8.0-alpha.1",
-  "currentPhase": "v1.8 - Image Arena MVP",
+  "currentVersion": "2.0.0-alpha.1",
+  "currentPhase": "v2.0 - AI Team Mode",
   "status": "in_development",
   "activeTaskIds": ["V200-01"],
-  "lastSyncedAt": "2026-06-26T00:00:00.000Z",
+  "lastSyncedAt": "2026-06-27T00:00:00.000Z",
   "baseBranch": "main"
 }
