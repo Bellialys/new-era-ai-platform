@@ -1,5 +1,7 @@
 import type { HistoryResponseView, HistoryTaskView } from "@/types/history";
 import type { JudgeVerdict } from "@/types/arena";
+import { MODE_SLUG_AI_TEAM } from "@/lib/arena/team-mode";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { HistoryResponseCard } from "./history-response-card";
 import { formatDateTime, modeLabel, statusLabel } from "./format";
 
@@ -36,6 +38,12 @@ export function HistoryDetail({
   task: HistoryTaskView;
   responses: HistoryResponseView[];
 }) {
+  const isTeamTask = task.modeSlug === MODE_SLUG_AI_TEAM;
+  const finalAnswer =
+    isTeamTask && typeof task.settings.finalAnswer === "string"
+      ? task.settings.finalAnswer
+      : null;
+
   return (
     <div className="grid gap-6">
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur">
@@ -61,11 +69,31 @@ export function HistoryDetail({
         ) : null}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        {responses.map((response) => (
-          <HistoryResponseCard key={response.responseId} response={response} />
-        ))}
-      </section>
+      {finalAnswer ? (
+        <section className="rounded-3xl border border-emerald-300/40 bg-emerald-500/10 p-6 shadow-2xl shadow-emerald-950/30 backdrop-blur">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            Финальный ответ
+          </h2>
+          <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm">
+            <MarkdownRenderer content={finalAnswer} />
+          </div>
+        </section>
+      ) : null}
+
+      {responses.length > 0 ? (
+        <section>
+          {isTeamTask ? (
+            <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Шаги команды
+            </h2>
+          ) : null}
+          <div className={isTeamTask ? "grid gap-4" : "grid gap-4 lg:grid-cols-2"}>
+            {responses.map((response) => (
+              <HistoryResponseCard key={response.responseId} response={response} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {task.judgeVerdict ? <JudgeVerdictPanel verdict={task.judgeVerdict} /> : null}
     </div>

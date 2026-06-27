@@ -16,6 +16,10 @@ export function formatDateTime(iso: string): string {
 export function modeLabel(slug: string): string {
   if (slug === "prompt-arena") return "Prompt Arena";
   if (slug === "code-arena") return "Code Arena";
+  if (slug === "ai-team-mode") return "AI Team Mode";
+  if (slug === "image-arena") return "Image Arena";
+  if (slug === "multi-model-battle") return "Multi-Model Battle";
+  if (slug === "judge-mode") return "Judge Mode";
   return slug;
 }
 
