@@ -249,5 +249,13 @@
       "archivedAt": "2026-06-17T05:35:36.779Z"
     }
   ],
-  "versions": []
+  "versions": [
+    {
+      "version": "2.0.0-alpha.1",
+      "phase": "v2.0 - AI Team Mode",
+      "releasedAt": "2026-06-27T00:00:00.000Z",
+      "commitHash": "beac35e",
+      "note": "AI Team Mode alpha: /api/team-run, /team UI, Image Arena, Upstash rate limit coverage. All checks green."
+    }
+  ]
 }

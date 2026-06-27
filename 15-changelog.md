@@ -7,14 +7,36 @@
 ## Текущая версия
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.7.0-alpha.1`
+**Текущая версия:** `v2.0.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
 ```text
-v1.7.0-alpha.1 - Code Arena Runner
-# текущая alpha-ветка: documentation/state/package/migrations/API contracts sync
+v2.0.0-alpha.1 - AI Team Mode
+# текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
+
+## v2.0.0-alpha.1 - AI Team Mode - 2026-06-27
+
+### Added
+
+- Реализован backend `POST /api/team-run` с auth gate (только авторизованные пользователи), rate limiting (3/10 min), DI-паттерном для engine и best-effort сохранением.
+- Добавлена `src/lib/arena/team-mode.ts` — последовательный конвейер из 4 ролей: Planner → Researcher → Critic → Finalizer; контекст обрезается до 2000 символов.
+- Добавлена страница `/team` — AI Team Mode UI за feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`.
+- Добавлена `src/app/api/image-compare/route.ts` — Image Arena: DALL-E 3, DALL-E 2, Stable Diffusion XL; загрузка в Supabase Storage bucket `images`.
+- Добавлены 13 тестов Upstash rate limit: pipeline-команды, fail-open на 503/ECONNREFUSED, key isolation, token не в body.
+- Добавлен audit log `docs/audits/project-audit-2026-06-27.md`.
+
+### Changed
+
+- `package.json` и `.project/state.json` обновлены до `v2.0.0-alpha.1`.
+- SYNC-маркеры в `README.md`, `AGENTS.md`, `14-roadmap.md`, `15-changelog.md`, `00-readme.md` синхронизированы с v2.0.
+
+### Security
+
+- `POST /api/team-run` и `POST /api/image-compare` доступны только авторизованным пользователям (`kind !== "user"` → 401).
+- Rate limit key привязан к `identity.userId` из Supabase session, не к request body.
+- Upstash rate limiter: fail-open при Redis outage; token только в Authorization header, не в body.
 
 ## Documentation Governance Hardening - 2026-06-24
 

@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V200-01",
   "title": "v2.0 AI Team Mode — architecture audit + MVP plan",
-  "status": "planned",
+  "status": "done",
   "priority": "high",
   "files": [
     "42-v2-ai-team-mode-plan.md",
@@ -13,15 +13,43 @@
     "state:check",
     "docs:check"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-06-27T00:00:00.000Z",
+  "checksPassed": [
+    "docs:check",
+    "state:check"
+  ],
+  "lastUpdated": "2026-06-27T17:26:37.843Z",
   "transitions": [
     {
       "from": null,
       "to": "planned",
       "at": "2026-06-27T00:00:00.000Z",
       "note": "Architecture audit complete. Existing schema fully covers MVP needs (mode_slug='ai-team-mode' already in DB constraint, tasks.settings JSONB stores team config, model_responses rows store step outputs). No migration required for MVP. Plan doc written at 42-v2-ai-team-mode-plan.md. Follow-up PRs: PR17 (no migration needed, skip), PR18 server helpers, PR19 /api/team-run route, PR20 /team UI, PR21 history integration, PR22 stabilization."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-06-27T17:26:15.935Z",
+      "note": "Team Mode PRs PR18-PR22 all merged on main."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-06-27T17:26:20.741Z",
+      "note": "All checks verified on main post-merge."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-06-27T17:26:29.914Z",
+      "note": "state:check also confirmed passing."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-06-27T17:26:37.843Z",
+      "note": "All Team Mode PRs (PR18-PR22) implemented and merged. Stabilized in v2.0.0-alpha.1."
     }
   ],
-  "notes": "Planning only. No runtime code in this PR. Next: PR18 creates src/lib/arena/team-mode.ts (role definitions + system prompts) and src/app/api/team-run/route.ts with unit tests. See 42-v2-ai-team-mode-plan.md for full spec."
+  "notes": "Planning only. No runtime code in this PR. Next: PR18 creates src/lib/arena/team-mode.ts (role definitions + system prompts) and src/app/api/team-run/route.ts with unit tests. See 42-v2-ai-team-mode-plan.md for full spec.",
+  "commitHash": "beac35e"
 }

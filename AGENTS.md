@@ -56,30 +56,23 @@
 <!-- SYNC:PROJECT_STATUS_END -->
 
 > **Разграничение версий:**
-> - `v1.7.0-alpha.1` — **текущий alpha-этап**: Code Arena Runner (внешний runner для авторизованных пользователей).
+> - `v2.0.0-alpha.1` — **текущий alpha-этап**: AI Team Mode (4 роли за feature flag; только авторизованные пользователи).
 > - `v1.0.0` — **текущий стабильный релиз**: Stable Arena MVP (production smoke passed, Vercel live).
-> - `v1.3.0` — предыдущий стабильный этап: Judge Mode.
-> - `v0.9.0-alpha.1` — Stable Arena Hardening (шаблоны, аналитика, anti-abuse).
+> - `v1.7.0` — предыдущий завершённый этап: Code Arena Runner.
+> - `v1.8.0` — завершённый этап: Image Arena MVP.
 > - `v0.5.3` — последний полностью зафиксированный стабильный MVP-релиз до v1.0.
 
 ```text
-v0.9 - Stable Arena Hardening
-# реализовано: prompt templates, code templates, /api/stats, history stats widget, blind arena, model badges, mobile UX fixes
-# v0.9 STABLE: typecheck ✓  lint ✓  build ✓  docs:check ✓
+v2.0.0-alpha.1 - AI Team Mode
+# реализовано: /api/team-run, /team UI за feature flag, /api/image-compare, audit log, Upstash rate limit coverage
+# v2.0.0-alpha.1: typecheck ✓  lint ✓  build ✓  test 256/256 ✓  docs:check ✓
 ```
 
 Текущий alpha-этап:
 
 ```text
-v1.7 - Code Arena Runner
-# сравнение кода остаётся отдельным режимом; запуск кода идёт через внешний runner только для авторизованных пользователей
-```
-
-Следующий главный этап:
-
-```text
-v1.8 - Image Arena MVP
-# только после отдельного storage/safety/release review
+v2.0 - AI Team Mode
+# 4 роли (Planner → Researcher → Critic → Finalizer) за NEXT_PUBLIC_ENABLE_TEAM_MODE; только авторизованные пользователи
 ```
 
 ---
