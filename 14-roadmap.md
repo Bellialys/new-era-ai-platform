@@ -11,7 +11,7 @@
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
-**Текущая фаза:** v1.8 - Image Arena MVP
+**Текущая фаза:** v2.0 - AI Team Mode
 <!-- SYNC:CURRENT_PHASE_END -->
 
 <!-- SYNC:PROJECT_STATUS_START -->
@@ -19,13 +19,13 @@
 <!-- SYNC:PROJECT_STATUS_END -->
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.8.0-alpha.1`
+**Текущая версия:** `v2.0.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
 ```text
-v1.8.0-alpha.1 - Image Arena MVP
-# текущая рабочая ветка: Image Arena MVP; сравнение изображений от AI-моделей для авторизованных пользователей
+v2.0.0-alpha.1 - AI Team Mode
+# текущая рабочая ветка: AI Team Mode; 4 роли (Planner → Researcher → Critic → Finalizer) за feature flag
 ```
 
 Сейчас уже есть:
@@ -68,18 +68,11 @@ v1.8.0-alpha.1 - Image Arena MVP
 - Code Arena Runner через внешний Piston runner для авторизованных пользователей;
 - подготовленные governance metadata для model catalog без утверждения live-verification OpenRouter IDs.
 
-Текущий release-gate для v1.7:
+Текущий release-gate для v2.0:
 
 ```text
-v1.7.0-alpha.1 - Code Arena Runner
-# state/docs/package/migrations/API contracts/schema/build должны быть синхронизированы перед stable sign-off
-```
-
-Следующий главный этап:
-
-```text
-v2.0 - AI Team Mode
-# командная работа нескольких AI-моделей
+v2.0.0-alpha.1 - AI Team Mode
+# state/docs/package/tests/build должны быть синхронизированы; Upstash Redis требует настройки в Vercel перед stable
 ```
 
 Детальные планы текущих направлений вынесены в файлы:
@@ -122,8 +115,8 @@ v2.0 - AI Team Mode
 | `v1.5` | Admin Panel and Limits | Управление моделями, лимитами и тарифами | Завершён |
 | `v1.6` | Enterprise Governance and Billing | роли, аудит, лимиты, billing-ready governance | Завершён |
 | `v1.7` | Code Arena Runner | Запуск кода через внешний runner для авторизованных пользователей | Завершён |
-| `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | **В разработке** |
-| `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей | Позже |
+| `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | Завершён |
+| `v2.0` | AI Team Mode | Командная работа нескольких AI-моделей | **В разработке** |
 
 ## v0.1 - Project Documentation
 

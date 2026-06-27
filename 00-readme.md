@@ -41,7 +41,7 @@
 ## Текущий статус
 
 <!-- SYNC:PROJECT_VERSION_START -->
-**Текущая версия:** `v1.7.0-alpha.1`
+**Текущая версия:** `v2.0.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
 Текущая рабочая версия: **v1.7.0-alpha.1 - Code Arena Runner**.
