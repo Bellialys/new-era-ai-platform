@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
       if (updateError.message.includes("already registered")) {
         throw new ApiError(409, "EMAIL_IN_USE", "This email is already associated with another account.");
       }
-      throw new ApiError(500, "INTERNAL_ERROR", updateError.message);
+      console.error("[profile/email] updateError:", updateError.code, updateError.message);
+      throw new ApiError(500, "INTERNAL_ERROR", "Failed to update email. Please try again.");
     }
 
     logApiRequest("POST", "/api/profile/email", 200, Date.now() - startTime);

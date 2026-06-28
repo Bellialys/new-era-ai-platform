@@ -19,6 +19,7 @@ import {
   createErrorResponse,
   logApiRequest,
   getSupabaseServerClient,
+  checkRateLimit,
 } from "@/lib/server";
 
 /** Generate a display name in the form "Анонимус #XXXX". */
@@ -47,6 +48,24 @@ export async function POST(
   const startTime = Date.now();
 
   try {
+    // IP-based rate limit — no identity available yet (this endpoint creates it).
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const rl = await checkRateLimit(`guest:ip:${ip}`, 10, 60_000);
+    if (rl.limited) {
+      logApiRequest("POST", "/api/guest", 429, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(429, "RATE_LIMIT", "Too many guest session requests. Please try again later.")
+        ),
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.max(Math.ceil((rl.resetAt - Date.now()) / 1000), 1).toString(),
+          },
+        }
+      );
+    }
+
     const supabase = getSupabaseServerClient();
 
     // --- Try to reuse existing session ---

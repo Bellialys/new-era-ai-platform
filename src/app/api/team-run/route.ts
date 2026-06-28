@@ -28,6 +28,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
 
+  // Backend feature flag — independent from the NEXT_PUBLIC_ UI flag.
+  // Without this, the UI flag only hides the button but doesn't block direct API calls.
+  if (process.env.ENABLE_TEAM_MODE !== "true") {
+    logApiRequest("POST", "/api/team-run", 503, Date.now() - startTime, requestId);
+    return NextResponse.json(
+      { status: "error", errorCode: "SERVICE_UNAVAILABLE", message: "Team Mode is not enabled." },
+      { status: 503 }
+    );
+  }
+
   try {
     // Auth — team mode requires a full user account, not a guest session.
     const identity = await resolveRequestIdentity(request);

@@ -87,6 +87,10 @@ beforeEach(() => {
   fetchOpenRouterMock.mockReset();
   saveArenaRunMock.mockReset();
 
+  // Enable team mode for all tests — individual tests that check the 503 gate
+  // must delete or override this before calling POST().
+  process.env.ENABLE_TEAM_MODE = "true";
+
   // Happy-path defaults — mockResolvedValue applies to ALL calls unless a test
   // adds Once values (which are consumed first) or resets the mock itself.
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
@@ -129,6 +133,44 @@ describe("POST /api/team-run — authentication", () => {
     expect(res.status).toBe(401);
     expect(body.errorCode).toBe("AUTH_REQUIRED");
     expect(fetchOpenRouterMock).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Backend feature gate
+// ---------------------------------------------------------------------------
+
+describe("POST /api/team-run — backend feature gate", () => {
+  it("returns 503 when ENABLE_TEAM_MODE is not set", async () => {
+    delete process.env.ENABLE_TEAM_MODE;
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { errorCode?: string };
+
+    expect(res.status).toBe(503);
+    expect(body.errorCode).toBe("SERVICE_UNAVAILABLE");
+    expect(resolveIdentityMock).not.toHaveBeenCalled();
+    expect(fetchOpenRouterMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when ENABLE_TEAM_MODE is 'false'", async () => {
+    process.env.ENABLE_TEAM_MODE = "false";
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { errorCode?: string };
+
+    expect(res.status).toBe(503);
+    expect(body.errorCode).toBe("SERVICE_UNAVAILABLE");
+    expect(fetchOpenRouterMock).not.toHaveBeenCalled();
+  });
+
+  it("proceeds past the gate when ENABLE_TEAM_MODE is 'true'", async () => {
+    process.env.ENABLE_TEAM_MODE = "true";
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    // The gate is open — normal auth check runs next (user identity is set in beforeEach)
+    expect(res.status).not.toBe(503);
   });
 });
 

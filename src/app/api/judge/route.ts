@@ -234,9 +234,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     if (taskId) {
-      const supabase = getSupabaseServerClient();
-      if (supabase) {
-        await supabase
+      const db = getSupabaseServerClient();
+      if (db) {
+        // Verify caller owns the task before writing to it — prevents IDOR write.
+        const ownerCol = identity.kind === "user" ? "user_id" : "anonymous_session_id";
+        const ownerId = identity.kind === "user" ? identity.userId : identity.guestId;
+        const { data: ownedTask } = await db
+          .from("tasks")
+          .select("id")
+          .eq("id", taskId)
+          .eq(ownerCol, ownerId)
+          .single();
+        if (!ownedTask) {
+          logApiRequest("POST", "/api/judge", 404, Date.now() - startTime, requestId);
+          return NextResponse.json(
+            { status: "error", errorCode: "NOT_FOUND", message: "Task not found.", requestId },
+            { status: 404 }
+          );
+        }
+        await db
           .from("tasks")
           .update({ judge_verdict: verdict })
           .eq("id", taskId);
