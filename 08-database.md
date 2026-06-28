@@ -7,15 +7,16 @@
 Текущий статус документа:
 
 ```text
-v1.7.0-alpha.1
-# repo target: Prompt Arena + Auth/Guest/Profile + Code Arena + Judge + Admin audit database surface
-# release gate: remote Supabase migration history, audit_log RLS and generated-column drift must stay reconciled
+v2.0.0-alpha.1
+# repo target: Prompt Arena + Auth/Guest/Profile + Code Arena + Judge + Admin audit + AI Team Mode + DB v2 Foundation
+# release gate: remote Supabase migration history must stay aligned; Upstash Redis required before v2.0 stable
 # task_text является каноническим полем текста задачи
 # votes использует model_response_id и vote_type: best, like, dislike
 # models.status должен быть generated column: active/inactive
 # cast_best_vote — атомарный RPC для best vote
 # tasks.judge_verdict хранит JSON-вердикт POST /api/judge
 # public.audit_log хранит admin/governance audit events и не открыт anon/authenticated напрямую
+# Migration history aligned through 20260628031516_database_v2_foundation
 ```
 
 ## Главная идея базы
@@ -498,6 +499,12 @@ v1.7.0-alpha.1 sync on 2026-06-24:
 # audit_log RLS is enabled
 # audit_log policies exist only for service_role SELECT/INSERT
 # anon/authenticated do not have direct audit_log SELECT
+
+v2.0.0-alpha.1 sync on 2026-06-28:
+# local migration 20260628031516_database_v2_foundation.sql created (not yet applied to production)
+# file name aligned to match production Supabase migration history timestamp
+# 8 new tables: usage_events, team_runs, team_run_steps, code_runs, leaderboard_snapshots, artifacts, model_price_history, cleanup_log
+# all new tables: RLS enabled, service_role only (leaderboard_snapshots also grants public SELECT)
 ```
 
 Удалённые устаревшие локальные миграции:
@@ -523,7 +530,7 @@ v1.7.0-alpha.1 sync on 2026-06-24:
 # это финальное выравнивание индексов votes под best/like/dislike
 ```
 
-## Что уже сделано к v1.7.0-alpha.1 в рабочем дереве
+## Что уже сделано к v2.0.0-alpha.1 в рабочем дереве
 
 1. Созданы таблицы `models`, `tasks`, `model_responses`, `profiles`, `votes`.
 2. Включён RLS на основных публичных таблицах.
@@ -553,7 +560,7 @@ v1.7.0-alpha.1 sync on 2026-06-24:
 
 ## Будущие сущности Image Arena / Visual Arena
 
-Image Arena не входит в текущий обязательный scope `v1.7.0-alpha.1`. Нельзя менять scope так, будто визуальная генерация уже нужна сейчас.
+Image Arena backend (`/api/image-compare`) реализован в v2.0.0-alpha.1 как alpha, auth-only. Публичный UI Image Arena и полная Storage-интеграция — за рамками текущего scope. Нельзя добавлять Image Arena в публичный релиз без отдельного safety/storage review.
 
 После стабильной Prompt Arena можно добавить отдельные сущности:
 

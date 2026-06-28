@@ -1,6 +1,6 @@
 # 31 - Image Arena / Visual Arena Spec
 
-> future-only: Этот документ описывает будущую Image Arena / Visual Arena и не является задачей на реализацию в `v0.5.3`.
+> **Alpha в v2.0.0-alpha.1.** Backend route `POST /api/image-compare` реализован (auth only, Supabase Storage). Публичный UI, полная Storage-политика и safety controls — за рамками текущего scope. Секции с пометкой `[future]` описывают то, что ещё не реализовано. Исходная пометка `future-only` (v0.5.3) снята: backend существует как alpha.
 
 ## Назначение файла
 
@@ -73,14 +73,16 @@ artifacts
 
 Для первого Image Arena MVP предпочтительнее `image_generations`, если нужен простой и понятный scope. `artifacts` можно выбрать позже, если появятся разные типы файлов.
 
-## Будущий API
+## API
 
-Будущий route:
+Alpha route (реализован в v2.0.0-alpha.1, auth only):
 
 ```text
-POST /api/image-arena/generate
-# не входит в текущий MVP
+POST /api/image-compare
+# запускает Image Arena; доступен только авторизованным пользователям
 ```
+
+> `[future]` Исходная спецификация описывала `POST /api/image-arena/generate`. В реализации используется `POST /api/image-compare`. Публичный маршрут `/api/image-arena/generate` не создан.
 
 Пример request body:
 
@@ -160,4 +162,4 @@ Safety controls готовы.
 - Storage buckets как обязательную часть Prompt Arena;
 - UI для генерации изображений.
 
-Сейчас Image Arena существует только как будущая спецификация и roadmap-этап `v1.8`.
+Backend `POST /api/image-compare` существует как alpha (v2.0.0-alpha.1). Публичный UI и полная Safety/Storage-политика — follow-up задачи.

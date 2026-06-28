@@ -66,13 +66,19 @@ v2.0.0-alpha.1 - AI Team Mode
 - Leaderboard;
 - admin routes для audit/usage/model/user management;
 - Code Arena Runner через внешний Piston runner для авторизованных пользователей;
-- подготовленные governance metadata для model catalog без утверждения live-verification OpenRouter IDs.
+- подготовленные governance metadata для model catalog без утверждения live-verification OpenRouter IDs;
+- AI Team Mode: `POST /api/team-run` (auth gate, rate 3/10 min, 4 роли) + страница `/team` за feature flag;
+- Image Arena backend: `POST /api/image-compare` alpha (auth only, Supabase Storage);
+- DB v2 Foundation: 8 таблиц аналитики и истории (`usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`); миграция создана, не применена.
 
 Текущий release-gate для v2.0:
 
 ```text
 v2.0.0-alpha.1 - AI Team Mode
-# state/docs/package/tests/build должны быть синхронизированы; Upstash Redis требует настройки в Vercel перед stable
+# AI Team Mode в alpha за feature flag NEXT_PUBLIC_ENABLE_TEAM_MODE ✅
+# DB v2 Foundation файл создан; применить в Supabase Dashboard перед stable
+# Upstash Redis требует настройки в Vercel перед stable release
+# Перевод в stable только после full smoke-test на production окружении
 ```
 
 Детальные планы текущих направлений вынесены в файлы:

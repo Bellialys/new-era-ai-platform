@@ -44,7 +44,7 @@
 **Текущая версия:** `v2.0.0-alpha.1`
 <!-- SYNC:PROJECT_VERSION_END -->
 
-Текущая рабочая версия: **v1.7.0-alpha.1 - Code Arena Runner**.
+Текущая рабочая версия: **v2.0.0-alpha.1 - AI Team Mode**.
 
 Канонический текущий статус фиксируется в `.project/state.json`, порядок версий - в `14-roadmap.md`.
 
@@ -87,15 +87,19 @@
 - Access Gate, guest mode через httpOnly cookie `na_guest`;
 - Auth SSR, profile, avatar upload, email/password management;
 - Code Arena: сравнение кодовых решений отдельно от запуска, запуск кода через внешний runner только для авторизованных пользователей;
+- backend route `POST /api/team-run` — AI Team Mode с auth gate, rate limit (3/10 min/user), 4 роли (Planner → Researcher → Critic → Finalizer);
+- страница `/team` — AI Team Mode UI за feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`;
+- backend route `POST /api/image-compare` — Image Arena alpha, auth only, изображения в Supabase Storage;
+- DB v2 Foundation: 8 новых таблиц (`usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`);
 - `package-lock.json`;
 - текущий `typecheck` проходит; полный release gate ещё должен пройти.
 
 Пока не готово как стабильный релиз:
 
-- release-gate для `v1.7.0-alpha.1`;
+- release-gate для `v2.0.0-alpha.1`: Upstash Redis требует настройки в Vercel перед stable;
 - live smoke внешнего runner и admin routes на целевом окружении;
-- Image Arena;
-- AI Team Mode.
+- Image Arena (публичный UI);
+- публичный выход AI Team Mode (сейчас в alpha за feature flag).
 
 ## Технологический стек
 
@@ -149,7 +153,9 @@ Visual Studio Code
 | `v0.9` | Stable Arena Hardening | Финальная стабилизация перед v1.0 | Завершён |
 | `v1.0` | Stable Arena MVP | Первая стабильная публичная версия | Завершён |
 | `v1.1-v1.6` | Enterprise and Advanced Modes | Enterprise readiness, Battle, Judge, Leaderboard, admin, governance | Завершён |
-| `v1.7` | Code Arena Runner | Внешний runner для авторизованных пользователей | В разработке |
+| `v1.7` | Code Arena Runner | Внешний runner для авторизованных пользователей | Завершён |
+| `v1.8` | Image Arena MVP | Сравнение изображений от image-моделей | Завершён |
+| `v2.0` | AI Team Mode | Командная работа нескольких AI-ролей | **В разработке** |
 
 ## Первый настоящий MVP
 
@@ -173,7 +179,7 @@ Visual Studio Code
 
 ## Что нельзя делать сейчас
 
-На этапе `v1.7.0-alpha.1` не добавлять:
+На этапе `v2.0.0-alpha.1` не добавлять:
 
 - запуск пользовательского кода внутри server-side процесса приложения;
 - обход auth/rate-limit для `/api/code-run`;
