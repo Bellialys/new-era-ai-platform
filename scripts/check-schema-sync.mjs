@@ -62,7 +62,7 @@ const REQUIRED_TABLES = [
   "model_responses",
   "votes",
   "anonymous_sessions",
-  // v2.0 analytics and history tables (added in 20260628060000_database_v2_foundation.sql)
+  // v2.0 analytics and history tables (added in 20260628031516_database_v2_foundation.sql)
   "usage_events",
   "team_runs",
   "team_run_steps",
@@ -136,7 +136,7 @@ const REQUIRED_COLUMNS = [
   { table: "anonymous_sessions", column: "created_at" },
   { table: "anonymous_sessions", column: "last_seen_at" },
   { table: "anonymous_sessions", column: "converted_user_id" },
-  // v2.0 analytics and history tables (added in 20260628060000_database_v2_foundation.sql)
+  // v2.0 analytics and history tables (added in 20260628031516_database_v2_foundation.sql)
   { table: "usage_events",            column: "id" },
   { table: "usage_events",            column: "user_id" },
   { table: "usage_events",            column: "mode_slug" },

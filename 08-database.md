@@ -597,7 +597,7 @@ Supabase PostgreSQL хранит metadata и storage path.
 
 ## v2.0 Foundation Tables
 
-Добавлены в `20260628060000_database_v2_foundation.sql`. Все таблицы: RLS enabled, service_role only (кроме `leaderboard_snapshots` — public read).
+Добавлены в `20260628031516_database_v2_foundation.sql`. Все таблицы: RLS enabled, service_role only (кроме `leaderboard_snapshots` — public read).
 
 ### usage_events
 
