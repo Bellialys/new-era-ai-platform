@@ -1,6 +1,6 @@
 ﻿# 18 - AI Team Mode Spec
 
-> future-only: Этот документ описывает будущий AI Team Mode и не является задачей на реализацию в `v0.5.3`.
+> **Реализовано в v2.0.0-alpha.1.** Документ изначально был написан как спецификация будущего (v0.5.3); секции с пометкой `[historical]` описывают устаревшую архитектуру (team_configs, team_steps, maxRoles=3, POST /api/team). Актуальная реализация: `POST /api/team-run`, 4 роли, таблицы `team_runs` + `team_run_steps`.
 
 ## Назначение файла
 
@@ -386,32 +386,37 @@ Critique flow можно добавить только после стабиль
 
 ---
 
-# 11. Ограничения v2.0
+# 11. Ограничения v2.0 (актуально)
 
-Первая версия Team Mode должна иметь такие ограничения:
+Реализованные ограничения в v2.0.0-alpha.1:
 
 ```text
-maxRoles = 3
-# максимум 3 роли
+roles = 4 (fixed)
+# Planner → Researcher → Critic → Finalizer; порядок фиксирован
 
 maxRounds = 1
-# максимум 1 раунд
+# один проход, без итераций
 
 flowType = pipeline
-# только последовательная цепочка
+# строго последовательная цепочка; параллельных вызовов нет
 
-Editor required
-# финальный сборщик обязателен
+Finalizer required
+# четвёртая роль всегда собирает финальный ответ
 
 allowlist models only
-# только разрешённые модели
+# только ALLOWED_MODELS; неизвестный ID → TEAM_DEFAULT_MODEL_ID
 
-guest access limited
-# для гостей жёсткие ограничения
+auth users only
+# только kind === "user"; гости получают 401
 
-auth users only for saved runs
-# сохранённые командные запуски только после аккаунтов
+rate limit = 3/10min per user
+# Upstash Redis в production; in-memory локально
+
+context truncation = 2000 chars
+# контекст обрезается между шагами для экономии токенов
 ```
+
+> `[historical]` В исходной спецификации `maxRoles = 3`. В реализации зафиксировано 4 роли.
 
 ---
 
@@ -443,20 +448,20 @@ Backend обязан проверять `ENABLE_TEAM_MODE` до создания
 
 # 13. База данных
 
-AI Team Mode использует будущие таблицы:
+AI Team Mode использует таблицы из DB v2 Foundation (`20260628031516_database_v2_foundation.sql`):
 
 ```text
-team_configs
-# сохранённые шаблоны команд
-
 team_runs
-# запуски командного режима
+# один запуск Team Mode — один ряд (task_id, user_id, model_key, status, final_answer)
 
-team_steps
-# отдельные шаги ролей
+team_run_steps
+# один ряд на роль (team_run_id, role_id, role_label, prompt, response, latency_ms)
+# каскадное удаление при удалении team_runs (ON DELETE CASCADE)
 ```
 
-Эти таблицы не входят в MVP Prompt Arena.
+Персистентность best-effort: сохранение выполняется, если Supabase доступен, и не блокирует ответ.
+
+> `[historical]` Исходная спецификация описывала таблицы `team_configs` (шаблоны команд) и `team_steps` (шаги с `role_slug`, `status`, `round_number`). В финальной реализации эти схемы заменены на `team_runs` + `team_run_steps`. Таблицы `team_configs` и `team_steps` **не созданы и не планируются** в текущей ветке.
 
 Они добавляются только перед `v2.0`.
 
@@ -644,28 +649,27 @@ create index team_steps_status_idx on public.team_steps (status);
 ## Endpoint
 
 ```text
-POST /api/team
-# запускает AI Team Mode
+POST /api/team-run
+# запускает AI Team Mode (реализовано в v2.0.0-alpha.1)
 ```
 
 Endpoint доступен только если:
 
 ```text
-ENABLE_TEAM_MODE=true
-# backend-разрешение включено
+авторизованный пользователь (kind === "user")
+# гости получают 401 AUTH_REQUIRED
 
-модель находится в allowlist
-# нельзя подставлять любые OpenRouter ID
+модель находится в ALLOWED_MODELS allowlist
+# нельзя подставлять произвольные OpenRouter ID; неизвестные fallback на TEAM_DEFAULT_MODEL_ID
 
 лимит пользователя не превышен
-# контроль расходов
+# rate limit: 3 запроса / 10 минут на user UUID
 
-количество ролей допустимо
-# максимум 3 роли в v2.0
-
-maxRounds допустим
-# максимум 1 раунд в v2.0
+prompt 10–4000 символов
+# пустые или слишком длинные промпты отклоняются с 400 VALIDATION_ERROR
 ```
+
+> `[historical]` Флаг `ENABLE_TEAM_MODE` (backend gate) описан ниже в секции Feature Flags, но ещё не реализован в `/api/team-run`. Добавить backend gate как follow-up task.
 
 ---
 

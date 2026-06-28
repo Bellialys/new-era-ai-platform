@@ -41,6 +41,8 @@ Frontend вызывает только backend route handlers.
 | `POST /api/code-compare` | 8 req / 3 guest req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/judge` | 3 req / 1 guest req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/code-run` | 10 req | 60 сек | user UUID; guests are not allowed |
+| `POST /api/team-run` | 3 req | 10 min | user UUID; guests are not allowed |
+| `POST /api/image-compare` | 5 req | 60 сек | user UUID; guests are not allowed |
 | `GET /api/history` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `GET /api/history/[taskId]` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `GET /api/admin/audit` | no public quota | admin Supabase session | `requireAdmin()` |
@@ -513,6 +515,93 @@ Query-параметры (все необязательные):
 - `taskId` должен быть UUID, иначе `400 VALIDATION_ERROR`;
 - задача, которая не существует **или** не принадлежит вызывающему, возвращает `404 TASK_NOT_FOUND` (существование не раскрывается);
 - read-only: история не редактируется и не запускает повторных вызовов моделей.
+
+## `POST /api/team-run` (v2.0)
+
+Запускает AI Team Mode: последовательное выполнение 4 ролей (Planner → Researcher → Critic → Finalizer) через один выбранный free-tier model.
+
+Требует авторизованного пользователя (`kind === "user"`). Гости получают `401 AUTH_REQUIRED`.
+
+Минимальный запрос:
+
+```json
+{
+  "prompt": "Спроектируй архитектуру rate-limiting для AI-платформы",
+  "modelId": "model-selection-id"
+}
+```
+
+Поле `modelId` необязательно — при отсутствии или если ID не входит в `ALLOWED_MODELS`, используется `TEAM_DEFAULT_MODEL_ID`.
+
+Минимальный ответ:
+
+```json
+{
+  "status": "success",
+  "taskId": "saved-task-uuid-or-null",
+  "steps": [
+    {
+      "roleId": "planner",
+      "roleLabel": "Planner",
+      "response": "Шаг 1 ответ модели"
+    },
+    {
+      "roleId": "researcher",
+      "roleLabel": "Researcher",
+      "response": "Шаг 2 ответ модели"
+    },
+    {
+      "roleId": "critic",
+      "roleLabel": "Critic",
+      "response": "Шаг 3 ответ модели"
+    },
+    {
+      "roleId": "finalizer",
+      "roleLabel": "Finalizer",
+      "response": "Финальный результат"
+    }
+  ],
+  "finalAnswer": "Финальный результат"
+}
+```
+
+Rules:
+
+- requires a real Supabase authenticated user (`kind === "user"`); guest or unauthenticated → `401 AUTH_REQUIRED`;
+- `prompt` must be 10–4000 characters;
+- `modelId` is validated against `ALLOWED_MODELS` allowlist; unknown IDs fall back to `TEAM_DEFAULT_MODEL_ID`;
+- rate limit: 3 requests per 10 minutes per user UUID (Upstash Redis in production, in-memory locally);
+- context window between steps is truncated to 2000 characters to prevent token overflow;
+- best-effort persistence: saves `tasks` (mode_slug = `ai-team-mode`) and `team_runs`/`team_run_steps` when DB is available;
+- OpenRouter is called server-side only; `modelId` from frontend is a `selectionId`, never a raw provider key;
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INVALID_JSON`, `INTERNAL_ERROR`.
+
+## `POST /api/image-compare` (v2.0, alpha)
+
+Запускает Image Arena: генерирует изображения через несколько image-capable моделей и сохраняет в Supabase Storage.
+
+Требует авторизованного пользователя. Гости получают `401 AUTH_REQUIRED`.
+
+> **Alpha endpoint.** API может измениться до стабильного v2.0 release. Не вызывать напрямую из frontend — только через backend route handler.
+
+Минимальный запрос:
+
+```json
+{
+  "idea": "Футуристический город на рассвете",
+  "modelIds": ["uuid-image-model-1", "uuid-image-model-2"],
+  "modeSlug": "image-arena"
+}
+```
+
+Rules:
+
+- requires a real Supabase authenticated user; guest or unauthenticated → `401 AUTH_REQUIRED`;
+- backend validates `modeSlug = image-arena` and that selected models have image output capability;
+- images are stored in Supabase Storage bucket `images`; PostgreSQL stores only metadata (storage path, mime type, dimensions);
+- frontend does NOT call image providers directly — only `POST /api/image-compare`;
+- response contains storage paths and metadata, not binary image data or provider secrets;
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INTERNAL_ERROR`.
 
 ## Request ID (v0.8)
 

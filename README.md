@@ -203,7 +203,7 @@ server-side hardcoded allowlist
 
 ### `POST /api/compare`
 
-Текущий запрос `v1.7.0-alpha.1`:
+Текущий запрос:
 
 ```json
 {
@@ -213,7 +213,7 @@ server-side hardcoded allowlist
 }
 ```
 
-Текущий ответ `v1.7.0-alpha.1`:
+Текущий ответ:
 
 ```json
 {
@@ -241,7 +241,7 @@ server-side hardcoded allowlist
 
 ### `POST /api/vote`
 
-Текущий запрос `v1.7.0-alpha.1`:
+Текущий запрос:
 
 ```json
 {
@@ -327,7 +327,7 @@ server-side hardcoded allowlist
 
 ## Главные правила разработки
 
-1. Текущий этап — `v1.7 - Code Arena Runner`; порядок дальнейших этапов остаётся в `14-roadmap.md`.
+1. Текущий этап — `v2.0 - AI Team Mode`; порядок дальнейших этапов остаётся в `14-roadmap.md`.
 2. Сначала чиним production-ошибки, потом добавляем новые функции.
 3. Все AI-запросы идут только через backend. Секретные ключи не попадают во frontend и в GitHub.
 4. Секреты хранятся только в `.env.local` (локально) и Vercel Environment Variables (production).

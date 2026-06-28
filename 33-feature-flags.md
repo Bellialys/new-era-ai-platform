@@ -45,7 +45,7 @@ NEXT_PUBLIC_ENABLE_HISTORY=false
 NEXT_PUBLIC_ENABLE_PROMPT_ARENA=true
 NEXT_PUBLIC_ENABLE_CODE_ARENA=false
 NEXT_PUBLIC_ENABLE_MULTI_MODEL_BATTLE=false
-NEXT_PUBLIC_ENABLE_AI_TEAM_MODE=false
+NEXT_PUBLIC_ENABLE_TEAM_MODE=false
 NEXT_PUBLIC_ENABLE_JUDGE_MODE=false
 NEXT_PUBLIC_ENABLE_LEADERBOARD=false
 ```
@@ -62,6 +62,10 @@ ENABLE_CODE_EXECUTION=false
 ---
 
 ## 4. Правило NEXT_PUBLIC
+
+> **Важно: `NEXT_PUBLIC_` флаги управляют только UI и не являются security boundary.**
+> Пользователь может напрямую вызвать API endpoint, даже если UI-кнопка скрыта флагом.
+> Безопасность обеспечивается backend: auth check, rate limit и allowlist в route handler.
 
 Флаги с префиксом `NEXT_PUBLIC_` доступны на клиенте, то есть в браузере.
 
@@ -81,6 +85,13 @@ NEXT_PUBLIC_ENABLE_VOTING=false
 Такой флаг можно использовать для скрытия кнопок голосования в интерфейсе.
 
 ---
+
+## 4.1 Follow-up: Backend ENABLE_TEAM_MODE gate
+
+> **Follow-up task:** добавить backend проверку `ENABLE_TEAM_MODE` в `/api/team-run`.
+> Сейчас route закрыт auth gate (`kind === "user"`), но отдельный on/off флаг на сервере ещё не добавлен.
+> `NEXT_PUBLIC_ENABLE_TEAM_MODE=false` скрывает UI, но не блокирует прямые вызовы API.
+> Полная защита: реализовать `process.env.ENABLE_TEAM_MODE !== "true"` → `503` или `404` в route handler.
 
 ## 5. Серверные флаги
 
@@ -373,7 +384,7 @@ NEXT_PUBLIC_ENABLE_HISTORY=false
 NEXT_PUBLIC_ENABLE_PROMPT_ARENA=true
 NEXT_PUBLIC_ENABLE_CODE_ARENA=false
 NEXT_PUBLIC_ENABLE_MULTI_MODEL_BATTLE=false
-NEXT_PUBLIC_ENABLE_AI_TEAM_MODE=false
+NEXT_PUBLIC_ENABLE_TEAM_MODE=false
 NEXT_PUBLIC_ENABLE_JUDGE_MODE=false
 NEXT_PUBLIC_ENABLE_LEADERBOARD=false
 
