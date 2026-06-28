@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServerClient, createErrorResponse, logApiRequest } from "@/lib/server";
+import {
+  getSupabaseServerClient,
+  createErrorResponse,
+  logApiRequest,
+  resolveRequestIdentity,
+  ApiError,
+} from "@/lib/server";
 
 interface RouteContext {
   params: Promise<{ taskId: string }>;
@@ -12,6 +18,15 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
   if (!taskId || !/^[0-9a-f-]{36}$/.test(taskId)) {
     logApiRequest("GET", "/api/tasks/[taskId]", 400, Date.now() - startTime);
     return NextResponse.json({ error: { code: "INVALID_ID" } }, { status: 400 });
+  }
+
+  const identity = await resolveRequestIdentity(request);
+  if (identity.kind !== "user") {
+    logApiRequest("GET", "/api/tasks/[taskId]", 401, Date.now() - startTime);
+    return NextResponse.json(
+      createErrorResponse(new ApiError(401, "AUTH_REQUIRED", "Sign in to view task details.")),
+      { status: 401 }
+    );
   }
 
   const supabase = getSupabaseServerClient();
@@ -29,6 +44,7 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
          votes(id, winner_response_id)`
       )
       .eq("id", taskId)
+      .eq("user_id", identity.userId)
       .single();
 
     if (taskError || !task) {
