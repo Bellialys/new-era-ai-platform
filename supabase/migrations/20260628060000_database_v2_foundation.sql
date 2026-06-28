@@ -1,4 +1,4 @@
--- =============================================================================
+﻿-- =============================================================================
 -- Database v2 Foundation
 -- Adds analytics, history, cache and audit tables.
 -- All new tables: RLS enabled, service_role only (except leaderboard_snapshots
@@ -24,9 +24,9 @@ CREATE TABLE IF NOT EXISTS public.usage_events (
   created_at         timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_usage_events_user_created   ON public.usage_events (user_id, created_at DESC);
-CREATE INDEX idx_usage_events_mode_created   ON public.usage_events (mode_slug, created_at DESC);
-CREATE INDEX idx_usage_events_created        ON public.usage_events (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_usage_events_user_created   ON public.usage_events (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_usage_events_mode_created   ON public.usage_events (mode_slug, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_usage_events_created        ON public.usage_events (created_at DESC);
 
 ALTER TABLE public.usage_events ENABLE ROW LEVEL SECURITY;
 
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS public.team_runs (
   created_at       timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_team_runs_user_created ON public.team_runs (user_id, created_at DESC);
-CREATE INDEX idx_team_runs_task         ON public.team_runs (task_id);
+CREATE INDEX IF NOT EXISTS idx_team_runs_user_created ON public.team_runs (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_team_runs_task         ON public.team_runs (task_id);
 
 ALTER TABLE public.team_runs ENABLE ROW LEVEL SECURITY;
 
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS public.team_run_steps (
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_team_run_steps_team_run ON public.team_run_steps (team_run_id);
+CREATE INDEX IF NOT EXISTS idx_team_run_steps_team_run ON public.team_run_steps (team_run_id);
 
 ALTER TABLE public.team_run_steps ENABLE ROW LEVEL SECURITY;
 
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS public.code_runs (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_code_runs_user_created ON public.code_runs (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_code_runs_user_created ON public.code_runs (user_id, created_at DESC);
 
 ALTER TABLE public.code_runs ENABLE ROW LEVEL SECURITY;
 
@@ -182,8 +182,8 @@ CREATE TABLE IF NOT EXISTS public.leaderboard_snapshots (
   created_at          timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_leaderboard_snapshots_date_rate  ON public.leaderboard_snapshots (snapshot_date DESC, win_rate DESC);
-CREATE INDEX idx_leaderboard_snapshots_model_key  ON public.leaderboard_snapshots (model_key);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_snapshots_date_rate  ON public.leaderboard_snapshots (snapshot_date DESC, win_rate DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_snapshots_model_key  ON public.leaderboard_snapshots (model_key);
 
 ALTER TABLE public.leaderboard_snapshots ENABLE ROW LEVEL SECURITY;
 
@@ -230,8 +230,8 @@ CREATE TABLE IF NOT EXISTS public.artifacts (
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_artifacts_user_created ON public.artifacts (user_id, created_at DESC);
-CREATE INDEX idx_artifacts_task         ON public.artifacts (task_id);
+CREATE INDEX IF NOT EXISTS idx_artifacts_user_created ON public.artifacts (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_artifacts_task         ON public.artifacts (task_id);
 
 ALTER TABLE public.artifacts ENABLE ROW LEVEL SECURITY;
 
@@ -268,8 +268,8 @@ CREATE TABLE IF NOT EXISTS public.model_price_history (
   created_at                timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_model_price_history_model_key   ON public.model_price_history (model_key);
-CREATE INDEX idx_model_price_history_effective   ON public.model_price_history (effective_from DESC);
+CREATE INDEX IF NOT EXISTS idx_model_price_history_model_key   ON public.model_price_history (model_key);
+CREATE INDEX IF NOT EXISTS idx_model_price_history_effective   ON public.model_price_history (effective_from DESC);
 
 ALTER TABLE public.model_price_history ENABLE ROW LEVEL SECURITY;
 
@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS public.cleanup_log (
   created_at         timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_cleanup_log_created ON public.cleanup_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cleanup_log_created ON public.cleanup_log (created_at DESC);
 
 ALTER TABLE public.cleanup_log ENABLE ROW LEVEL SECURITY;
 
