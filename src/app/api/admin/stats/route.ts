@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   ApiError,
+  checkRateLimit,
   createErrorResponse,
   logApiRequest,
   requireAdmin,
@@ -13,7 +14,16 @@ export async function GET(request: NextRequest) {
   const requestId = resolveRequestId(request);
 
   try {
-    await requireAdmin();
+    const { userId } = await requireAdmin();
+
+    const rl = await checkRateLimit(`admin:${userId}`, 60, 60_000);
+    if (rl.limited) {
+      logApiRequest("GET", "/api/admin/stats", 429, Date.now() - startTime, requestId);
+      return NextResponse.json(
+        createErrorResponse(new ApiError(429, "RATE_LIMIT", "Too many requests."), requestId),
+        { status: 429 }
+      );
+    }
 
     const supabase = getSupabaseServerClient();
     if (!supabase) throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
