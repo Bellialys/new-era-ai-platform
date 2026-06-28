@@ -1,0 +1,186 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { NextRequest } from "next/server";
+
+// ---------------------------------------------------------------------------
+// Hoist mocks before any module import is evaluated.
+// ---------------------------------------------------------------------------
+
+const {
+  resolveIdentityMock,
+  checkRateLimitMock,
+  saveBestVoteMock,
+} = vi.hoisted(() => ({
+  resolveIdentityMock: vi.fn(),
+  checkRateLimitMock: vi.fn(),
+  saveBestVoteMock: vi.fn(),
+}));
+
+vi.mock("@/lib/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/server")>();
+  return {
+    ...actual,
+    resolveRequestIdentity: resolveIdentityMock,
+    checkRateLimit: checkRateLimitMock,
+    saveBestVote: saveBestVoteMock,
+    applyGuestCookie: vi.fn(),
+    logApiRequest: vi.fn(),
+  };
+});
+
+import { POST } from "./route";
+import {
+  VOTE_RATE_LIMIT_MAX_REQUESTS,
+  VOTE_RATE_LIMIT_WINDOW_MS,
+} from "@/lib/arena/constants";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const TASK_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const RESPONSE_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+
+const VALID_BODY = { taskId: TASK_ID, responseId: RESPONSE_ID, voteType: "best" };
+
+function makeRequest(body?: unknown): NextRequest {
+  if (body === undefined) {
+    return new NextRequest("http://localhost/api/vote", { method: "POST" });
+  }
+  return new NextRequest("http://localhost/api/vote", {
+    method: "POST",
+    body: typeof body === "string" ? body : JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const NOT_LIMITED = {
+  limited: false,
+  remaining: VOTE_RATE_LIMIT_MAX_REQUESTS - 1,
+  resetAt: Date.now() + VOTE_RATE_LIMIT_WINDOW_MS,
+};
+
+beforeEach(() => {
+  resolveIdentityMock.mockReset();
+  checkRateLimitMock.mockReset();
+  saveBestVoteMock.mockReset();
+
+  resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
+  checkRateLimitMock.mockResolvedValue(NOT_LIMITED);
+  saveBestVoteMock.mockResolvedValue({
+    voteId: "vote-uuid",
+    taskId: TASK_ID,
+    responseId: RESPONSE_ID,
+    voteType: "best",
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth guard
+// ---------------------------------------------------------------------------
+
+describe("POST /api/vote — auth guard", () => {
+  it("returns 401 AUTH_REQUIRED when the caller has no identity", async () => {
+    resolveIdentityMock.mockResolvedValue({ kind: "none", userId: null, guestId: null });
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(401);
+    const body = await res.json() as { errorCode?: string };
+    expect(body.errorCode).toBe("AUTH_REQUIRED");
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    expect(saveBestVoteMock).not.toHaveBeenCalled();
+  });
+
+  it("allows guest callers to vote", async () => {
+    const GUEST_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    resolveIdentityMock.mockResolvedValue({ kind: "guest", userId: null, guestId: GUEST_ID });
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Input validation
+// ---------------------------------------------------------------------------
+
+describe("POST /api/vote — input validation", () => {
+  it("returns 400 VALIDATION_ERROR for an unsupported voteType", async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, voteType: "worst" }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errorCode?: string };
+    expect(body.errorCode).toBe("VALIDATION_ERROR");
+    expect(saveBestVoteMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 VALIDATION_ERROR when taskId is missing", async () => {
+    const res = await POST(makeRequest({ responseId: RESPONSE_ID, voteType: "best" }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errorCode?: string };
+    expect(body.errorCode).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 VALIDATION_ERROR when taskId is not a UUID", async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, taskId: "not-a-uuid" }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errorCode?: string };
+    expect(body.errorCode).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 VALIDATION_ERROR when responseId is missing", async () => {
+    const res = await POST(makeRequest({ taskId: TASK_ID, voteType: "best" }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errorCode?: string };
+    expect(body.errorCode).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 when body is not valid JSON", async () => {
+    const res = await POST(makeRequest("bad json {{"));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errorCode?: string };
+    expect(body.errorCode).toBe("INVALID_JSON");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Success path
+// ---------------------------------------------------------------------------
+
+describe("POST /api/vote — success", () => {
+  it("returns 200 with vote details when the vote is saved", async () => {
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      status?: string;
+      voteId?: string;
+      taskId?: string;
+      responseId?: string;
+      voteType?: string;
+    };
+    expect(body.status).toBe("success");
+    expect(body.voteId).toBe("vote-uuid");
+    expect(body.taskId).toBe(TASK_ID);
+    expect(body.responseId).toBe(RESPONSE_ID);
+    expect(body.voteType).toBe("best");
+  });
+
+  it("calls saveBestVote with the correct IDs", async () => {
+    await POST(makeRequest(VALID_BODY));
+
+    expect(saveBestVoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: TASK_ID,
+        responseId: RESPONSE_ID,
+        userId: USER_ID,
+      })
+    );
+  });
+});

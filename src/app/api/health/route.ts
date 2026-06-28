@@ -1,10 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAvailableModels, getSupabaseServerClient, logApiRequest } from "@/lib/server";
 
 type HealthStatus = "ok" | "degraded";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const startTime = Date.now();
+
+  // Gate detailed diagnostics behind a server-side secret.
+  // If HEALTH_CHECK_SECRET is not configured, always return the minimal public response —
+  // fail-safe: never expose internal service state without explicit opt-in.
+  const secret = process.env.HEALTH_CHECK_SECRET;
+  const providedSecret = request.headers.get("x-health-secret");
+  const isAuthorized = Boolean(secret && providedSecret === secret);
+
+  if (!isAuthorized) {
+    logApiRequest("GET", "/api/health", 200, Date.now() - startTime);
+    return NextResponse.json({ status: "ok" });
+  }
+
+  // Authorized path — return full diagnostic response.
   const supabaseConfigured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   );
