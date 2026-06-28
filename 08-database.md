@@ -594,3 +594,62 @@ Supabase PostgreSQL хранит metadata и storage path.
 ```
 
 Для Image Arena также понадобятся лимиты на количество генераций, размер файлов, доступ к Storage и очистку старых artifacts.
+
+## v2.0 Foundation Tables
+
+Добавлены в `20260628060000_database_v2_foundation.sql`. Все таблицы: RLS enabled, service_role only (кроме `leaderboard_snapshots` — public read).
+
+### usage_events
+
+Учёт каждого AI-запроса (токены, стоимость, latency, ошибки).
+
+| Колонка | Тип | Описание |
+|---|---|---|
+| `id` | uuid | PK |
+| `user_id` | uuid null | FK → auth.users |
+| `guest_id` | text null | Анонимный session ID |
+| `mode_slug` | text | `prompt-arena`, `ai-team-mode`, `code-arena` и т.д. |
+| `model_key` | text | OpenRouter model key |
+| `prompt_tokens` | integer null | Токены промпта |
+| `completion_tokens` | integer null | Токены ответа |
+| `latency_ms` | integer null | Время ответа |
+| `cost_usd` | numeric(12,8) null | Стоимость в USD |
+| `error_code` | text null | Код ошибки, если запрос упал |
+| `created_at` | timestamptz | Дата события |
+
+### team_runs / team_run_steps
+
+История AI Team Mode запусков с пошаговыми выходами ролей.
+
+`team_runs` — одна строка на запуск (4 роли → один `final_answer`).
+`team_run_steps` — одна строка на роль: `planner`, `researcher`, `critic`, `finalizer`.
+
+### code_runs
+
+История запусков кода через внешний Piston runner (только авторизованные пользователи).
+
+Хранит: `language`, `code`, `stdin`, `stdout`, `stderr`, `exit_code`, `runner_url`, `latency_ms`.
+
+Код не исполняется внутри Supabase или приложения — только metadata о внешнем выполнении.
+
+### leaderboard_snapshots
+
+Ежедневные снапшоты рейтинга моделей. Позволяют показывать Leaderboard без агрегации на лету.
+
+Поля: `snapshot_date`, `model_key`, `model_display_name`, `total_votes`, `wins`, `losses`, `ties`, `win_rate`, `elo_score` (nullable).
+
+RLS: public SELECT (снапшоты — публичные агрегированные данные); INSERT только service_role.
+
+### artifacts
+
+Metadata файлов (изображений, документов, code output). Binary data хранится в Supabase Storage, в PG — только путь и атрибуты.
+
+Поля: `artifact_type` (`image` | `document` | `code_output`), `storage_path`, `mime_type`, `size_bytes`, `metadata` (jsonb), `task_id`.
+
+### model_price_history
+
+Append-only история цен моделей OpenRouter (input/output per million tokens), с полями `effective_from` / `effective_to` и `source`.
+
+### cleanup_log
+
+Аудит-трейл автоматических retention jobs: `cleanup_type`, `rows_deleted`, `oldest_deleted_at`.

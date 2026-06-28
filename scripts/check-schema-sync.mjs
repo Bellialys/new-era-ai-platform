@@ -55,12 +55,22 @@ const EXIT_CODES = {
 // Required schema definitions
 // ---------------------------------------------------------------------------
 const REQUIRED_TABLES = [
+  // v1.x core tables
   "profiles",
   "models",
   "tasks",
   "model_responses",
   "votes",
   "anonymous_sessions",
+  // v2.0 analytics and history tables (added in 20260628060000_database_v2_foundation.sql)
+  "usage_events",
+  "team_runs",
+  "team_run_steps",
+  "code_runs",
+  "leaderboard_snapshots",
+  "artifacts",
+  "model_price_history",
+  "cleanup_log",
 ];
 
 const REQUIRED_COLUMNS = [
