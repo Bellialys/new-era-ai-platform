@@ -151,8 +151,8 @@ npm run env:check:example
 # генерирует .env.local.example только из placeholder-значений
 ```
 
-Политика и детали: `docs/37-env-check-policy.md` и
-`docs/38-env-check-implementation.md`.
+Политика и детали: `37-env-check-policy.md` и
+`38-env-check-implementation.md`.
 
 ```bash
 cp .env.local.example .env.local
@@ -317,8 +317,8 @@ server-side hardcoded allowlist
 | `34-manual-qa-checklist.md` | Manual QA checklist |
 | `35-database-schema-sync.md` | Проверка соответствия Supabase-схемы (`npm run schema:check`) |
 | `36-document-sync-policy.md` | Project State Sync System и политика синхронизации документов |
-| `docs/37-env-check-policy.md` | Политика Environment Variables Checker (`npm run env:check`) |
-| `docs/38-env-check-implementation.md` | Реализация Environment Variables Checker |
+| `37-env-check-policy.md` | Политика Environment Variables Checker (`npm run env:check`) |
+| `38-env-check-implementation.md` | Реализация Environment Variables Checker |
 | `40-project-health-check.md` | Команды `health`, `health:local`, `health:production` и live-проверка моделей |
 | `41-enterprise-readiness-roadmap.md` | План выхода на international corporate-grade уровень |
 | `AGENTS.md` | Правила для AI-агентов и разработчиков |

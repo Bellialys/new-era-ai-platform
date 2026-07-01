@@ -1,6 +1,6 @@
 ﻿# 18 - AI Team Mode Spec
 
-> **Реализовано в v2.0.0-alpha.1.** Документ изначально был написан как спецификация будущего (v0.5.3); секции с пометкой `[historical]` описывают устаревшую архитектуру (team_configs, team_steps, maxRoles=3, POST /api/team). Актуальная реализация: `POST /api/team-run`, 4 роли, таблицы `team_runs` + `team_run_steps`.
+> **Реализовано в v2.0.0-alpha.1.** Документ изначально был написан как спецификация будущего (v0.5.3); секции с пометкой `[historical]` описывают устаревшую архитектуру (team_configs, team_steps, maxRoles=3, POST /api/team). Актуальная реализация: `POST /api/team-run`, 4 роли, persistence через `saveArenaRun`: `tasks.settings` + `model_responses`.
 
 ## Назначение файла
 
@@ -448,26 +448,33 @@ Backend обязан проверять `ENABLE_TEAM_MODE` до создания
 
 # 13. База данных
 
-AI Team Mode использует таблицы из DB v2 Foundation (`20260628031516_database_v2_foundation.sql`):
+Актуальная runtime-персистентность v2.0.0-alpha.1 переиспользует существующую arena-схему:
 
 ```text
-team_runs
-# один запуск Team Mode — один ряд (task_id, user_id, model_key, status, final_answer)
+tasks
+# один запуск Team Mode — один task с mode_slug='ai-team-mode'
 
-team_run_steps
-# один ряд на роль (team_run_id, role_id, role_label, prompt, response, latency_ms)
-# каскадное удаление при удалении team_runs (ON DELETE CASCADE)
+tasks.settings
+# JSONB metadata: team preset и finalAnswer
+
+model_responses
+# один ряд на шаг/роль Team Mode; model_key хранит выбранную модель, display_name хранит роль
 ```
 
-Персистентность best-effort: сохранение выполняется, если Supabase доступен, и не блокирует ответ.
+`POST /api/team-run` сохраняет результаты через `saveArenaRun`. Персистентность best-effort:
+сохранение выполняется, если Supabase доступен, и не блокирует ответ.
 
-> `[historical]` Исходная спецификация описывала таблицы `team_configs` (шаблоны команд) и `team_steps` (шаги с `role_slug`, `status`, `round_number`). В финальной реализации эти схемы заменены на `team_runs` + `team_run_steps`. Таблицы `team_configs` и `team_steps` **не созданы и не планируются** в текущей ветке.
+> `[future storage]` DB v2 Foundation (`20260628031516_database_v2_foundation.sql`) создаёт
+> `team_runs` и `team_run_steps` как задел для отдельной v2.x миграции runtime. Текущий код
+> не пишет в эти таблицы.
 
-Они добавляются только перед `v2.0`.
+> `[historical]` Исходная спецификация описывала таблицы `team_configs` (шаблоны команд)
+> и `team_steps` (шаги с `role_slug`, `status`, `round_number`). Эти схемы не являются
+> текущей runtime-персистентностью.
 
 ---
 
-# 14. Таблица team_configs
+# 14. Таблица team_configs [historical]
 
 `team_configs` хранит шаблоны команд.
 
@@ -527,9 +534,12 @@ user_id = null.
 
 ---
 
-# 15. Таблица team_runs
+# 15. Таблица team_runs [future storage]
 
 `team_runs` хранит один запуск AI Team Mode.
+
+> `[future storage]` Эта таблица описывает DB v2 storage-задел. Runtime v2.0.0-alpha.1
+> пока сохраняет Team Mode через `tasks.settings` и `model_responses`.
 
 ```sql
 create table public.team_runs (
@@ -581,7 +591,7 @@ final_response_id
 
 ---
 
-# 16. Таблица team_steps
+# 16. Таблица team_steps [historical]
 
 `team_steps` хранит каждый шаг команды.
 
@@ -1058,16 +1068,17 @@ votes
 # выбор лучшего ответа
 ```
 
-AI Team Mode использует `tasks`, но вместо независимых `model_responses` создаёт цепочку `team_steps`.
+AI Team Mode использует `tasks` и `model_responses`: каждый шаг/роль сохраняется как отдельный
+`model_responses` ряд, а конфигурация запуска и `finalAnswer` лежат в `tasks.settings`.
 
 Финальный результат команды может быть записан в:
 
 ```text
-team_runs.final_output
-# основной вариант для v2.0
+tasks.settings.finalAnswer
+# основной вариант для v2.0.0-alpha.1
 
 model_responses
-# опционально, если нужно сравнивать командный ответ с обычными ответами
+# шаги команды и роль через display_name/model metadata
 ```
 
 ---
@@ -1272,14 +1283,14 @@ ENABLE_TEAM_MODE=false
 ## Шаг 3 - Таблицы базы
 
 ```text
-создать team_configs.
-# шаблоны команд
+использовать существующую tasks/model_responses persistence.
+# runtime v2.0.0-alpha.1 через saveArenaRun
 
-создать team_runs.
-# запуски команд
+settings JSONB хранит team config и finalAnswer.
+# данные запуска без новой обязательной runtime-таблицы
 
-создать team_steps.
-# шаги ролей
+team_runs/team_run_steps.
+# future storage из DB v2 Foundation, подключается отдельной v2.x задачей
 ```
 
 ## Шаг 4 - API
@@ -1372,13 +1383,13 @@ parallel flow;
 можно запустить pipeline из 4 ролей.
 # первая рабочая команда
 
-Editor формирует final_output.
+Finalizer формирует finalAnswer.
 # пользователь получает итог
 
-team_runs сохраняет запуск.
-# есть история запуска
+tasks сохраняет запуск.
+# есть история запуска через существующую arena-схему
 
-team_steps сохраняет каждый шаг.
+model_responses сохраняет каждый шаг.
 # есть прозрачность работы команды
 
 ошибки моделей обрабатываются.
@@ -1511,13 +1522,13 @@ team_configs.
 # шаблоны команд
 
 team_runs.
-# запуски команд
+# future storage для отдельных запусков команд
 
 team_steps.
-# шаги команд
+# historical storage для шагов команд
 
-final_output.
-# финальный результат команды
+tasks.settings.finalAnswer.
+# финальный результат команды в актуальной реализации
 
 Editor required.
 # итоговый сборщик обязателен

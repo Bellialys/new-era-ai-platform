@@ -97,5 +97,3 @@ export async function saveBestVote({
     voteType: "best",
   };
 }
-
-export const saveWinnerVote = saveBestVote;

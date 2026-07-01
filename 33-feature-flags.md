@@ -37,7 +37,7 @@ NEXT_PUBLIC_ENABLE_VOTING=true
 NEXT_PUBLIC_ENABLE_HISTORY=false
 ```
 
-Не считать этот пример актуальным списком обязательных env variables. Актуальные переменные окружения определяются `env-check.config.json`, `.env.local.example`, `docs/37-env-check-policy.md` и `12-security-and-env.md`.
+Не считать этот пример актуальным списком обязательных env variables. Актуальные переменные окружения определяются `env-check.config.json`, `.env.local.example`, `37-env-check-policy.md` и `12-security-and-env.md`.
 
 Дополнительные флаги для будущих режимов:
 
