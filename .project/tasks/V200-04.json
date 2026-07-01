@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V200-04",
   "title": "Global Audit and Cleanup Plan 44",
-  "status": "verify",
+  "status": "done",
   "priority": "medium",
   "files": [
     "44-global-audit-and-cleanup-plan.md",
@@ -46,7 +46,8 @@
     "docs:check",
     "state:check"
   ],
-  "lastUpdated": "2026-07-02T01:31:00.000Z",
+  "lastUpdated": "2026-07-02T01:34:00.000Z",
+  "commitHash": "3e947f8",
   "transitions": [
     {
       "from": null,
@@ -65,6 +66,12 @@
       "to": "verify",
       "at": "2026-07-02T01:31:00.000Z",
       "note": "Cleanup changes are implemented. Required checks passed: typecheck, lint, test, test:env-check, build, docs:check, state:check."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-07-02T01:34:00.000Z",
+      "note": "Cleanup committed in 3e947f8 and all required checks passed."
     }
   ],
   "notes": "Scope: FIX-01..FIX-10 from 44-global-audit-and-cleanup-plan.md. Owner decisions: D-1=A root numbered canon; D-2=delete three dead exports; D-3=A remove hardcoded version drift from CLAUDE.md. Out of scope: package changes, migrations, env files, scripts, production deployment, backlog features, push/merge/deploy."
