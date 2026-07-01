@@ -57,6 +57,6 @@ npm run docs:check  # синхронизация документации
 ## Текущая фаза
 
 `v1.0.0` — Stable Arena MVP (текущий стабильный релиз).
-`v1.7.0-alpha.1` — текущий alpha-этап: Code Arena Runner.
+`v2.0.0-alpha.1` — текущий alpha-этап: AI Team Mode.
 
 Актуальная версия и активные задачи всегда в `.project/state.json`; порядок будущих этапов в `14-roadmap.md`.

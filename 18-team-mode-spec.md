@@ -429,7 +429,7 @@ NEXT_PUBLIC_ENABLE_TEAM_MODE=false
 # показывает или скрывает страницу /team во frontend
 
 ENABLE_TEAM_MODE=false
-# реально разрешает или запрещает /api/team на backend
+# реально разрешает или запрещает /api/team-run на backend
 ```
 
 Важное правило:
@@ -669,7 +669,7 @@ prompt 10–4000 символов
 # пустые или слишком длинные промпты отклоняются с 400 VALIDATION_ERROR
 ```
 
-> `[historical]` Флаг `ENABLE_TEAM_MODE` (backend gate) описан ниже в секции Feature Flags, но ещё не реализован в `/api/team-run`. Добавить backend gate как follow-up task.
+> `[current]` Backend gate `ENABLE_TEAM_MODE` реализован в `/api/team-run`: при значении, отличном от `"true"`, endpoint возвращает controlled `503 SERVICE_UNAVAILABLE` до запуска ролей, OpenRouter-вызовов и записи данных.
 
 ---
 
@@ -1285,7 +1285,7 @@ ENABLE_TEAM_MODE=false
 ## Шаг 4 - API
 
 ```text
-создать POST /api/team.
+создать POST /api/team-run.
 # запуск команды
 
 добавить backend validation.
@@ -1366,10 +1366,10 @@ parallel flow;
 /team открывается только при включённом frontend flag.
 # UI скрыт, если режим отключён
 
-/api/team закрыт при ENABLE_TEAM_MODE=false.
+/api/team-run закрыт при ENABLE_TEAM_MODE=false.
 # backend-защита работает
 
-можно запустить pipeline из 3 ролей.
+можно запустить pipeline из 4 ролей.
 # первая рабочая команда
 
 Editor формирует final_output.

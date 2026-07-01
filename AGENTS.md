@@ -65,7 +65,8 @@
 ```text
 v2.0.0-alpha.1 - AI Team Mode
 # реализовано: /api/team-run, /team UI за feature flag, /api/image-compare, audit log, Upstash rate limit coverage
-# v2.0.0-alpha.1: typecheck ✓  lint ✓  build ✓  test 256/256 ✓  docs:check ✓
+# v2.0.0-alpha.1: typecheck ✓  lint ✓  build ✓  test 337/337 ✓  docs:check ✓
+# production Team Mode activation: pending V200-02 (Upstash + ENABLE_TEAM_MODE + NEXT_PUBLIC_ENABLE_TEAM_MODE + redeploy + smoke)
 ```
 
 Текущий alpha-этап:

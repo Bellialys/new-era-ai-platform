@@ -148,9 +148,9 @@ NEXT_PUBLIC_SITE_URL=
 # публичный site URL
 ```
 
-> **Примечание:** feature-флаги `NEXT_PUBLIC_ENABLE_CODE_ARENA` и `NEXT_PUBLIC_ENABLE_TEAM_MODE`
-> убраны из env — соответствующие режимы контролируются константами в `src/lib/arena/constants.ts`
-> и версионным запретом в CLAUDE.md.
+> **Примечание:** часть feature-флагов больше не обязательна для обычной локальной сборки.
+> Для production activation AI Team Mode флаги `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`
+> и `ENABLE_TEAM_MODE=true` обязательны: первый включает UI, второй разрешает backend `/api/team-run`.
 
 Важное правило:
 
@@ -226,9 +226,13 @@ OPENROUTER_MAX_TOKENS=2048
 # максимум токенов в ответе модели; можно переопределить без деплоя
 ```
 
-> **Убрано:** `NEXT_PUBLIC_ENABLE_CODE_ARENA`, `ENABLE_CODE_RUNNER`, `NEXT_PUBLIC_ENABLE_TEAM_MODE`,
-> `ENABLE_TEAM_MODE`, `MIN_PROMPT_LENGTH`, `MAX_PROMPT_LENGTH`, `MAX_MODELS_PER_COMPARE` —
-> эти значения больше не читаются из env; они заменены константами в `src/lib/arena/constants.ts`.
+> **Убрано из обязательных build env:** `NEXT_PUBLIC_ENABLE_CODE_ARENA`, `ENABLE_CODE_RUNNER`,
+> `MIN_PROMPT_LENGTH`, `MAX_PROMPT_LENGTH`, `MAX_MODELS_PER_COMPARE` — эти значения заменены
+> константами в `src/lib/arena/constants.ts`.
+>
+> **Production activation exception:** `NEXT_PUBLIC_ENABLE_TEAM_MODE` и `ENABLE_TEAM_MODE`
+> читаются runtime-кодом Team Mode. Для включения Team Mode в production они должны быть выставлены
+> в Vercel Production вместе с Upstash Redis env.
 
 ## 3.2 Что нельзя делать
 
@@ -597,7 +601,7 @@ GitHub хранит код, документацию и package-lock.json.
 - `/api/models` читает Supabase catalog с hardcoded fallback;
 - `modeSlug` проверяется на backend;
 - все три endpoint защищены rate limit: `/api/models` (60 req/мин по IP), `/api/compare` (10 req/мин по user/guest), `/api/vote` (30 req/мин по user/guest);
-- rate limit использует Upstash Redis в production (глобальный, между serverless instances) с in-memory fallback для локальной разработки;
+- rate limit использует Upstash Redis в production (глобальный, между serverless instances) с in-memory fallback для локальной разработки; без `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN` production остаётся на per-instance fallback и не проходит release gate;
 - `/api/compare` best-effort сохраняет `tasks` и `model_responses`;
 - RLS и grants для текущих таблиц описаны Supabase migrations;
 - неизвестные ошибки скрываются за `INTERNAL_ERROR`;

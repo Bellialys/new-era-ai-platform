@@ -436,10 +436,10 @@ ENABLE_CODE_RUNNER=false
 # запрещает запуск кода на backend
 
 NEXT_PUBLIC_ENABLE_TEAM_MODE=false
-# показывает или скрывает AI Team Mode в интерфейсе
+# показывает или скрывает AI Team Mode в интерфейсе; production=true только вместе с ENABLE_TEAM_MODE
 
 ENABLE_TEAM_MODE=false
-# запрещает AI Team Mode на backend
+# запрещает AI Team Mode на backend; production=true только после Upstash + smoke gate
 ```
 
 ## 9.2 Файл `.env.example`
@@ -472,10 +472,10 @@ ENABLE_CODE_RUNNER=false
 # backend flag
 
 NEXT_PUBLIC_ENABLE_TEAM_MODE=false
-# UI flag
+# UI flag; для production Team Mode activation выставить true вместе с ENABLE_TEAM_MODE
 
 ENABLE_TEAM_MODE=false
-# backend flag
+# backend flag; без true /api/team-run возвращает 503
 ```
 
 ## 9.3 Проверка `.gitignore`
@@ -750,10 +750,10 @@ ENABLE_CODE_RUNNER=false
 # Runner запрещён до v1.7
 
 NEXT_PUBLIC_ENABLE_TEAM_MODE=false
-# Team Mode скрыт до v2.0
+# Team Mode скрыт до V200-02 production activation
 
 ENABLE_TEAM_MODE=false
-# Team Mode запрещён на backend до v2.0
+# Team Mode запрещён на backend до V200-02 production activation
 ```
 
 Важно:
@@ -910,7 +910,7 @@ Code Runner выключен.
 # ENABLE_CODE_RUNNER=false до v1.7
 
 Team Mode выключен.
-# ENABLE_TEAM_MODE=false до v2.0
+# ENABLE_TEAM_MODE=false до V200-02 production activation
 
 Git commit создан.
 # рабочее состояние сохранено
@@ -964,10 +964,10 @@ ENABLE_CODE_RUNNER=false
 # backend flag для запуска кода
 
 NEXT_PUBLIC_ENABLE_TEAM_MODE=false
-# UI flag для AI Team Mode
+# UI flag для AI Team Mode; production=true только вместе с ENABLE_TEAM_MODE
 
 ENABLE_TEAM_MODE=false
-# backend flag для AI Team Mode
+# backend flag для AI Team Mode; без true /api/team-run возвращает 503
 ```
 
 Правило:
@@ -1078,7 +1078,7 @@ ENABLE_CODE_RUNNER=false
 
 ## 18.5 v2.0 - AI Team Mode
 
-Можно деплоить, если:
+Можно деплоить код, если:
 
 ```text
 Есть лимиты стоимости.
@@ -1097,11 +1097,30 @@ ENABLE_CODE_RUNNER=false
 # ограничение количества раундов
 ```
 
-До этого:
+Production activation считается закрытой только после отдельного gate V200-02:
 
 ```env
-ENABLE_TEAM_MODE=false
-# Team Mode выключен
+UPSTASH_REDIS_REST_URL=...
+# глобальный Redis backend для rate limit
+
+UPSTASH_REDIS_REST_TOKEN=...
+# server-only token
+
+ENABLE_TEAM_MODE=true
+# backend разрешает /api/team-run
+
+NEXT_PUBLIC_ENABLE_TEAM_MODE=true
+# UI показывает /team
+```
+
+Обязательный smoke после redeploy:
+
+```text
+/api/health публично возвращает только { "status": "ok" }
+/team показывает активный UI
+unauthenticated POST /api/team-run блокируется auth gate, а не 503 feature flag
+authenticated пользователь запускает Team Mode
+rate limit подтверждён через Upstash, не memory fallback
 ```
 
 ---

@@ -4,6 +4,13 @@
 **Ветка:** main  
 **Коммит:** `beac35e` release: v2.0.0-alpha.1 — AI Team Mode stabilization
 
+> **Current status update — 2026-06-28:** этот аудит является историческим снимком на commit `beac35e`.
+> Часть пунктов ниже уже устарела: `V200-01` закрыта как `done`, git tag `v2.0.0-alpha.1`
+> существует, Team Mode default model приведена к allowlist, тестовая сетка выросла до 337 tests.
+> Актуальный P1-блокер вынесен в `.project/tasks/V200-02.json`: Production Env Activation
+> (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `ENABLE_TEAM_MODE=true`,
+> `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, redeploy и production smoke).
+
 ---
 
 ## 1. Краткое резюме (Executive Summary)
@@ -12,10 +19,11 @@
 
 **Ключевые риски:**
 - P1: Rate limiter в in-memory режиме — **не работает across Vercel serverless instances** без Upstash Redis. Это критично для production.
-- P1: Задача V200-01 помечена как `planned`, хотя v2.0 уже полностью реализована — state рассинхронизирован.
-- P1: Git-тег `v2.0.0-alpha.1` не проставлен — есть только `v1.0.0`.
+- P1: Production Team Mode activation ещё не закрыта — требуется V200-02: Upstash Redis env, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, redeploy и smoke.
+- Superseded 2026-06-28: V200-01 уже закрыта как `done`.
+- Superseded 2026-06-28: git tag `v2.0.0-alpha.1` существует.
 - P2: Storage bucket `images` для Image Arena — наличие в Supabase не верифицировано.
-- P2: Дефолтная модель Team Mode (`google/gemini-flash-1.5`) отсутствует в ALLOWED_MODELS.
+- Superseded 2026-06-28: default model Team Mode приведена к allowlist (`meta-llama/llama-3.3-70b-instruct:free`).
 - P3: Документация (`14-roadmap.md`, `AGENTS.md`, `00-readme.md`, Image Arena UI) содержит устаревшие версионные ссылки.
 
 **Нет P0-проблем.** Публичных ключей или секретов в коде не найдено. `eval`, `new Function`, `dangerouslySetInnerHTML` в src отсутствуют.
@@ -41,7 +49,7 @@
 | Параметр | Значение |
 |---|---|
 | Версия | `2.0.0-alpha.1` |
-| Git tag | `v1.0.0` (единственный; v2.0 не помечен) |
+| Git tag | На момент аудита: `v1.0.0` only. Current status update 2026-06-28: `v2.0.0-alpha.1` tag существует. |
 | Ветка | main |
 | Последний коммит | `beac35e` 2026-06-27 |
 | Node.js | v26.3.0 |
@@ -357,7 +365,8 @@ Browser
 | Votes | `src/lib/server/votes.test.ts` | ~12 |
 | Guest | `src/lib/guest.test.ts` | ~10 |
 
-**Итого: 18 vitest-файлов, 243 теста + 32 env-check теста = 275 тестов**
+**Итого на момент аудита:** 18 vitest-файлов, 243 теста + 32 env-check теста = 275 тестов.
+**Current status update — 2026-06-28:** текущая сетка выросла до 337 tests.
 
 ### Что НЕ покрыто тестами
 
@@ -404,9 +413,10 @@ Browser
 - ⚠️ **Upstash Redis не настроен** — rate limiter работает in-memory и не шарится между serverless instances
 - ⚠️ **Storage bucket `images`** — Image Arena сохраняет изображения в bucket `images`, но наличие этого bucket в Supabase не верифицировано; если он не создан, upload упадёт (graceful fallback на прямой URL OpenRouter есть)
 - ⚠️ **Piston API (emkc.org)** — внешняя зависимость, не под нашим контролем; нет fallback при недоступности
-- ⚠️ **Team Mode default model** — `google/gemini-flash-1.5` используется по умолчанию, но этот ID отсутствует в ALLOWED_MODELS / migrations и не верифицирован через OpenRouter
-- ⚠️ **V200-01 task status = "planned"** — задача не закрыта, хотя Team Mode полностью реализован и зарелизован
-- ⚠️ **Git tag v2.0.0-alpha.1 не проставлен** — только v1.0.0 существует
+- ✅ **Team Mode default model** — superseded 2026-06-28; текущий default `meta-llama/llama-3.3-70b-instruct:free` есть в ALLOWED_MODELS и покрыт consistency test
+- ✅ **V200-01 task status** — superseded 2026-06-28; task закрыта как `done`
+- ✅ **Git tag v2.0.0-alpha.1** — superseded 2026-06-28; tag существует
+- ⚠️ **V200-02 Production Env Activation** — текущий P1 gate: Upstash Redis env + оба Team Mode флага + redeploy + production smoke
 - ⚠️ **schema:check не запускался** — синхронизация миграций с live DB не проверена в этой сессии
 - ⚠️ **models:verify не запускался** — model IDs не верифицированы против live OpenRouter
 - ⚠️ **`/api/compare` без тестов** — главный endpoint без route-level unit тестов
@@ -420,15 +430,15 @@ Browser
 | # | Риск | Файл | Описание |
 |---|---|---|---|
 | P1-1 | **Rate limiter in-memory** | `src/lib/server/rate-limit.ts` | Без `UPSTASH_REDIS_REST_URL`/`TOKEN` rate limit не шарится между Vercel serverless instances. Злоумышленник делает запросы параллельно на несколько функций и обходит лимит. Критично для `TEAM_RUN_RATE_LIMIT_MAX = 3/10min`. |
-| P1-2 | **V200-01 task не закрыта** | `.project/tasks/V200-01.json` | Status = "planned", checksPassed = []. Team Mode реализован и задеплоен. State рассинхронизирован — docs:check не ловит это. |
-| P1-3 | **Git tag v2.0 отсутствует** | — | `git tag` показывает только `v1.0.0`. Нет способа сослаться на v2.0-alpha release через тег. |
+| P1-2 | **V200-02 Production Env Activation** | `.project/tasks/V200-02.json` | Team Mode не считается активным в production, пока не выставлены Upstash Redis env, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, не выполнен redeploy и smoke. |
+| P1-3 | **Superseded: V200-01/git tag** | `.project/tasks/V200-01.json` | V200-01 закрыта как `done`, tag `v2.0.0-alpha.1` существует. Этот старый риск больше не актуален. |
 
 ### P2 — Средний приоритет
 
 | # | Риск | Файл | Описание |
 |---|---|---|---|
 | P2-1 | **Supabase bucket `images` не верифицирован** | `src/app/api/image-compare/route.ts:60-91` | `uploadToStorage()` пытается загрузить в bucket "images". Если bucket не создан, Upload возвращает ошибку; есть fallback на прямой URL, но это не production-ready. |
-| P2-2 | **TEAM_DEFAULT_MODEL_ID не верифицирован** | `src/lib/arena/team-mode.ts:7` | `google/gemini-flash-1.5` — конкретный ID может быть недоступен или не поддерживать указанный формат в OpenRouter. |
+| P2-2 | **Superseded: TEAM_DEFAULT_MODEL_ID** | `src/lib/arena/team-mode.ts:6` | Текущий default `meta-llama/llama-3.3-70b-instruct:free` присутствует в ALLOWED_MODELS и покрыт consistency test. Live OpenRouter verification остаётся отдельной env-dependent проверкой. |
 | P2-3 | **`/api/compare` без тестов** | `src/app/api/compare/route.ts` | Основной endpoint (630 строк, SSE streaming + batch) не имеет route-level тестов. Регрессии трудно поймать. |
 | P2-4 | **Image Arena error format несогласован** | `src/app/api/image-compare/route.ts` | Использует `{ error: "...", message: "..." }` вместо стандартного `{ status, errorCode, message }`. Клиентский код должен обрабатывать два формата. |
 | P2-5 | **Piston без fallback** | `src/app/api/code-run/route.ts:118-131` | AbortSignal.timeout(15000) есть, но нет fallback если emkc.org недоступен — возвращается 502. |
@@ -438,8 +448,8 @@ Browser
 
 | # | Риск | Файл | Описание |
 |---|---|---|---|
-| P3-1 | **14-roadmap.md устарел** | `14-roadmap.md` | Таблица версий: v2.0 = "Позже", v1.8 = "В разработке" — оба неверны. SYNC-маркеры в roadmap показывают v1.8.0-alpha.1. |
-| P3-2 | **AGENTS.md contextual text устарел** | `AGENTS.md` | Блок "Следующий главный этап" ссылается на v1.8; "Разграничение версий" ссылается на v1.7.0-alpha.1. SYNC-маркеры обновлены корректно. |
+| P3-1 | **Superseded: 14-roadmap.md устарел** | `14-roadmap.md` | Current status update 2026-06-28: roadmap показывает `v2.0 - AI Team Mode`, `v2.0.0-alpha.1`, status `in_development`. |
+| P3-2 | **Superseded: AGENTS.md contextual text устарел** | `AGENTS.md` | Current status update 2026-06-28: AGENTS.md показывает `v2.0.0-alpha.1`; test count обновлён до 337 и production activation вынесен в V200-02. |
 | P3-3 | **00-readme.md и 15-changelog.md** | `00-readme.md`, `15-changelog.md` | Содержат SYNC-маркеры с устаревшими версиями. docs:check только проверяет presence, не content. |
 | P3-4 | **Image Arena UI badge "v1.8"** | `src/app/image/page.tsx:23` | Хардкод `Alpha · v1.8` в UI. После перехода на v2.0-alpha не обновлён. |
 | P3-5 | **TODO в models.ts** | `src/lib/server/models.ts:8` | Комментарий `TODO(v0.5.3): verify model IDs` — стал историческим долгом. |
@@ -511,22 +521,21 @@ Browser
 
 ## 18. Рекомендуемый план следующих PR
 
-### PR-1 — Закрытие V200-01 и git tag (meta, 15 мин)
-- Закрыть задачу через `npm run state:task`
-- `git tag v2.0.0-alpha.1 beac35e && git push origin v2.0.0-alpha.1`
-- Не меняет никакой код
+> **Current status update — 2026-06-28:** старый suggested PR plan ниже superseded.
+> V200-01 закрыта, tag `v2.0.0-alpha.1` существует, docs/state sync проходит.
+> Текущий следующий шаг — V200-02 `Release Gate P1 - Production Env Activation`.
 
-### PR-2 — Docs sync (5 файлов, 30 мин)
-- `14-roadmap.md`: обновить SYNC-маркеры и таблицу версий (v2.0 "Позже" → "В разработке")
-- `00-readme.md`: обновить SYNC-маркеры
-- `15-changelog.md`: обновить SYNC-маркеры
-- `AGENTS.md`: обновить contextual text (не только маркеры)
-- `src/app/image/page.tsx`: `v1.8` → `v2.0` в badge
+### V200-02 — Production Env Activation
+- Добавить в Vercel Production `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN`.
+- Добавить в Vercel Production `ENABLE_TEAM_MODE=true`.
+- Добавить в Vercel Production `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`.
+- Выполнить production redeploy.
+- Проверить `/api/health`, `/team`, unauth/auth `/api/team-run`, Upstash-backed rate limits.
 
-### PR-3 — Production-grade rate limiter (1 файл + env, 1ч)
-- Задокументировать в `docs/runbook.md` обязательный шаг: Upstash Redis перед production deploy
-- Добавить в CI проверку наличия Upstash env vars (через `npm run env:check:full`)
-- Обновить `.env.example` с инструкцией по Upstash
+### PR30 — после V200-02
+- Nonce-based CSP.
+- Remaining route-level tests.
+- Не считать Team Mode активированным в production до закрытия V200-02.
 
 ### PR-4 — Image Arena fixes (2-3 файла, 2ч)
 - Верифицировать/задокументировать bucket `images` в Supabase (runbook)
@@ -575,13 +584,13 @@ Browser
 
 ## 20. Финальный вывод
 
-**Проект технически здоров.** Кодовая база чистая, архитектура последовательная, безопасность соблюдена на уровне, который пройдёт большинство production security review. Все 275 автоматических тестов проходят. CI настроен и работает.
+**Проект технически здоров.** Кодовая база чистая, архитектура последовательная, безопасность соблюдена на уровне, который пройдёт большинство production security review. На момент аудита проходили 275 автоматических тестов; current status update — 337 tests. CI настроен и работает.
 
 **Главная задача перед public production release** — не фичи, а инфраструктурные gaps:
 
-1. Настройка Upstash Redis (P1) — без этого rate limiting не работает на Vercel.
-2. Закрытие V200-01 и проставление git тега (P1) — приведение state в порядок.
-3. Верификация Storage bucket и TEAM_DEFAULT_MODEL_ID (P2).
+1. V200-02 Production Env Activation (P1) — Upstash Redis env, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, redeploy и production smoke.
+2. Верификация Storage bucket `images` (P2).
+3. Live OpenRouter/model verification, если доступны production credentials (P2).
 4. Тесты для /api/compare (P2) — самый важный endpoint без тестов.
 
-Кодовая база готова к следующей итерации. Рекомендуется начать с PR-1 (meta) и PR-3 (Upstash) как блокирующих для production.
+Кодовая база готова к следующей итерации. Current recommendation 2026-06-28: закрыть V200-02 `Release Gate P1 - Production Env Activation` перед PR30 и перед объявлением Team Mode активным в production.

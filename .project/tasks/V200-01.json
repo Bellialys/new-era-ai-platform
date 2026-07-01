@@ -50,6 +50,6 @@
       "note": "All Team Mode PRs (PR18-PR22) implemented and merged. Stabilized in v2.0.0-alpha.1."
     }
   ],
-  "notes": "Planning only. No runtime code in this PR. Next: PR18 creates src/lib/arena/team-mode.ts (role definitions + system prompts) and src/app/api/team-run/route.ts with unit tests. See 42-v2-ai-team-mode-plan.md for full spec.",
+  "notes": "Architecture audit and MVP plan are complete. PR18-PR22 were implemented and merged on main; Team Mode runtime now includes src/lib/arena/team-mode.ts, POST /api/team-run, /team UI, auth gate, backend ENABLE_TEAM_MODE gate, and route/unit coverage. Next tracked step is V200-02: production env activation with Upstash Redis, ENABLE_TEAM_MODE=true, NEXT_PUBLIC_ENABLE_TEAM_MODE=true, redeploy, and production smoke.",
   "commitHash": "beac35e"
 }
