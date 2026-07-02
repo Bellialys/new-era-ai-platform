@@ -5,16 +5,14 @@
  * list is used only when Supabase is not configured or the `models` table is
  * empty, so the app still works without a database.
  *
- * TODO(v0.5.3): verify model IDs against OpenRouter before public deploy:
- * curl https://openrouter.ai/api/v1/models -H "Authorization: Bearer $OPENROUTER_API_KEY"
+ * Live ID verification is handled by `npm run models:verify`.
  */
 
 import type { ArenaModel } from "@/types/arena";
 
 // Curated set of free OpenRouter text/chat model keys mirrored by
-// supabase/migrations/0002_sync_free_models.sql. The keys must be verified
-// against OpenRouter before public deploy; this repository does not store an
-// API key and should not claim live verification without running that check.
+// supabase/migrations/0002_sync_free_models.sql. Run `npm run models:verify`
+// before public deploy or whenever this fallback list changes.
 // Order matters: the UI preselects the first models.
 export const ALLOWED_MODELS: ArenaModel[] = [
   // --- General-purpose (default selection) ---

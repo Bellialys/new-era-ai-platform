@@ -1,6 +1,6 @@
 # 31 - Image Arena / Visual Arena Spec
 
-> **Alpha в v2.0.0-alpha.1.** Backend route `POST /api/image-compare` реализован (auth only, Supabase Storage). Публичный UI, полная Storage-политика и safety controls — за рамками текущего scope. Секции с пометкой `[future]` описывают то, что ещё не реализовано. Исходная пометка `future-only` (v0.5.3) снята: backend существует как alpha.
+> **Alpha в v2.0.0-alpha.1.** Backend route `POST /api/image-compare` реализован (auth only, Supabase Storage with degraded provider-URL fallback). Публичный UI, полная Storage-политика и safety controls — за рамками текущего scope. Секции с пометкой `[future]` описывают то, что ещё не реализовано. Исходная пометка `future-only` (v0.5.3) снята: backend существует как alpha.
 
 ## Назначение файла
 
@@ -36,14 +36,15 @@ Image Arena позволяет сравнить изображения, кото
 5. Frontend отправляет запрос только в backend route.
 6. Backend валидирует идею, модели, лимиты и доступ.
 7. Backend вызывает image-capable модели через OpenRouter.
-8. Изображения сохраняются в Supabase Storage.
-9. Metadata и storage path сохраняются в Supabase PostgreSQL.
-10. UI показывает сетку изображений.
-11. Пользователь выбирает лучший результат.
+8. Изображения загружаются в Supabase Storage, если server-side storage client доступен и provider URL можно скачать.
+9. В alpha degraded mode backend возвращает provider URL, если Storage недоступен или upload/fetch изображения не прошёл.
+10. Metadata и storage path сохраняются в Supabase PostgreSQL после выделенной Image Arena persistence-задачи.
+11. UI показывает сетку изображений.
+12. Пользователь выбирает лучший результат.
 
 ## Будущие таблицы и Storage
 
-Файлы изображений должны храниться в Supabase Storage.
+Файлы изображений должны храниться в Supabase Storage в стабильном режиме. Текущий alpha backend допускает degraded provider-URL fallback, чтобы ошибка Storage не скрывала уже полученный результат генерации.
 
 PostgreSQL должен хранить только metadata:
 
@@ -140,6 +141,9 @@ Stable Prompt Arena готова.
 
 Supabase Storage готов.
 # изображения нельзя хранить в PostgreSQL
+
+Storage fallback описан и протестирован.
+# alpha может вернуть provider URL, если Storage недоступен
 
 Лимиты генераций готовы.
 # иначе режим может быстро стать дорогим

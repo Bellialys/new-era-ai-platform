@@ -66,8 +66,8 @@ Production должен быть защищён не только правила
 | `NEXT_PUBLIC_SITE_URL` | Browser + server | Да | Публичный URL сайта для текущего окружения. |
 | `MODEL_TIMEOUT_MS` | Backend | Нет | Лимит времени ответа модели. |
 | `OPENROUTER_MAX_TOKENS` | Backend | Нет | Лимит токенов ответа модели. |
-| `UPSTASH_REDIS_REST_URL` | Backend | Нет | Нужен для rate limiting перед публичным deploy. |
-| `UPSTASH_REDIS_REST_TOKEN` | Backend | Нет | Секретный токен Redis. Только server-side. |
+| `UPSTASH_REDIS_REST_URL` | Backend | Нет | Нужен для rate limiting перед публичным deploy. Vercel Marketplace alias: `KV_REST_API_URL`. |
+| `UPSTASH_REDIS_REST_TOKEN` | Backend | Нет | Секретный токен Redis. Только server-side. Vercel Marketplace alias: `KV_REST_API_TOKEN`. |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | CI / smoke tooling | Нет | Опциональный Vercel Deployment Protection bypass secret для автоматических проверок protected Preview. Не использовать в browser/client code. |
 
 ## Нормализация `APP_ENV`

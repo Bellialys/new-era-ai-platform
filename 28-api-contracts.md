@@ -526,7 +526,7 @@ Query-параметры (все необязательные):
 
 ```json
 {
-  "prompt": "Спроектируй архитектуру rate-limiting для AI-платформы",
+  "task": "Спроектируй архитектуру rate-limiting для AI-платформы",
   "modelId": "model-selection-id"
 }
 ```
@@ -537,28 +537,27 @@ Query-параметры (все необязательные):
 
 ```json
 {
-  "status": "success",
   "taskId": "saved-task-uuid-or-null",
   "steps": [
     {
       "roleId": "planner",
-      "roleLabel": "Planner",
-      "response": "Шаг 1 ответ модели"
+      "output": "Шаг 1 ответ модели",
+      "latencyMs": 1234
     },
     {
       "roleId": "researcher",
-      "roleLabel": "Researcher",
-      "response": "Шаг 2 ответ модели"
+      "output": "Шаг 2 ответ модели",
+      "latencyMs": 1234
     },
     {
       "roleId": "critic",
-      "roleLabel": "Critic",
-      "response": "Шаг 3 ответ модели"
+      "output": "Шаг 3 ответ модели",
+      "latencyMs": 1234
     },
     {
       "roleId": "finalizer",
-      "roleLabel": "Finalizer",
-      "response": "Финальный результат"
+      "output": "Финальный результат",
+      "latencyMs": 1234
     }
   ],
   "finalAnswer": "Финальный результат"
@@ -568,17 +567,17 @@ Query-параметры (все необязательные):
 Rules:
 
 - requires a real Supabase authenticated user (`kind === "user"`); guest or unauthenticated → `401 AUTH_REQUIRED`;
-- `prompt` must be 10–4000 characters;
+- `task` must be 10–4000 characters;
 - `modelId` is validated against `ALLOWED_MODELS` allowlist; unknown IDs fall back to `TEAM_DEFAULT_MODEL_ID`;
 - rate limit: 3 requests per 10 minutes per user UUID (Upstash Redis in production, in-memory locally);
 - context window between steps is truncated to 2000 characters to prevent token overflow;
-- best-effort persistence: saves `tasks` (mode_slug = `ai-team-mode`) and `team_runs`/`team_run_steps` when DB is available;
+- best-effort persistence: current runtime saves `tasks` (mode_slug = `ai-team-mode`) and role rows in `model_responses`; `team_runs`/`team_run_steps` are DB v2 future storage until the v2.1 migration task switches writes to those tables;
 - OpenRouter is called server-side only; `modelId` from frontend is a `selectionId`, never a raw provider key;
-- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INVALID_JSON`, `INTERNAL_ERROR`.
+- safe errors include `SERVICE_UNAVAILABLE`, `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INVALID_JSON`, `INTERNAL_ERROR`.
 
 ## `POST /api/image-compare` (v2.0, alpha)
 
-Запускает Image Arena: генерирует изображения через несколько image-capable моделей и сохраняет в Supabase Storage.
+Запускает Image Arena: генерирует изображения через несколько image-capable моделей и загружает их в Supabase Storage, если storage upload доступен; в alpha degraded mode может вернуть provider URL.
 
 Требует авторизованного пользователя. Гости получают `401 AUTH_REQUIRED`.
 
@@ -598,9 +597,9 @@ Rules:
 
 - requires a real Supabase authenticated user; guest or unauthenticated → `401 AUTH_REQUIRED`;
 - backend validates `modeSlug = image-arena` and that selected models have image output capability;
-- images are stored in Supabase Storage bucket `images`; PostgreSQL stores only metadata (storage path, mime type, dimensions);
+- images are uploaded to Supabase Storage bucket `images` when the server storage client and provider download are available; in alpha degraded mode the response may return the provider URL when storage upload is unavailable or fails;
 - frontend does NOT call image providers directly — only `POST /api/image-compare`;
-- response contains storage paths and metadata, not binary image data or provider secrets;
+- response contains image URLs/metadata, not binary image data or provider secrets;
 - safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INTERNAL_ERROR`.
 
 ## Request ID (v0.8)

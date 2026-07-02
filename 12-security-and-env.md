@@ -123,9 +123,11 @@ ADMIN_SECRET=
 UPSTASH_REDIS_REST_URL=
 # URL Upstash Redis для production rate limiting; без него каждый serverless instance
 # считает лимиты независимо — rate limit де-факто не работает между репликами
+# Vercel Marketplace Upstash alias: KV_REST_API_URL
 
 UPSTASH_REDIS_REST_TOKEN=
 # токен доступа к Upstash Redis; обязателен вместе с UPSTASH_REDIS_REST_URL
+# Vercel Marketplace Upstash alias: KV_REST_API_TOKEN
 
 VERCEL_AUTOMATION_BYPASS_SECRET=
 # секрет Vercel Deployment Protection для автоматических smoke/e2e проверок protected Preview
@@ -215,9 +217,11 @@ APP_ENV=development
 
 UPSTASH_REDIS_REST_URL=https://your-upstash-endpoint.upstash.io
 # URL Upstash Redis — обязателен для production rate limiting между serverless instances
+# Vercel Marketplace Upstash alias: KV_REST_API_URL
 
 UPSTASH_REDIS_REST_TOKEN=your_upstash_token_here
 # токен Upstash Redis — server-only, никогда не в NEXT_PUBLIC_
+# Vercel Marketplace Upstash alias: KV_REST_API_TOKEN
 
 VERCEL_AUTOMATION_BYPASS_SECRET=your_vercel_automation_bypass_secret
 # опционально: только для smoke/e2e против protected Vercel Preview
@@ -285,9 +289,11 @@ APP_ENV=development
 
 UPSTASH_REDIS_REST_URL=
 # Upstash Redis URL для rate limiting (опционально локально, обязательно в production)
+# Vercel Marketplace Upstash alias: KV_REST_API_URL
 
 UPSTASH_REDIS_REST_TOKEN=
 # Upstash Redis token (server-only)
+# Vercel Marketplace Upstash alias: KV_REST_API_TOKEN
 
 VERCEL_AUTOMATION_BYPASS_SECRET=
 # Vercel Deployment Protection bypass secret для automation, server/CI only
@@ -601,7 +607,7 @@ GitHub хранит код, документацию и package-lock.json.
 - `/api/models` читает Supabase catalog с hardcoded fallback;
 - `modeSlug` проверяется на backend;
 - все три endpoint защищены rate limit: `/api/models` (60 req/мин по IP), `/api/compare` (10 req/мин по user/guest), `/api/vote` (30 req/мин по user/guest);
-- rate limit использует Upstash Redis в production (глобальный, между serverless instances) с in-memory fallback для локальной разработки; без `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN` production остаётся на per-instance fallback и не проходит release gate;
+- rate limit использует Upstash Redis в production (глобальный, между serverless instances) с in-memory fallback для локальной разработки; без `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` или Vercel Marketplace aliases `KV_REST_API_URL`/`KV_REST_API_TOKEN` production остаётся на per-instance fallback и не проходит release gate;
 - `/api/compare` best-effort сохраняет `tasks` и `model_responses`;
 - RLS и grants для текущих таблиц описаны Supabase migrations;
 - неизвестные ошибки скрываются за `INTERNAL_ERROR`;
@@ -646,8 +652,8 @@ Image generation только через backend.
 Secret keys не выводятся во frontend.
 # OPENROUTER_API_KEY и service role key остаются server-side
 
-Изображения хранятся только в Supabase Storage.
-# PostgreSQL хранит только metadata и storage path
+Изображения хранятся в Supabase Storage в стабильном режиме.
+# PostgreSQL хранит только metadata и storage path; alpha backend может вернуть provider URL, если Storage upload/fetch недоступен
 
 Количество генераций ограничено.
 # нужны лимиты на пользователя, IP, модель и период времени

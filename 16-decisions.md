@@ -800,7 +800,7 @@ Deferred
 
 ## Решение
 
-Image Arena / Visual Arena не реализуется в текущем MVP и откладывается до стабильной Prompt Arena, настроенного Supabase Storage, лимитов стоимости и safety-контролей.
+Image Arena / Visual Arena не реализуется в текущем MVP и откладывается до стабильной Prompt Arena, настроенного Supabase Storage, лимитов стоимости и safety-контролей. В v2.0.0-alpha.1 backend route существует, но полный Storage/persistence режим ещё не является stable contract: при недоступном Storage alpha может вернуть provider URL.
 
 ## Контекст
 

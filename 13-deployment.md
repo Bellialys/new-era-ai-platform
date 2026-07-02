@@ -1097,14 +1097,16 @@ ENABLE_CODE_RUNNER=false
 # ограничение количества раундов
 ```
 
-Production activation считается закрытой только после отдельного gate V200-02:
+Production activation V200-02 подтверждена 2026-07-02 и находится в `verify` до commitHash. Для повторного production activation или нового окружения обязательный набор остаётся таким:
 
 ```env
 UPSTASH_REDIS_REST_URL=...
 # глобальный Redis backend для rate limit
+# Vercel Marketplace Upstash alias: KV_REST_API_URL
 
 UPSTASH_REDIS_REST_TOKEN=...
 # server-only token
+# Vercel Marketplace Upstash alias: KV_REST_API_TOKEN
 
 ENABLE_TEAM_MODE=true
 # backend разрешает /api/team-run

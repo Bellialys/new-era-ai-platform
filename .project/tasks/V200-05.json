@@ -1,0 +1,113 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V200-05",
+  "title": "Audit Sync Cleanup",
+  "status": "verify",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/document-map.json",
+    ".project/tasks/V200-02.json",
+    ".project/tasks/V200-05.json",
+    "env-check.config.json",
+    "README.md",
+    "00-readme.md",
+    "01-idea.md",
+    "06-project-modes.md",
+    "07-architecture.md",
+    "08-database.md",
+    "09-api-structure.md",
+    "12-security-and-env.md",
+    "13-deployment.md",
+    "14-roadmap.md",
+    "16-decisions.md",
+    "27-environments.md",
+    "37-env-check-policy.md",
+    "28-api-contracts.md",
+    "31-image-arena-spec.md",
+    "42-v2-ai-team-mode-plan.md",
+    "docs/audits/project-audit-2026-06-27.md",
+    "SECURITY.md",
+    "src/components/arena/guest-session-card.tsx",
+    "src/components/arena/prompt-arena.tsx",
+    "src/components/arena/use-arena-identity.ts",
+    "src/components/code-arena/code-arena.tsx",
+    "src/lib/server/rate-limit.ts",
+    "src/lib/server/rate-limit.test.ts",
+    "src/lib/server/models.ts",
+    "docs/adr/",
+    "docs/roadmap-drafts/"
+  ],
+  "checksRequired": [
+    "sync:dry-run",
+    "state:check",
+    "docs:check",
+    "models:verify",
+    "typecheck",
+    "lint",
+    "verify",
+    "diff:check",
+    "production-smoke:health-models",
+    "audit",
+    "test",
+    "test:env-check",
+    "test:rate-limit",
+    "build"
+  ],
+  "checksPassed": [
+    "sync:dry-run",
+    "state:check",
+    "docs:check",
+    "models:verify",
+    "typecheck",
+    "lint",
+    "verify",
+    "diff:check",
+    "production-smoke:health-models",
+    "audit",
+    "test",
+    "test:env-check",
+    "test:rate-limit",
+    "build"
+  ],
+  "lastUpdated": "2026-07-02T20:12:48.613Z",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-07-02T19:19:43.188Z",
+      "note": "Created after the repo audit to fix stale docs, duplicate root draft files, document-map drift, and roadmap draft placement without changing production secrets."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-07-02T19:19:43.188Z",
+      "note": "User approved the >5 file Stop Signal and requested all feasible audit fixes."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-07-02T19:19:43.188Z",
+      "note": "Docs/state sync, typecheck, lint, tests, build, model verification, production health/models smoke, audit, and diff check passed. Task remains verify until commitHash exists."
+    },
+    {
+      "from": "verify",
+      "to": "in_progress",
+      "at": "2026-07-02T19:40:00.000Z",
+      "note": "Expanded scope to support Vercel Marketplace Upstash aliases KV_REST_API_URL and KV_REST_API_TOKEN before attempting production activation."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-07-02T20:11:16.167Z",
+      "note": "Alias support and docs/task sync are complete. rate-limit targeted tests, env-check tests, sync dry-run, state:check, docs:check, typecheck, lint, verify/build, full tests, models:verify, npm audit, production health/models smoke, and diff check passed. Task remains verify until commitHash exists."
+    },
+    {
+      "from": "verify",
+      "to": "verify",
+      "at": "2026-07-02T20:12:48.613Z",
+      "note": "Resolved historical audit references to the removed models.ts verification comment so TODO debt search no longer reports a stale code item."
+    }
+  ],
+  "notes": "Scope: synchronize Team Mode and Image Arena docs with current runtime behavior; move v2.1-v3.1 roadmap drafts and project vision out of the repository root; register SECURITY.md, ADRs, and roadmap drafts in document-map; resolve stale audit references to removed models.ts debt; support Vercel Marketplace Upstash KV_REST_API_URL/KV_REST_API_TOKEN aliases; keep V200-02 open for production env activation because Upstash/Vercel secret values or Marketplace resource acceptance are external and cannot be invented."
+}

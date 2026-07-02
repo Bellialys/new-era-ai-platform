@@ -3,6 +3,8 @@
  *
  * Production (Vercel/serverless): set UPSTASH_REDIS_REST_URL and
  * UPSTASH_REDIS_REST_TOKEN to share a fixed-window counter across instances.
+ * Vercel Marketplace Upstash env aliases KV_REST_API_URL and
+ * KV_REST_API_TOKEN are also supported.
  *
  * Local/unconfigured: falls back to a per-instance in-memory counter. This is
  * fine for development but does NOT work across serverless instances, so always
@@ -53,8 +55,12 @@ export function checkRateLimitInMemory(
 type UpstashPipelineEntry = { result?: unknown; error?: string };
 
 function getUpstashConfig(): { url: string; token: string } | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL?.trim() ||
+    process.env.KV_REST_API_URL?.trim();
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ||
+    process.env.KV_REST_API_TOKEN?.trim();
   if (!url || !token) {
     return null;
   }

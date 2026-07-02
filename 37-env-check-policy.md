@@ -75,8 +75,8 @@ JavaScript-бандл. Любой пользователь сайта может
 
 | Переменная | Тип | Описание |
 |---|---|---|
-| `UPSTASH_REDIS_REST_URL` | secret | URL Upstash Redis для глобального rate limiting. Без него каждый Vercel serverless instance считает лимиты независимо — rate limit работает только per-instance. |
-| `UPSTASH_REDIS_REST_TOKEN` | secret | Токен доступа к Upstash Redis. Обязателен вместе с `UPSTASH_REDIS_REST_URL`. |
+| `UPSTASH_REDIS_REST_URL` | secret | URL Upstash Redis для глобального rate limiting. Без него каждый Vercel serverless instance считает лимиты независимо — rate limit работает только per-instance. Vercel Marketplace alias: `KV_REST_API_URL`. |
+| `UPSTASH_REDIS_REST_TOKEN` | secret | Токен доступа к Upstash Redis. Обязателен вместе с `UPSTASH_REDIS_REST_URL`. Vercel Marketplace alias: `KV_REST_API_TOKEN`. |
 | `APP_ENV` | optional | Окружение: `development`, `preview`, `production`. |
 | `APP_URL` | optional | Публичный URL приложения. |
 | `MODEL_TIMEOUT_MS` | optional | Таймаут ответа модели в мс (по умолчанию `OPENROUTER_TIMEOUT_MS` из constants.ts). |

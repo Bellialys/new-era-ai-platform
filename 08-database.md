@@ -560,7 +560,7 @@ v2.0.0-alpha.1 sync on 2026-06-28:
 
 ## Будущие сущности Image Arena / Visual Arena
 
-Image Arena backend (`/api/image-compare`) реализован в v2.0.0-alpha.1 как alpha, auth-only. Публичный UI Image Arena и полная Storage-интеграция — за рамками текущего scope. Нельзя добавлять Image Arena в публичный релиз без отдельного safety/storage review.
+Image Arena backend (`/api/image-compare`) реализован в v2.0.0-alpha.1 как alpha, auth-only. Публичный UI Image Arena, стабильная Storage-интеграция и dedicated persistence — за рамками текущего scope. Текущий alpha backend может вернуть provider URL, если Storage upload/fetch недоступен. Нельзя добавлять Image Arena в публичный релиз без отдельного safety/storage review.
 
 После стабильной Prompt Arena можно добавить отдельные сущности:
 

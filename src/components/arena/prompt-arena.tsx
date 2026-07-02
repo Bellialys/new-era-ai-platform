@@ -8,13 +8,6 @@ import {
   MODEL_MIN_SELECT,
   MODEL_MAX_SELECT,
 } from "@/lib/arena/constants";
-import { getSupabaseClient } from "@/lib/supabase";
-import {
-  readGuestInfo,
-  createOrRefreshGuestSession,
-  clearGuestInfo,
-  type GuestInfo,
-} from "@/lib/guest";
 import type {
   ArenaApiResponse,
   ArenaResponseView,
@@ -24,12 +17,12 @@ import { ArenaForm } from "./arena-form";
 import { ArenaResults } from "./arena-results";
 import { AccessGate } from "./access-gate";
 import { UsageIndicator } from "./usage-indicator";
+import { GuestSessionCard } from "./guest-session-card";
+import { useArenaIdentity } from "./use-arena-identity";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type IdentityMode = "loading" | "gate" | "guest" | "user";
 
 type VoteStatus = "idle" | "saving" | "success" | "error";
 
@@ -72,62 +65,6 @@ type ApiErrorPayload = {
   message?: string;
   errorCode?: string;
 };
-
-// ---------------------------------------------------------------------------
-// GuestCard
-// ---------------------------------------------------------------------------
-
-const AVATAR_COLORS = [
-  "bg-violet-600",
-  "bg-blue-600",
-  "bg-cyan-600",
-  "bg-emerald-600",
-  "bg-amber-600",
-  "bg-rose-600",
-  "bg-pink-600",
-  "bg-indigo-600",
-];
-
-function getAvatarColorClass(seed: string): string {
-  const hash = seed.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? "bg-violet-600";
-}
-
-function GuestCard({
-  info,
-  onSignIn,
-}: {
-  info: GuestInfo;
-  onSignIn: () => void;
-}) {
-  const colorClass = getAvatarColorClass(info.colorSeed);
-
-  return (
-    <div className="mb-6 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-      {/* Avatar */}
-      <div
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${colorClass} text-sm font-black text-white`}
-      >
-        А
-      </div>
-
-      {/* Info */}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-white">{info.displayName}</p>
-        <p className="text-xs text-slate-400">Гость · Только бесплатные модели</p>
-      </div>
-
-      {/* Sign-in button */}
-      <button
-        type="button"
-        onClick={onSignIn}
-        className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-white/15 px-3 text-xs font-semibold text-slate-300 transition hover:border-white/30 hover:text-white"
-      >
-        Войти
-      </button>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // PromptArena
@@ -252,11 +189,15 @@ function asApiErrorPayload(value: unknown): ApiErrorPayload {
 }
 
 export function PromptArena() {
-  // --- Identity state ---
-  const [identityMode, setIdentityMode] = useState<IdentityMode>("loading");
-  const [guestInfo, setGuestInfo] = useState<GuestInfo | null>(null);
-  const [guestCreateError, setGuestCreateError] = useState<string | null>(null);
-  const [isCreatingGuest, setIsCreatingGuest] = useState(false);
+  const {
+    identityMode,
+    guestInfo,
+    guestCreateError,
+    isCreatingGuest,
+    continueAsGuest,
+    signIn,
+    resetToGate,
+  } = useArenaIdentity();
 
   // --- Arena state ---
   const [availableModels, setAvailableModels] = useState<ArenaModel[]>([]);
@@ -277,70 +218,6 @@ export function PromptArena() {
   const [sessionWins, setSessionWins] = useState<Record<string, number>>({});
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  // ---------------------------------------------------------------------------
-  // Identity resolution on mount
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    async function resolveIdentity() {
-      // 1. Check Supabase session (authenticated user)
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.user) {
-          setIdentityMode("user");
-          return;
-        }
-      }
-
-      // 2. Check localStorage for existing guest info
-      const stored = readGuestInfo();
-      if (stored) {
-        // Refresh the cookie by touching the server (fire-and-forget)
-        createOrRefreshGuestSession()
-          .then((info) => {
-            setGuestInfo(info);
-          })
-          .catch(() => {
-            // If refresh fails, still show the stored guest card
-            setGuestInfo(stored);
-          });
-        setGuestInfo(stored);
-        setIdentityMode("guest");
-        return;
-      }
-
-      // 3. No identity — show Access Gate
-      setIdentityMode("gate");
-    }
-
-    // Subscribe to auth changes so the UI updates when user signs in/out
-    const supabase = getSupabaseClient();
-    let unsubscribe: (() => void) | undefined;
-    if (supabase) {
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-          setIdentityMode("user");
-        } else if (identityMode === "user") {
-          // User signed out — check for guest info
-          const stored = readGuestInfo();
-          setIdentityMode(stored ? "guest" : "gate");
-          setGuestInfo(stored);
-        }
-      });
-      unsubscribe = () => subscription.unsubscribe();
-    }
-
-    resolveIdentity();
-
-    return () => {
-      unsubscribe?.();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Abort pending requests on unmount
   useEffect(() => {
@@ -379,30 +256,6 @@ export function PromptArena() {
 
     loadModels();
   }, [identityMode]);
-
-  // ---------------------------------------------------------------------------
-  // Guest actions
-  // ---------------------------------------------------------------------------
-
-  async function handleContinueAsGuest() {
-    setIsCreatingGuest(true);
-    setGuestCreateError(null);
-    try {
-      const info = await createOrRefreshGuestSession();
-      setGuestInfo(info);
-      setIdentityMode("guest");
-    } catch (error) {
-      setGuestCreateError(
-        error instanceof Error ? error.message : "Не удалось создать гостевой профиль. Попробуйте ещё раз."
-      );
-    } finally {
-      setIsCreatingGuest(false);
-    }
-  }
-
-  function handleSignIn() {
-    window.location.href = "/login";
-  }
 
   // ---------------------------------------------------------------------------
   // Arena helpers
@@ -640,9 +493,7 @@ export function PromptArena() {
           const errorData = (await response.json()) as { message?: string; errorCode?: string };
           // If auth expired mid-session, go back to gate
           if (response.status === 401) {
-            clearGuestInfo();
-            setIdentityMode("gate");
-            setGuestInfo(null);
+            resetToGate();
           }
           throw new Error(errorData.message || `API error: ${response.status}`);
         }
@@ -775,7 +626,7 @@ export function PromptArena() {
   if (identityMode === "gate") {
     return (
       <AccessGate
-        onContinueAsGuest={handleContinueAsGuest}
+        onContinueAsGuest={continueAsGuest}
         isLoading={isCreatingGuest}
         errorMessage={guestCreateError}
       />
@@ -787,7 +638,7 @@ export function PromptArena() {
     <div>
       {/* Guest card */}
       {identityMode === "guest" && guestInfo && (
-        <GuestCard info={guestInfo} onSignIn={handleSignIn} />
+        <GuestSessionCard info={guestInfo} onSignIn={signIn} />
       )}
 
       {/* User indicator */}

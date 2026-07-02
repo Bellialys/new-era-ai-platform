@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getSupabaseClient } from "@/lib/supabase";
-import { createOrRefreshGuestSession, type GuestInfo } from "@/lib/guest";
 import type { ArenaModel, ArenaApiResponse, ArenaResponseView } from "@/types/arena";
 import {
   type CodeArenaLanguage,
@@ -11,63 +9,25 @@ import {
   CODE_MODEL_MAX_SELECT,
 } from "@/lib/arena/constants";
 import { AccessGate } from "@/components/arena/access-gate";
+import { GuestSessionCard } from "@/components/arena/guest-session-card";
+import { useArenaIdentity } from "@/components/arena/use-arena-identity";
 import { ProgrammingContextForm } from "./programming-context-form";
 import { CodeResponseCard } from "./code-response-card";
 import { CodeDiffView } from "./code-diff-view";
 import { CodeTemplates } from "./code-templates";
 
 // ---------------------------------------------------------------------------
-// Identity state
-// ---------------------------------------------------------------------------
-type IdentityMode = "loading" | "gate" | "guest" | "user";
-
-const AVATAR_COLORS = [
-  "bg-violet-500",
-  "bg-indigo-500",
-  "bg-sky-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-fuchsia-500",
-  "bg-cyan-500",
-];
-
-function getAvatarColorClass(seed: string): string {
-  const n = parseInt(seed, 16) || seed.charCodeAt(0) || 0;
-  return AVATAR_COLORS[Math.abs(n) % AVATAR_COLORS.length];
-}
-
-function GuestCard({ info, onSignIn }: { info: GuestInfo; onSignIn: () => void }) {
-  const colorClass = getAvatarColorClass(info.colorSeed);
-  const initials = info.displayName.slice(0, 2).toUpperCase();
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${colorClass} text-xs font-bold text-white`}>
-        {initials}
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-white">{info.displayName}</p>
-        <p className="text-xs text-slate-400">Гость · Только бесплатные модели</p>
-      </div>
-      <button
-        onClick={onSignIn}
-        className="ml-auto inline-flex min-h-[44px] shrink-0 items-center rounded-full border border-violet-300/40 bg-violet-600/20 px-3 text-xs font-semibold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-600/40"
-      >
-        Войти
-      </button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Code Arena component
 // ---------------------------------------------------------------------------
 export function CodeArena() {
-  // Identity
-  const [identityMode, setIdentityMode] = useState<IdentityMode>("loading");
-  const [guestInfo, setGuestInfo] = useState<GuestInfo | null>(null);
-  const [isCreatingGuest, setIsCreatingGuest] = useState(false);
-  const [guestCreateError, setGuestCreateError] = useState<string | null>(null);
+  const {
+    identityMode,
+    guestInfo,
+    isCreatingGuest,
+    guestCreateError,
+    continueAsGuest,
+    signIn,
+  } = useArenaIdentity();
 
   // Form state
   const [prompt, setPrompt] = useState("");
@@ -93,81 +53,6 @@ export function CodeArena() {
   const [voteMessage, setVoteMessage] = useState<string | null>(null);
   const [savingVoteResponseId, setSavingVoteResponseId] = useState<string | null>(null);
   const [blindMode, setBlindMode] = useState(true);
-
-  // ---------------------------------------------------------------------------
-  // Identity resolution
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      queueMicrotask(() => setIdentityMode("gate"));
-      return;
-    }
-
-    let mounted = true;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      if (data.session?.user) {
-        setIdentityMode("user");
-        return;
-      }
-      const stored = localStorage.getItem("na_guest_info");
-      if (stored) {
-        try {
-          const info = JSON.parse(stored) as GuestInfo;
-          setGuestInfo(info);
-          setIdentityMode("guest");
-        } catch {
-          setIdentityMode("gate");
-        }
-      } else {
-        setIdentityMode("gate");
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      if (session?.user) {
-        setIdentityMode("user");
-        setGuestInfo(null);
-      } else {
-        const stored = localStorage.getItem("na_guest_info");
-        if (stored) {
-          try {
-            const info = JSON.parse(stored) as GuestInfo;
-            setGuestInfo(info);
-            setIdentityMode("guest");
-          } catch {
-            setIdentityMode("gate");
-          }
-        } else {
-          setIdentityMode("gate");
-        }
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  async function handleContinueAsGuest() {
-    setIsCreatingGuest(true);
-    setGuestCreateError(null);
-    try {
-      const info = await createOrRefreshGuestSession();
-      setGuestInfo(info);
-      setIdentityMode("guest");
-    } catch (error) {
-      setGuestCreateError(
-        error instanceof Error ? error.message : "Не удалось создать гостевой профиль. Попробуйте ещё раз."
-      );
-    } finally {
-      setIsCreatingGuest(false);
-    }
-  }
 
   // ---------------------------------------------------------------------------
   // Load code models when identity is resolved
@@ -337,7 +222,7 @@ export function CodeArena() {
   if (identityMode === "gate") {
     return (
       <AccessGate
-        onContinueAsGuest={handleContinueAsGuest}
+        onContinueAsGuest={continueAsGuest}
         isLoading={isCreatingGuest}
         errorMessage={guestCreateError}
       />
@@ -350,7 +235,11 @@ export function CodeArena() {
   return (
     <div className="grid gap-6">
       {identityMode === "guest" && guestInfo ? (
-        <GuestCard info={guestInfo} onSignIn={() => { window.location.href = "/login"; }} />
+        <GuestSessionCard
+          info={guestInfo}
+          onSignIn={signIn}
+          variant="code"
+        />
       ) : null}
 
       {/* Form */}

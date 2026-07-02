@@ -5,9 +5,9 @@
 Спецификация и план реализации **AI Team Mode** — режима последовательной командной работы
 нескольких AI-ролей над одной задачей.
 
-Статус: **реализовано в v2.0.0-alpha.1**. PR18–PR22 выполнены и merged on main; текущий незакрытый шаг — V200-02 `Release Gate P1 - Production Env Activation`.
+Статус: **реализовано в v2.0.0-alpha.1**. PR18–PR22 выполнены и merged on main; V200-02 `Release Gate P1 - Production Env Activation` подтверждён в production и находится в `verify` до commitHash.
 
-Production Team Mode не считается активированным, пока в Vercel Production не выставлены `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, не выполнен redeploy и не пройден production smoke.
+Production Team Mode активирован в production alpha: Vercel Production содержит Vercel Marketplace aliases `KV_REST_API_URL`/`KV_REST_API_TOKEN`, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`; redeploy и production smoke пройдены. Task schema оставляет V200-02 в `verify`, пока не появится commitHash.
 
 ---
 
@@ -177,15 +177,13 @@ Context — Critique: {criticOutput}
 
 ```typescript
 {
-  taskId: string;
+  taskId: string | null;
   steps: Array<{
-    role: "planner" | "researcher" | "critic" | "finalizer";
+    roleId: "planner" | "researcher" | "critic" | "finalizer";
     output: string;
     latencyMs: number;
-    error?: string;
   }>;
   finalAnswer: string;
-  totalLatencyMs: number;
 }
 ```
 
@@ -232,7 +230,7 @@ src/lib/arena/team-mode.ts          # роли, system prompts, типы
 src/app/api/team-run/route.ts       # основной API route
 src/app/api/team-run/route.test.ts  # contract tests
 src/app/team/page.tsx               # server component страница
-src/components/arena/team-arena.tsx # client component
+src/app/team/team-run-form.tsx      # client form component
 ```
 
 **Итого: 5 файлов.** Укладывается в ограничение.
@@ -318,7 +316,7 @@ src/components/arena/team-arena.tsx # client component
 
 Новые файлы:
 - `src/app/team/page.tsx`
-- `src/components/arena/team-arena.tsx`
+- `src/app/team/team-run-form.tsx`
 
 Изменения в существующих:
 - `src/components/layout/site-header.tsx` — добавить ссылку «Команда»
@@ -340,15 +338,14 @@ src/components/arena/team-arena.tsx # client component
 
 ### V200-02 — Production Env Activation
 
-- Добавить в Vercel Production `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN`.
-- Добавить в Vercel Production `ENABLE_TEAM_MODE=true`.
-- Добавить в Vercel Production `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`.
-- Выполнить production redeploy.
-- Проверить `/api/health` публично: только `{ "status": "ok" }`.
-- Проверить, что `/team` показывает активный UI.
-- Проверить, что unauthenticated `POST /api/team-run` блокируется auth gate, а не `503` от feature flag.
-- Проверить authenticated Team Mode run.
-- Проверить Upstash-backed rate limits для Team Mode, admin routes и `/api/guest`.
+- Статус 2026-07-02: `verify`; все runtime checks пройдены, `done` ждёт commitHash.
+- Vercel Production содержит Upstash/KV aliases, `ENABLE_TEAM_MODE=true` и `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`.
+- Production redeploy готов и алиас `new-era-ai-platform.vercel.app` указывает на новую сборку.
+- `/api/health` и `/api/models` smoke пройдены.
+- `/team` показывает активный UI.
+- Unauthenticated `POST /api/team-run` блокируется auth gate, а не `503` от feature flag.
+- Authenticated Team Mode run прошёл с 4 role steps на allowlisted model.
+- Upstash-backed rate limits подтверждены для Team Mode, admin routes и `/api/guest`.
 
 ---
 

@@ -88,6 +88,7 @@
     },
     {
       "name": "UPSTASH_REDIS_REST_URL",
+      "aliases": ["KV_REST_API_URL"],
       "required": false,
       "category": "secret",
       "groups": ["full"],
@@ -100,6 +101,7 @@
     },
     {
       "name": "UPSTASH_REDIS_REST_TOKEN",
+      "aliases": ["KV_REST_API_TOKEN"],
       "required": false,
       "category": "secret",
       "groups": ["full"],

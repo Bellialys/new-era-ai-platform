@@ -62,15 +62,15 @@
 - backend route `POST /api/team-run` с auth gate, backend flag `ENABLE_TEAM_MODE`, rate limiting и DI-паттерном для engine;
 - страница `/team` — AI Team Mode UI с feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`;
 - `package-lock.json`;
-- текущая локальная сетка `state:check`, `docs:check`, `typecheck`, `lint`, `build` и `test` проходит; production Team Mode activation остаётся отдельным P1 gate.
+- текущая локальная сетка `state:check`, `docs:check`, `typecheck`, `lint`, `build` и `test` проходит; production Team Mode activation V200-02 подтверждена и находится в `verify` до commitHash.
 
 Пока не готово как стабильный пользовательский этап:
 
-- Release Gate P1 `Production Env Activation`: Upstash Redis env в Vercel Production, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, production redeploy и smoke;
-- повторная проверка docs/state/typecheck/lint/build/test перед закрытием gate;
+- commit/фиксация V200-02, чтобы task schema разрешила перевести production activation из `verify` в `done`;
+- повторная проверка docs/state/typecheck/lint/build/test перед закрытием commit gate;
 - live smoke внешнего runner и admin routes на целевом окружении;
 - Image Arena;
-- публичный выход AI Team Mode: считается активированным только после успешного V200-02 production smoke; до этого UI/API остаются alpha за feature flags.
+- AI Team Mode активирован в production alpha за feature flags; стабильным пользовательским этапом станет только после commitHash, мониторинга и оставшихся release checks.
 
 ## Главная цель
 

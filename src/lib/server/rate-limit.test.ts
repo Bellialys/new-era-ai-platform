@@ -37,15 +37,21 @@ describe("checkRateLimitInMemory", () => {
 describe("checkRateLimit (no Upstash configured)", () => {
   const savedUrl = process.env.UPSTASH_REDIS_REST_URL;
   const savedToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const savedKvUrl = process.env.KV_REST_API_URL;
+  const savedKvToken = process.env.KV_REST_API_TOKEN;
 
   beforeEach(() => {
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    delete process.env.KV_REST_API_URL;
+    delete process.env.KV_REST_API_TOKEN;
   });
 
   afterEach(() => {
     if (savedUrl !== undefined) process.env.UPSTASH_REDIS_REST_URL = savedUrl;
     if (savedToken !== undefined) process.env.UPSTASH_REDIS_REST_TOKEN = savedToken;
+    if (savedKvUrl !== undefined) process.env.KV_REST_API_URL = savedKvUrl;
+    if (savedKvToken !== undefined) process.env.KV_REST_API_TOKEN = savedKvToken;
   });
 
   it("falls back to in-memory and returns a result", async () => {
@@ -72,8 +78,12 @@ describe("checkRateLimit (no Upstash configured)", () => {
 describe("checkRateLimit (Upstash configured)", () => {
   const savedUrl = process.env.UPSTASH_REDIS_REST_URL;
   const savedToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const savedKvUrl = process.env.KV_REST_API_URL;
+  const savedKvToken = process.env.KV_REST_API_TOKEN;
 
   beforeEach(() => {
+    delete process.env.KV_REST_API_URL;
+    delete process.env.KV_REST_API_TOKEN;
     process.env.UPSTASH_REDIS_REST_URL = "https://fake.upstash.io";
     process.env.UPSTASH_REDIS_REST_TOKEN = "fake-token";
   });
@@ -88,6 +98,16 @@ describe("checkRateLimit (Upstash configured)", () => {
       process.env.UPSTASH_REDIS_REST_TOKEN = savedToken;
     } else {
       delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    }
+    if (savedKvUrl !== undefined) {
+      process.env.KV_REST_API_URL = savedKvUrl;
+    } else {
+      delete process.env.KV_REST_API_URL;
+    }
+    if (savedKvToken !== undefined) {
+      process.env.KV_REST_API_TOKEN = savedKvToken;
+    } else {
+      delete process.env.KV_REST_API_TOKEN;
     }
     vi.unstubAllGlobals();
   });
@@ -114,6 +134,21 @@ describe("checkRateLimit (Upstash configured)", () => {
     expect(url).toBe("https://fake.upstash.io/pipeline");
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer fake-token");
+  });
+
+  it("supports Vercel Marketplace KV_REST_API_URL/TOKEN aliases", async () => {
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    process.env.KV_REST_API_URL = "https://fake-marketplace.upstash.io";
+    process.env.KV_REST_API_TOKEN = "fake-marketplace-token";
+    const fetchMock = mockUpstashFetch(1);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await checkRateLimit("test-upstash-marketplace-alias", 5, 60_000);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit & { headers: Record<string, string> }];
+    expect(url).toBe("https://fake-marketplace.upstash.io/pipeline");
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer fake-marketplace-token");
   });
 
   it("returns limited:false with correct remaining count on first hit", async () => {

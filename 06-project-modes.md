@@ -382,8 +382,8 @@ Leaderboard нельзя делать до накопления данных.
 - пользователь вводит одну визуальную идею;
 - выбирает 2-3 модели с `image` output capability;
 - backend вызывает image-capable модели через OpenRouter;
-- изображения сохраняются в Supabase Storage;
-- metadata и storage path сохраняются в Supabase PostgreSQL;
+- изображения сохраняются в Supabase Storage в стабильном режиме; alpha backend может вернуть provider URL, если Storage upload/fetch недоступен;
+- metadata и storage path сохраняются в Supabase PostgreSQL после выделенной persistence-задачи;
 - UI показывает сетку результатов;
 - пользователь выбирает лучший вариант.
 

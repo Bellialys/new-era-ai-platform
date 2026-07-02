@@ -416,6 +416,6 @@ POST /api/image-arena/generate
 - frontend не вызывает OpenRouter напрямую;
 - frontend не получает secret keys;
 - backend разрешает только модели с `image` output capability;
-- изображения сохраняются в Supabase Storage;
+- изображения сохраняются в Supabase Storage в стабильном режиме; alpha backend может вернуть provider URL, если Storage upload/fetch недоступен;
 - PostgreSQL хранит только metadata и `storagePath`;
 - route включается только после лимитов стоимости и safety-контролей.
