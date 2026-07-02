@@ -9,7 +9,7 @@
 > существует, Team Mode default model приведена к allowlist, тестовая сетка выросла до 337 tests.
 > **Current status update — 2026-07-02:** V200-02 Production Env Activation подтверждён в production:
 > Vercel Marketplace Upstash/KV aliases, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`,
-> redeploy, Team UI/API smoke и Upstash-backed rate-limit smoke пройдены. Task остаётся `verify` до commitHash.
+> redeploy, Team UI/API smoke и Upstash-backed rate-limit smoke пройдены. Task закрыта как `done`.
 
 ---
 
@@ -19,7 +19,7 @@
 
 **Ключевые риски:**
 - Superseded 2026-07-02: production rate limiter больше не только in-memory; Vercel Marketplace Upstash/KV aliases подключены и smoke пройден.
-- Superseded 2026-07-02: Production Team Mode activation V200-02 подтверждена и находится в `verify` до commitHash.
+- Superseded 2026-07-02: Production Team Mode activation V200-02 подтверждена и закрыта как `done`.
 - Superseded 2026-06-28: V200-01 уже закрыта как `done`.
 - Superseded 2026-06-28: git tag `v2.0.0-alpha.1` существует.
 - P2: Storage bucket `images` для Image Arena — наличие в Supabase не верифицировано.
@@ -416,7 +416,7 @@ Browser
 - ✅ **Team Mode default model** — superseded 2026-06-28; текущий default `meta-llama/llama-3.3-70b-instruct:free` есть в ALLOWED_MODELS и покрыт consistency test
 - ✅ **V200-01 task status** — superseded 2026-06-28; task закрыта как `done`
 - ✅ **Git tag v2.0.0-alpha.1** — superseded 2026-06-28; tag существует
-- ✅ **V200-02 Production Env Activation** — superseded 2026-07-02; Upstash/KV env + оба Team Mode флага + redeploy + production smoke подтверждены, task в `verify` до commitHash
+- ✅ **V200-02 Production Env Activation** — superseded 2026-07-02; Upstash/KV env + оба Team Mode флага + redeploy + production smoke подтверждены, task закрыта как `done`
 - ⚠️ **schema:check не запускался** — синхронизация миграций с live DB не проверена в этой сессии
 - ⚠️ **models:verify не запускался** — model IDs не верифицированы против live OpenRouter
 - ⚠️ **`/api/compare` без тестов** — главный endpoint без route-level unit тестов
@@ -430,7 +430,7 @@ Browser
 | # | Риск | Файл | Описание |
 |---|---|---|---|
 | P1-1 | **Rate limiter in-memory** | `src/lib/server/rate-limit.ts` | Без `UPSTASH_REDIS_REST_URL`/`TOKEN` rate limit не шарится между Vercel serverless instances. Злоумышленник делает запросы параллельно на несколько функций и обходит лимит. Критично для `TEAM_RUN_RATE_LIMIT_MAX = 3/10min`. |
-| P1-2 | **V200-02 Production Env Activation** | `.project/tasks/V200-02.json` | Team Mode не считается активным в production, пока не выставлены Upstash Redis env, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, не выполнен redeploy и smoke. |
+| P1-2 | **Resolved: V200-02 Production Env Activation** | `.project/tasks/V200-02.json` | Superseded 2026-07-02: Upstash/KV env, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, redeploy и smoke подтверждены; task закрыта как `done`. |
 | P1-3 | **Superseded: V200-01/git tag** | `.project/tasks/V200-01.json` | V200-01 закрыта как `done`, tag `v2.0.0-alpha.1` существует. Этот старый риск больше не актуален. |
 
 ### P2 — Средний приоритет
@@ -523,7 +523,7 @@ Browser
 
 > **Current status update — 2026-06-28:** старый suggested PR plan ниже superseded.
 > V200-01 закрыта, tag `v2.0.0-alpha.1` существует, docs/state sync проходит.
-> Текущий следующий шаг — V200-02 `Release Gate P1 - Production Env Activation`.
+> Superseded 2026-07-02: V200-02 `Release Gate P1 - Production Env Activation` закрыта.
 
 ### V200-02 — Production Env Activation
 - Superseded 2026-07-02: Vercel Production содержит Upstash/KV aliases, `ENABLE_TEAM_MODE=true` и `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`.
@@ -533,7 +533,7 @@ Browser
 ### PR30 — после V200-02
 - Nonce-based CSP.
 - Remaining route-level tests.
-- Team Mode production alpha activation подтверждена V200-02; стабильный релиз всё ещё требует отдельного commit/release closeout.
+- Team Mode production alpha activation подтверждена V200-02; стабильный релиз всё ещё требует отдельного monitoring/release-hardening closeout.
 
 ### PR-4 — Image Arena fixes (2-3 файла, 2ч)
 - Верифицировать/задокументировать bucket `images` в Supabase (runbook)
@@ -586,9 +586,9 @@ Browser
 
 **Главная задача перед public production release** — не фичи, а инфраструктурные gaps:
 
-1. Commit/release closeout для V200-02, чтобы task schema разрешила перевести `verify` в `done`.
+1. Monitoring/release-hardening task после V200-02 production activation.
 2. Верификация Storage bucket `images` (P2).
 3. Live OpenRouter/model watch: default free model smoke может упираться во внешний `429 Too Many Requests` (P2).
 4. Тесты для /api/compare (P2) — самый важный endpoint без route-level unit тестов.
 
-Кодовая база готова к следующей итерации. Current recommendation 2026-07-02: зафиксировать V200-02 commitHash, затем переходить к PR30/следующему release-hardening шагу.
+Кодовая база готова к следующей итерации. Current recommendation 2026-07-02: переходить к PR30/следующему release-hardening шагу.

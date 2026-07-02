@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V200-05",
   "title": "Audit Sync Cleanup",
-  "status": "verify",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -70,7 +70,8 @@
     "test:rate-limit",
     "build"
   ],
-  "lastUpdated": "2026-07-02T20:12:48.613Z",
+  "lastUpdated": "2026-07-02T21:31:28.166Z",
+  "commitHash": "7569b89f2218e9c709f389954e8a080c1daab286",
   "transitions": [
     {
       "from": null,
@@ -107,7 +108,13 @@
       "to": "verify",
       "at": "2026-07-02T20:12:48.613Z",
       "note": "Resolved historical audit references to the removed models.ts verification comment so TODO debt search no longer reports a stale code item."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-07-02T21:31:28.166Z",
+      "note": "Audit sync cleanup and production-gate support committed as 7569b89f2218e9c709f389954e8a080c1daab286. Task schema closeout complete."
     }
   ],
-  "notes": "Scope: synchronize Team Mode and Image Arena docs with current runtime behavior; move v2.1-v3.1 roadmap drafts and project vision out of the repository root; register SECURITY.md, ADRs, and roadmap drafts in document-map; resolve stale audit references to removed models.ts debt; support Vercel Marketplace Upstash KV_REST_API_URL/KV_REST_API_TOKEN aliases; keep V200-02 open for production env activation because Upstash/Vercel secret values or Marketplace resource acceptance are external and cannot be invented."
+  "notes": "Scope completed: synchronized Team Mode and Image Arena docs with current runtime behavior; moved v2.1-v3.1 roadmap drafts and project vision out of the repository root; registered SECURITY.md, ADRs, and roadmap drafts in document-map; resolved stale audit references to removed models.ts debt; supported Vercel Marketplace Upstash KV_REST_API_URL/KV_REST_API_TOKEN aliases; production activation V200-02 is now done. Done in commit 7569b89f2218e9c709f389954e8a080c1daab286."
 }

@@ -62,15 +62,15 @@
 - backend route `POST /api/team-run` с auth gate, backend flag `ENABLE_TEAM_MODE`, rate limiting и DI-паттерном для engine;
 - страница `/team` — AI Team Mode UI с feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`;
 - `package-lock.json`;
-- текущая локальная сетка `state:check`, `docs:check`, `typecheck`, `lint`, `build` и `test` проходит; production Team Mode activation V200-02 подтверждена и находится в `verify` до commitHash.
+- текущая локальная сетка `state:check`, `docs:check`, `typecheck`, `lint`, `build` и `test` проходит; production Team Mode activation V200-02 закрыта как `done`.
 
 Пока не готово как стабильный пользовательский этап:
 
-- commit/фиксация V200-02, чтобы task schema разрешила перевести production activation из `verify` в `done`;
-- повторная проверка docs/state/typecheck/lint/build/test перед закрытием commit gate;
+- мониторинг production alpha после V200-02 и фиксация следующей release-hardening задачи;
+- повторная проверка docs/state/typecheck/lint/build/test перед следующим release gate;
 - live smoke внешнего runner и admin routes на целевом окружении;
 - Image Arena;
-- AI Team Mode активирован в production alpha за feature flags; стабильным пользовательским этапом станет только после commitHash, мониторинга и оставшихся release checks.
+- AI Team Mode активирован в production alpha за feature flags; стабильным пользовательским этапом станет только после мониторинга и оставшихся release checks.
 
 ## Главная цель
 

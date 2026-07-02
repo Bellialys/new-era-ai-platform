@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V200-02",
   "title": "Release Gate P1 - Production Env Activation",
-  "status": "verify",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -47,7 +47,8 @@
     "state:check",
     "docs:check"
   ],
-  "lastUpdated": "2026-07-02T21:22:20.656Z",
+  "lastUpdated": "2026-07-02T21:31:28.166Z",
+  "commitHash": "7569b89f2218e9c709f389954e8a080c1daab286",
   "transitions": [
     {
       "from": null,
@@ -78,7 +79,13 @@
       "to": "verify",
       "at": "2026-07-02T21:22:20.656Z",
       "note": "Production activation completed: Upstash Marketplace KV aliases and both Team Mode flags are present in Vercel Production; deployment dpl_3XiR5XcnrsWutgjfw6Tfd5z9rn3o is Ready and aliased to new-era-ai-platform.vercel.app; health/models smoke passed; /team renders active roles; unauthenticated /api/team-run returns 401 AUTH_REQUIRED instead of 503; authenticated /api/team-run returned 200 with 4 steps using allowlisted openai/gpt-oss-20b:free. Supabase migration grant_anonymous_sessions_service_role fixed live /api/guest 42501; /api/guest returned 201/200 and 429 under limit test; Team Mode app rate limit returned 400,400,400,429 before model calls; admin /api/admin/stats returned 200x60 then 429. A default model smoke attempt hit OpenRouter 429, so provider quota remains an operational watch item, not an activation blocker. Task remains verify until commitHash exists."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-07-02T21:31:28.166Z",
+      "note": "Implementation and production activation evidence committed as 7569b89f2218e9c709f389954e8a080c1daab286. Task schema closeout complete."
     }
   ],
-  "notes": "Definition of Done evidence is complete for production activation: Vercel Production has Upstash/KV aliases, ENABLE_TEAM_MODE=true, and NEXT_PUBLIC_ENABLE_TEAM_MODE=true; production redeploy is Ready and aliased; /api/health and /api/models smoke passed; /team renders active Team Mode UI; unauthenticated POST /api/team-run is blocked by auth instead of feature-flag 503; authenticated Team Mode run succeeded with 4 role steps on an allowlisted model; Upstash-backed rate limits were verified for Team Mode, admin routes, and /api/guest. Supabase service_role table grants for anonymous_sessions were fixed by migration 20260702211527_grant_anonymous_sessions_service_role.sql. Status is verify, not done, because task.schema.json requires commitHash for done."
+  "notes": "Definition of Done evidence is complete for production activation: Vercel Production has Upstash/KV aliases, ENABLE_TEAM_MODE=true, and NEXT_PUBLIC_ENABLE_TEAM_MODE=true; production redeploy is Ready and aliased; /api/health and /api/models smoke passed; /team renders active Team Mode UI; unauthenticated POST /api/team-run is blocked by auth instead of feature-flag 503; authenticated Team Mode run succeeded with 4 role steps on an allowlisted model; Upstash-backed rate limits were verified for Team Mode, admin routes, and /api/guest. Supabase service_role table grants for anonymous_sessions were fixed by migration 20260702211527_grant_anonymous_sessions_service_role.sql. Done in commit 7569b89f2218e9c709f389954e8a080c1daab286."
 }

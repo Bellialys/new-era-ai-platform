@@ -5,9 +5,9 @@
 Спецификация и план реализации **AI Team Mode** — режима последовательной командной работы
 нескольких AI-ролей над одной задачей.
 
-Статус: **реализовано в v2.0.0-alpha.1**. PR18–PR22 выполнены и merged on main; V200-02 `Release Gate P1 - Production Env Activation` подтверждён в production и находится в `verify` до commitHash.
+Статус: **реализовано в v2.0.0-alpha.1**. PR18–PR22 выполнены и merged on main; V200-02 `Release Gate P1 - Production Env Activation` подтверждён в production и закрыт как `done`.
 
-Production Team Mode активирован в production alpha: Vercel Production содержит Vercel Marketplace aliases `KV_REST_API_URL`/`KV_REST_API_TOKEN`, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`; redeploy и production smoke пройдены. Task schema оставляет V200-02 в `verify`, пока не появится commitHash.
+Production Team Mode активирован в production alpha: Vercel Production содержит Vercel Marketplace aliases `KV_REST_API_URL`/`KV_REST_API_TOKEN`, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`; redeploy и production smoke пройдены.
 
 ---
 
@@ -277,7 +277,7 @@ src/app/team/team-run-form.tsx      # client form component
 
 ## 7. Последовательность PR
 
-Этот раздел является исторической записью реализации v2.0. PR18–PR22 уже выполнены; следующая активная задача находится в `.project/tasks/V200-02.json`.
+Этот раздел является исторической записью реализации v2.0. PR18–PR22 и V200-02 уже выполнены; следующую release-hardening задачу нужно заводить отдельным task-файлом.
 
 ### PR16 — Docs / State / Planning
 
@@ -338,7 +338,7 @@ src/app/team/team-run-form.tsx      # client form component
 
 ### V200-02 — Production Env Activation
 
-- Статус 2026-07-02: `verify`; все runtime checks пройдены, `done` ждёт commitHash.
+- Статус 2026-07-02: `done`; все runtime checks пройдены и commitHash зафиксирован.
 - Vercel Production содержит Upstash/KV aliases, `ENABLE_TEAM_MODE=true` и `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`.
 - Production redeploy готов и алиас `new-era-ai-platform.vercel.app` указывает на новую сборку.
 - `/api/health` и `/api/models` smoke пройдены.
