@@ -71,11 +71,6 @@ export function readGuestSessionId(request: NextRequest): string | null {
   return value && UUID_PATTERN.test(value) ? value : null;
 }
 
-/** Reuse the guest cookie if present, otherwise mint a fresh guest id. */
-export function ensureGuestSessionId(request: NextRequest): string {
-  return readGuestSessionId(request) ?? crypto.randomUUID();
-}
-
 /** Persist the guest id as an httpOnly cookie on the outgoing response. */
 export function applyGuestCookie(response: NextResponse, guestId: string): void {
   response.cookies.set(GUEST_COOKIE_NAME, guestId, {

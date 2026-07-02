@@ -37,7 +37,7 @@ NEXT_PUBLIC_ENABLE_VOTING=true
 NEXT_PUBLIC_ENABLE_HISTORY=false
 ```
 
-Не считать этот пример актуальным списком обязательных env variables. Актуальные переменные окружения определяются `env-check.config.json`, `.env.local.example`, `docs/37-env-check-policy.md` и `12-security-and-env.md`.
+Не считать этот пример актуальным списком обязательных env variables. Актуальные переменные окружения определяются `env-check.config.json`, `.env.local.example`, `37-env-check-policy.md` и `12-security-and-env.md`.
 
 Дополнительные флаги для будущих режимов:
 
@@ -86,12 +86,18 @@ NEXT_PUBLIC_ENABLE_VOTING=false
 
 ---
 
-## 4.1 Follow-up: Backend ENABLE_TEAM_MODE gate
+## 4.1 Backend ENABLE_TEAM_MODE gate
 
-> **Follow-up task:** добавить backend проверку `ENABLE_TEAM_MODE` в `/api/team-run`.
-> Сейчас route закрыт auth gate (`kind === "user"`), но отдельный on/off флаг на сервере ещё не добавлен.
-> `NEXT_PUBLIC_ENABLE_TEAM_MODE=false` скрывает UI, но не блокирует прямые вызовы API.
-> Полная защита: реализовать `process.env.ENABLE_TEAM_MODE !== "true"` → `503` или `404` в route handler.
+`/api/team-run` уже имеет server-side gate: если `process.env.ENABLE_TEAM_MODE !== "true"`, route возвращает controlled `503 SERVICE_UNAVAILABLE`.
+
+`NEXT_PUBLIC_ENABLE_TEAM_MODE=false` скрывает UI, но не является защитой от прямого вызова API. Production activation требует включить оба флага вместе:
+
+```env
+ENABLE_TEAM_MODE=true
+NEXT_PUBLIC_ENABLE_TEAM_MODE=true
+```
+
+Главный release-риск: включить UI-флаг без backend-флага. В этом случае `/team` может быть виден пользователю, но `POST /api/team-run` вернёт `503`.
 
 ## 5. Серверные флаги
 

@@ -18,7 +18,7 @@
 
 ## Правила и документы
 
-Перед любой работой читать обязательно:
+Стартовый минимум перед любой работой:
 
 1. **`AGENTS.md`** — текущий статус проекта, главные правила, архитектура.
 2. **`24-codex-active-rule-set.md`** — полный индекс действующих правил и алгоритм работы.
@@ -26,7 +26,10 @@
 4. **`.project/state.json`** — текущая версия, фаза, статус и активные задачи.
 5. **`14-roadmap.md`** — порядок этапов разработки (главный источник истины по версиям).
 6. **`36-document-sync-policy.md`** — правила синхронизации документации и project state.
-7. **`25-production-excellence.md`** — дополнительные production-grade стандарты, начиная с v1.7.
+7. **`25-production-excellence.md`** — дополнительные production-grade стандарты проекта.
+
+Полный обязательный список документов находится в `24-codex-active-rule-set.md`,
+раздел **«Обязательные документы перед работой Codex»**.
 
 ## Ключевые ограничения
 
@@ -34,9 +37,9 @@
 - Любой AI-generated output считать Untrusted Input; безопасный рендер, sanitization и запрет исполнения описаны в `25-production-excellence.md`, раздел `9.1 AI Output Sanitization`.
 - Не коммитить `.env.local` и секретные ключи.
 - Для Next.js App Router data fetching, mutations и UI state применять cache/revalidation policy из `23-codex-quality-rules.md`, раздел `17`.
-- Code Arena Lite завершён; текущий v1.7 добавляет запуск кода только через внешний runner для авторизованных пользователей.
+- Code Arena Runner выполняет пользовательский код только через внешний runner для авторизованных пользователей.
 - Для `/api/code-run` не запускать пользовательский код внутри server-side процесса приложения; не обходить auth/rate limit и требования `25-production-excellence.md`, раздел `6.1 Code Runner Isolation Requirements`.
-- AI Team Mode не добавлять раньше v2.0; Image Arena не добавлять раньше v1.8 и без отдельного storage/safety review.
+- AI Team Mode работает за `NEXT_PUBLIC_ENABLE_TEAM_MODE` и backend gate `ENABLE_TEAM_MODE`; Image Arena требует auth, storage и safety controls.
 
 ## Команды
 
@@ -56,7 +59,6 @@ npm run docs:check  # синхронизация документации
 
 ## Текущая фаза
 
-`v1.0.0` — Stable Arena MVP (текущий стабильный релиз).
-`v1.7.0-alpha.1` — текущий alpha-этап: Code Arena Runner.
-
-Актуальная версия и активные задачи всегда в `.project/state.json`; порядок будущих этапов в `14-roadmap.md`.
+Актуальная версия, текущая фаза, стабильный релиз и активные задачи всегда
+зафиксированы в `.project/state.json` и `AGENTS.md`. Порядок будущих этапов
+находится в `14-roadmap.md`.

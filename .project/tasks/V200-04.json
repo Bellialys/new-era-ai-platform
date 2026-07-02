@@ -1,0 +1,78 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V200-04",
+  "title": "Global Audit and Cleanup Plan 44",
+  "status": "done",
+  "priority": "medium",
+  "files": [
+    "44-global-audit-and-cleanup-plan.md",
+    ".project/document-map.json",
+    ".project/state.json",
+    ".project/tasks/V200-04.json",
+    "15-changelog.md",
+    "16-decisions.md",
+    "18-team-mode-spec.md",
+    "24-codex-active-rule-set.md",
+    "36-document-sync-policy.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "33-feature-flags.md",
+    "37-env-check-policy.md",
+    "38-env-check-implementation.md",
+    "docs/audits/file-connection-audit-2026-06-15.md",
+    "archive/29-apply-documentation-audit-fixes.ps1",
+    "src/lib/server/auth.ts",
+    "src/lib/server/auth.test.ts",
+    "src/lib/server/models.ts",
+    "src/lib/server/models.test.ts",
+    "src/lib/server/votes.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "test:env-check",
+    "build",
+    "docs:check",
+    "state:check"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "test:env-check",
+    "build",
+    "docs:check",
+    "state:check"
+  ],
+  "lastUpdated": "2026-07-02T01:34:00.000Z",
+  "commitHash": "3e947f8",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-07-02T00:00:00.000Z",
+      "note": "Track global cleanup plan 44: document-map completion, numbering normalization, stale audit archival, changelog order, dead export removal, Team Mode persistence documentation truth, CLAUDE.md version drift, and mandatory-document list alignment."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-07-02T00:00:00.000Z",
+      "note": "Baseline after pre-existing owner WIP commit passed all required checks. Cleanup changes are being applied as a separate layer."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-07-02T01:31:00.000Z",
+      "note": "Cleanup changes are implemented. Required checks passed: typecheck, lint, test, test:env-check, build, docs:check, state:check."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-07-02T01:34:00.000Z",
+      "note": "Cleanup committed in 3e947f8 and all required checks passed."
+    }
+  ],
+  "notes": "Scope: FIX-01..FIX-10 from 44-global-audit-and-cleanup-plan.md. Owner decisions: D-1=A root numbered canon; D-2=delete three dead exports; D-3=A remove hardcoded version drift from CLAUDE.md. Out of scope: package changes, migrations, env files, scripts, production deployment, backlog features, push/merge/deploy."
+}

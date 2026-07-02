@@ -2,7 +2,7 @@
 
 ## ⚡ Первым делом для AI-агентов
 
-Перед любой работой прочитать обязательно:
+Стартовый минимум перед любой работой:
 
 1. **`24-codex-active-rule-set.md`** — индекс действующих правил Codex, включает список всех обязательных документов и главный алгоритм работы.
 2. **`23-codex-quality-rules.md`** — стандарты качества выполнения задач и чек-листы; обязателен к полному прочтению.
@@ -10,7 +10,9 @@
 4. **`14-roadmap.md`** — главный источник порядка будущих этапов.
 5. **`25-production-excellence.md`** — production-grade стандарты для v1.7+.
 
-Если читаешь только один файл — читай `24-codex-active-rule-set.md`.
+Полный обязательный список документов находится в `24-codex-active-rule-set.md`,
+раздел **«Обязательные документы перед работой Codex»**. Если читаешь только
+один файл — читай `24-codex-active-rule-set.md`.
 
 ---
 
@@ -65,7 +67,8 @@
 ```text
 v2.0.0-alpha.1 - AI Team Mode
 # реализовано: /api/team-run, /team UI за feature flag, /api/image-compare, audit log, Upstash rate limit coverage
-# v2.0.0-alpha.1: typecheck ✓  lint ✓  build ✓  test 256/256 ✓  docs:check ✓
+# v2.0.0-alpha.1: typecheck ✓  lint ✓  build ✓  test 337/337 ✓  docs:check ✓
+# production Team Mode activation: pending V200-02 (Upstash + ENABLE_TEAM_MODE + NEXT_PUBLIC_ENABLE_TEAM_MODE + redeploy + smoke)
 ```
 
 Текущий alpha-этап:

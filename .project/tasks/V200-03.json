@@ -1,0 +1,42 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V200-03",
+  "title": "Web Dev Skills Roadmap",
+  "status": "verify",
+  "priority": "medium",
+  "files": [
+    "43-web-dev-skills-roadmap.md",
+    ".project/tasks/V200-03.json",
+    ".project/document-map.json"
+  ],
+  "checksRequired": [
+    "state:check",
+    "docs:check",
+    "verify",
+    "test",
+    "build"
+  ],
+  "checksPassed": [
+    "state:check",
+    "docs:check",
+    "verify",
+    "test",
+    "build"
+  ],
+  "lastUpdated": "2026-07-01T21:27:29.893Z",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-07-01T21:21:06.557Z",
+      "note": "Docs-only track created for the Web Dev Skills Roadmap. Status remains planned until roadmap, task file, document-map registration, final diff review, and available verification checks are complete."
+    },
+    {
+      "from": "planned",
+      "to": "verify",
+      "at": "2026-07-01T21:27:29.893Z",
+      "note": "Roadmap doc, task file, and document-map registration are complete. state:check, docs:check, verify, test, and build passed. Not marked done because the task schema requires a commitHash for done status."
+    }
+  ],
+  "notes": "Purpose: fix the learning/adoption phases for web-development skills under the current architecture. Scope: create roadmap doc; classify skills P1/P2/P3; define status vocabulary; add Agent Guardrails; map skills to phases and project areas; define acceptance criteria. Out of scope: adding new frameworks; installing Vue/Angular/PHP/Ruby/Java/MongoDB/MySQL; changing production code; changing database schema; changing environment variables."
+}

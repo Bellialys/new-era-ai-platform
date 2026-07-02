@@ -1,0 +1,50 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V200-02",
+  "title": "Release Gate P1 - Production Env Activation",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V200-01.json",
+    ".project/tasks/V200-02.json",
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "42-v2-ai-team-mode-plan.md",
+    "33-feature-flags.md",
+    "18-team-mode-spec.md",
+    "12-security-and-env.md",
+    "13-deployment.md",
+    "docs/audits/project-audit-2026-06-27.md"
+  ],
+  "checksRequired": [
+    "vercel-env:upstash",
+    "vercel-env:ENABLE_TEAM_MODE",
+    "vercel-env:NEXT_PUBLIC_ENABLE_TEAM_MODE",
+    "production-redeploy",
+    "production-smoke:health",
+    "production-smoke:team-ui",
+    "production-smoke:team-run-auth",
+    "production-smoke:upstash-rate-limit",
+    "state:check",
+    "docs:check"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-06-28T06:38:24.000Z",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-06-28T06:38:24.000Z",
+      "note": "Production Team Mode activation is tracked separately from PR30. Code and local checks are green, but production still requires Upstash Redis env, ENABLE_TEAM_MODE=true, NEXT_PUBLIC_ENABLE_TEAM_MODE=true, redeploy, and smoke verification."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-06-28T06:38:24.000Z",
+      "note": "Current blocker: production /api/team-run can return 503 if the backend ENABLE_TEAM_MODE flag is not enabled while UI is exposed."
+    }
+  ],
+  "notes": "Definition of Done: Upstash Redis env variables are present in Vercel Production; ENABLE_TEAM_MODE=true and NEXT_PUBLIC_ENABLE_TEAM_MODE=true are present in Vercel Production; production redeploy is READY; /api/health returns only {\"status\":\"ok\"}; /team renders active Team Mode UI; unauthenticated POST /api/team-run is blocked by auth instead of feature-flag 503; an authenticated user can run Team Mode; Upstash-backed rate limits are verified for Team Mode, admin routes, and /api/guest."
+}

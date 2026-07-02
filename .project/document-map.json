@@ -54,6 +54,7 @@
   "activeDocuments": [
     "README.md",
     "AGENTS.md",
+    "CLAUDE.md",
     "00-readme.md",
     "01-idea.md",
     "02-project-plan.md",
@@ -90,10 +91,17 @@
     "34-manual-qa-checklist.md",
     "35-database-schema-sync.md",
     "36-document-sync-policy.md",
-    "docs/37-env-check-policy.md",
-    "docs/38-env-check-implementation.md",
+    "37-env-check-policy.md",
+    "38-env-check-implementation.md",
     "40-project-health-check.md",
-    "41-enterprise-readiness-roadmap.md"
+    "41-enterprise-readiness-roadmap.md",
+    "42-v2-ai-team-mode-plan.md",
+    "43-web-dev-skills-roadmap.md",
+    "44-global-audit-and-cleanup-plan.md",
+    "docs/runbook.md",
+    "docs/slo.md",
+    "docs/release-checklist.md",
+    "docs/privacy-retention.md"
   ],
   "deprecatedPatterns": [
     "*-addendum.md",

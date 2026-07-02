@@ -16,6 +16,21 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Database v2 Foundation - 2026-06-28
+
+### Added (PR25, PR26)
+
+- Добавлена SQL-миграция `20260628031516_database_v2_foundation.sql` с 8 новыми таблицами:
+  `usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`.
+- Все новые таблицы: RLS enabled, `service_role` only (кроме `leaderboard_snapshots` — public SELECT).
+- 14 именованных индексов (`CREATE INDEX IF NOT EXISTS`); RLS policies: `DROP POLICY IF EXISTS` перед `CREATE POLICY` (idempotent).
+- `scripts/check-schema-sync.mjs` расширен: 8 новых таблиц в `REQUIRED_TABLES` + 43 новые записи в `REQUIRED_COLUMNS`.
+- `08-database.md` и `30-data-retention-policy.md` обновлены с retention windows для новых таблиц.
+
+### Fixed (PR26)
+
+- Переименован файл миграции `20260628060000_database_v2_foundation.sql` → `20260628031516_database_v2_foundation.sql` для устранения drift с production Supabase migration history.
+
 ## v2.0.0-alpha.1 - AI Team Mode - 2026-06-27
 
 ### Added
@@ -31,27 +46,13 @@ v2.0.0-alpha.1 - AI Team Mode
 
 - `package.json` и `.project/state.json` обновлены до `v2.0.0-alpha.1`.
 - SYNC-маркеры в `README.md`, `AGENTS.md`, `14-roadmap.md`, `15-changelog.md`, `00-readme.md` синхронизированы с v2.0.
+- Выполнена гигиена документации и кода по плану 44: document-map дополнен, 37/38 перенесены в корневой канон, Team Mode persistence truth исправлен в `18-team-mode-spec.md`, `CLAUDE.md` очищен от версионного дрейфа, удалены неиспользуемые exports.
 
 ### Security
 
 - `POST /api/team-run` и `POST /api/image-compare` доступны только авторизованным пользователям (`kind !== "user"` → 401).
 - Rate limit key привязан к `identity.userId` из Supabase session, не к request body.
 - Upstash rate limiter: fail-open при Redis outage; token только в Authorization header, не в body.
-
-## Database v2 Foundation - 2026-06-28
-
-### Added (PR25, PR26)
-
-- Добавлена SQL-миграция `20260628031516_database_v2_foundation.sql` с 8 новыми таблицами:
-  `usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`.
-- Все новые таблицы: RLS enabled, `service_role` only (кроме `leaderboard_snapshots` — public SELECT).
-- 14 именованных индексов (`CREATE INDEX IF NOT EXISTS`); RLS policies: `DROP POLICY IF EXISTS` перед `CREATE POLICY` (idempotent).
-- `scripts/check-schema-sync.mjs` расширен: 8 новых таблиц в `REQUIRED_TABLES` + 43 новые записи в `REQUIRED_COLUMNS`.
-- `08-database.md` и `30-data-retention-policy.md` обновлены с retention windows для новых таблиц.
-
-### Fixed (PR26)
-
-- Переименован файл миграции `20260628060000_database_v2_foundation.sql` → `20260628031516_database_v2_foundation.sql` для устранения drift с production Supabase migration history.
 
 ## Documentation Governance Hardening - 2026-06-24
 

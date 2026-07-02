@@ -52,6 +52,9 @@ Codex должен прочитать:
 8. `CLAUDE.md`
    - краткий профиль работы Claude/Codex в проекте.
 
+9. `36-document-sync-policy.md`
+   - правила синхронизации документации, `document-map.json`, task-файлов и project state.
+
 ## Иерархия правил
 
 Если документы конфликтуют:

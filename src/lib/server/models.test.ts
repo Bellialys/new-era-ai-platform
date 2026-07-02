@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ALLOWED_MODELS, getModelById } from "./models";
+import { ALLOWED_MODELS } from "./models";
 
 describe("ALLOWED_MODELS", () => {
   it("only contains free OpenRouter models with unique ids", () => {
@@ -11,15 +11,5 @@ describe("ALLOWED_MODELS", () => {
       expect(model.name.length).toBeGreaterThan(0);
       expect(model.role.length).toBeGreaterThan(0);
     }
-  });
-});
-
-describe("getModelById", () => {
-  it("finds a known model", () => {
-    expect(getModelById(ALLOWED_MODELS[0].id)?.id).toBe(ALLOWED_MODELS[0].id);
-  });
-
-  it("returns undefined for an unknown model", () => {
-    expect(getModelById("does/not-exist")).toBeUndefined();
   });
 });

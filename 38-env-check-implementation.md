@@ -1,7 +1,7 @@
 # 38 - Environment Variables Check Implementation
 
 Техническое описание Environment Variables Checker. Политика и правила —
-в `docs/37-env-check-policy.md`.
+в `37-env-check-policy.md`.
 
 ## 1. Добавленные файлы
 
@@ -11,8 +11,8 @@
 | `scripts/check-env.mjs` | сам чекер (загрузка env, валидация, leak detection, репортеры) |
 | `scripts/check-env.test.mjs` | тесты на `node:test` (изолированы через `ENV_CHECK_DIR`) |
 | `.env.local.example` | генерируется командой `env:check:example` (только placeholders) |
-| `docs/37-env-check-policy.md` | политика и правила безопасности |
-| `docs/38-env-check-implementation.md` | этот документ |
+| `37-env-check-policy.md` | политика и правила безопасности |
+| `38-env-check-implementation.md` | этот документ |
 
 ## 2. Добавленные npm-команды
 

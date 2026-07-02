@@ -59,17 +59,18 @@
 - Auth SSR, login/signup/logout, reset/update password flow;
 - профиль, базовая статистика, avatar upload и email change request;
 - Code Arena: сравнение кодовых решений отдельно от запуска; запуск кода доступен авторизованным пользователям через внешний Piston runner;
-- backend route `POST /api/team-run` с auth gate, rate limiting и DI-паттерном для engine;
+- backend route `POST /api/team-run` с auth gate, backend flag `ENABLE_TEAM_MODE`, rate limiting и DI-паттерном для engine;
 - страница `/team` — AI Team Mode UI с feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`;
 - `package-lock.json`;
-- текущий `typecheck` проходит; остальные проверки должны пройти перед stable/release.
+- текущая локальная сетка `state:check`, `docs:check`, `typecheck`, `lint`, `build` и `test` проходит; production Team Mode activation остаётся отдельным P1 gate.
 
 Пока не готово как стабильный пользовательский этап:
 
-- release-gate для `v2.0.0-alpha.1`: повторная проверка docs/state/typecheck/lint/build;
+- Release Gate P1 `Production Env Activation`: Upstash Redis env в Vercel Production, `ENABLE_TEAM_MODE=true`, `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`, production redeploy и smoke;
+- повторная проверка docs/state/typecheck/lint/build/test перед закрытием gate;
 - live smoke внешнего runner и admin routes на целевом окружении;
 - Image Arena;
-- публичный выход AI Team Mode (сейчас в alpha за feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`).
+- публичный выход AI Team Mode: считается активированным только после успешного V200-02 production smoke; до этого UI/API остаются alpha за feature flags.
 
 ## Главная цель
 
@@ -150,8 +151,8 @@ npm run env:check:example
 # генерирует .env.local.example только из placeholder-значений
 ```
 
-Политика и детали: `docs/37-env-check-policy.md` и
-`docs/38-env-check-implementation.md`.
+Политика и детали: `37-env-check-policy.md` и
+`38-env-check-implementation.md`.
 
 ```bash
 cp .env.local.example .env.local
@@ -316,8 +317,8 @@ server-side hardcoded allowlist
 | `34-manual-qa-checklist.md` | Manual QA checklist |
 | `35-database-schema-sync.md` | Проверка соответствия Supabase-схемы (`npm run schema:check`) |
 | `36-document-sync-policy.md` | Project State Sync System и политика синхронизации документов |
-| `docs/37-env-check-policy.md` | Политика Environment Variables Checker (`npm run env:check`) |
-| `docs/38-env-check-implementation.md` | Реализация Environment Variables Checker |
+| `37-env-check-policy.md` | Политика Environment Variables Checker (`npm run env:check`) |
+| `38-env-check-implementation.md` | Реализация Environment Variables Checker |
 | `40-project-health-check.md` | Команды `health`, `health:local`, `health:production` и live-проверка моделей |
 | `41-enterprise-readiness-roadmap.md` | План выхода на international corporate-grade уровень |
 | `AGENTS.md` | Правила для AI-агентов и разработчиков |

@@ -153,7 +153,3 @@ export const ALLOWED_MODELS: ArenaModel[] = [
     description: "Бесплатная очень маленькая instruct-модель LiquidAI 1.2B для мгновенных ответов.",
   },
 ];
-
-export function getModelById(modelId: string): ArenaModel | undefined {
-  return ALLOWED_MODELS.find((m) => m.id === modelId);
-}

@@ -9,7 +9,6 @@ vi.mock("@supabase/ssr", () => ({
 
 import {
   readGuestSessionId,
-  ensureGuestSessionId,
   applyGuestCookie,
   getAuthenticatedUserId,
   resolveRequestIdentity,
@@ -17,7 +16,6 @@ import {
 
 const USER_ID = "33333333-3333-4333-8333-333333333333";
 const VALID_GUEST = "44444444-4444-4444-8444-444444444444";
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** Minimal NextRequest stub exposing only the cookie API these helpers use. */
 function mockRequest(cookies: Record<string, string> = {}): NextRequest {
@@ -74,24 +72,6 @@ describe("readGuestSessionId", () => {
 
   it("returns null when the cookie is absent", () => {
     expect(readGuestSessionId(mockRequest())).toBeNull();
-  });
-});
-
-describe("ensureGuestSessionId", () => {
-  it("reuses an existing valid guest id (stable across calls)", () => {
-    const request = mockRequest({ na_guest: VALID_GUEST });
-    expect(ensureGuestSessionId(request)).toBe(VALID_GUEST);
-    expect(ensureGuestSessionId(request)).toBe(VALID_GUEST);
-  });
-
-  it("mints a fresh uuid when no cookie is present", () => {
-    expect(ensureGuestSessionId(mockRequest())).toMatch(UUID_RE);
-  });
-
-  it("never reuses a malformed cookie value", () => {
-    const minted = ensureGuestSessionId(mockRequest({ na_guest: "spoofed" }));
-    expect(minted).not.toBe("spoofed");
-    expect(minted).toMatch(UUID_RE);
   });
 });
 
