@@ -3,8 +3,6 @@ import type { ArenaModel, ArenaResponseView } from "@/types/arena";
 import { ResponseCard } from "./response-card";
 import { JudgePanel } from "./judge-panel";
 
-const BLIND_LABELS = ["Модель A", "Модель B", "Модель C", "Модель D", "Модель E"];
-
 type ArenaResultsProps = {
   responses: ArenaResponseView[];
   isLoading: boolean;
@@ -55,7 +53,7 @@ export function ArenaResults({
     const lines: string[] = [`Задача: ${prompt}`, ""];
     for (let i = 0; i < responses.length; i++) {
       const r = responses[i];
-      const label = showBlind ? BLIND_LABELS[i] ?? `Модель ${i + 1}` : r.modelName;
+      const label = r.modelName;
       lines.push(`--- ${label} ---`);
       lines.push(r.answerText ?? r.errorMessage ?? "Нет ответа");
       lines.push("");
@@ -209,7 +207,7 @@ export function ArenaResults({
       )}
 
       <div className={`grid gap-4 ${getResponseGridClass(responses.length)}`}>
-        {responses.map((response, index) => (
+        {responses.map((response) => (
           <ResponseCard
             key={response.id}
             response={response}
@@ -217,7 +215,7 @@ export function ArenaResults({
             canSaveWinner={canSaveWinner}
             isSavingWinner={savingVoteResponseId === response.id}
             isVoteLocked={voteStatus === "saving"}
-            blindLabel={showBlind ? (BLIND_LABELS[index] ?? `Модель ${index + 1}`) : undefined}
+            blindLabel={showBlind ? response.modelName : undefined}
             onSelectWinner={onSelectWinner}
           />
         ))}

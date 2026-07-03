@@ -218,6 +218,35 @@ export function validateModeSlug(
 }
 
 /**
+ * Return a shuffled copy using Fisher-Yates. The input array is never mutated,
+ * so callers can safely preserve their original ordering for non-random flows.
+ */
+export function fisherYatesShuffle<T>(items: readonly T[]): T[] {
+  const shuffled = [...items];
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const current = shuffled[i];
+    const replacement = shuffled[j];
+    if (current === undefined || replacement === undefined) {
+      continue;
+    }
+    shuffled[i] = replacement;
+    shuffled[j] = current;
+  }
+
+  return shuffled;
+}
+
+export function blindSlotId(index: number): string {
+  return `slot-${String.fromCharCode(97 + index)}`;
+}
+
+export function blindSlotName(index: number): string {
+  return `Модель ${String.fromCharCode(65 + index)}`;
+}
+
+/**
  * Log API request metadata (safe logging)
  * - DO NOT log request body or headers with secrets
  * - DO NOT log Authorization headers

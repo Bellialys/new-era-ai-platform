@@ -20,7 +20,7 @@ export type HistoryListItemView = {
 
 export type HistoryResponseView = {
   responseId: string;
-  modelKey: string;
+  modelKey: string | null;
   displayName: string | null;
   status: string;
   responseText: string | null;

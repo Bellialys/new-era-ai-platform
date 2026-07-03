@@ -8,6 +8,7 @@ import {
   applyGuestCookie,
   checkRateLimit,
   createErrorResponse,
+  getBlindReveal,
   logApiRequest,
   resolveRequestIdentity,
   saveBestVote,
@@ -26,6 +27,11 @@ interface VoteResponse {
   taskId: string;
   responseId: string;
   voteType: "best";
+  reveal?: Array<{
+    responseId: string;
+    modelName: string;
+    modelKey: string;
+  }>;
 }
 
 export async function POST(
@@ -105,6 +111,7 @@ export async function POST(
       userId: identity.userId,
       anonymousSessionId: identity.guestId,
     });
+    const reveal = await getBlindReveal(ids.taskId);
 
     logApiRequest("POST", "/api/vote", 200, Date.now() - startTime);
 
@@ -115,6 +122,7 @@ export async function POST(
         taskId: savedVote.taskId,
         responseId: savedVote.responseId,
         voteType: savedVote.voteType,
+        ...(reveal ? { reveal } : {}),
       },
       { status: 200 }
     );

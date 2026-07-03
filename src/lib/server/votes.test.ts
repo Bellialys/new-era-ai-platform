@@ -10,7 +10,7 @@ vi.mock("./supabase", () => ({
   getSupabaseServerClient: getClientMock,
 }));
 
-import { saveBestVote, validateVoteIds } from "./votes";
+import { getBlindReveal, saveBestVote, validateVoteIds } from "./votes";
 
 const TASK_ID = "11111111-1111-4111-8111-111111111111";
 const RESPONSE_ID = "22222222-2222-4222-8222-222222222222";
@@ -123,5 +123,79 @@ describe("saveBestVote", () => {
     await expect(
       saveBestVote({ taskId: TASK_ID, responseId: RESPONSE_ID, userId: USER_ID })
     ).rejects.toMatchObject({ statusCode: 500, errorCode: "VOTE_SAVE_FAILED" });
+  });
+});
+
+describe("getBlindReveal", () => {
+  function createRevealClient({
+    isBlind,
+    responses = [],
+  }: {
+    isBlind: boolean;
+    responses?: Array<{ id: string; display_name: string | null; model_key: string }>;
+  }) {
+    const taskQuery = {
+      select: vi.fn(function (this: typeof taskQuery) { return this; }),
+      eq: vi.fn(function (this: typeof taskQuery) { return this; }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { is_blind: isBlind },
+        error: null,
+      }),
+    };
+    const responsesQuery = {
+      select: vi.fn(function (this: typeof responsesQuery) { return this; }),
+      eq: vi.fn(function (this: typeof responsesQuery) { return this; }),
+      order: vi.fn().mockResolvedValue({
+        data: responses,
+        error: null,
+      }),
+    };
+
+    return {
+      from: vi.fn((table: string) => (table === "tasks" ? taskQuery : responsesQuery)),
+      builders: { taskQuery, responsesQuery },
+    };
+  }
+
+  it("returns null when Supabase is not configured", async () => {
+    getClientMock.mockReturnValue(null);
+
+    await expect(getBlindReveal(TASK_ID)).resolves.toBeNull();
+  });
+
+  it("returns null for a non-blind task", async () => {
+    const client = createRevealClient({ isBlind: false });
+    getClientMock.mockReturnValue(client);
+
+    await expect(getBlindReveal(TASK_ID)).resolves.toBeNull();
+    expect(client.from).toHaveBeenCalledWith("tasks");
+    expect(client.from).not.toHaveBeenCalledWith("model_responses");
+  });
+
+  it("returns response reveal details for a blind task", async () => {
+    const client = createRevealClient({
+      isBlind: true,
+      responses: [
+        { id: RESPONSE_ID, display_name: "Real Model", model_key: "provider/real" },
+        { id: "66666666-6666-4666-8666-666666666666", display_name: null, model_key: "provider/fallback" },
+      ],
+    });
+    getClientMock.mockReturnValue(client);
+
+    await expect(getBlindReveal(TASK_ID)).resolves.toEqual([
+      {
+        responseId: RESPONSE_ID,
+        modelName: "Real Model",
+        modelKey: "provider/real",
+      },
+      {
+        responseId: "66666666-6666-4666-8666-666666666666",
+        modelName: "provider/fallback",
+        modelKey: "provider/fallback",
+      },
+    ]);
+    expect(client.builders.responsesQuery.order).toHaveBeenCalledWith("created_at", {
+      ascending: true,
+    });
   });
 });

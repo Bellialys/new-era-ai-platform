@@ -183,6 +183,7 @@ Streaming-запрос:
 - выбирать можно только response со статусом `success`;
 - голосование по задаче со статусом `running` блокируется: `409 TASK_STILL_RUNNING`;
 - актуальная схема БД использует `votes.model_response_id` и `vote_type = 'best'`;
+- для blind-задач успешный best vote может вернуть `reveal` с реальными именами моделей;
 - старое значение `winner` не должно использоваться в новом frontend-коде или документации.
 
 Ошибки:
@@ -197,9 +198,18 @@ Streaming-запрос:
   "voteId": "vote-uuid",
   "taskId": "task-uuid",
   "responseId": "model-response-uuid",
-  "voteType": "best"
+  "voteType": "best",
+  "reveal": [
+    {
+      "responseId": "model-response-uuid",
+      "modelName": "Model display name",
+      "modelKey": "provider/model-key"
+    }
+  ]
 }
 ```
+
+`reveal` присутствует только для задач с `tasks.is_blind = true` после успешного сохранения best vote. Для обычных задач поле отсутствует.
 
 Streaming events:
 
@@ -669,8 +679,8 @@ Query-параметры (все необязательные):
   "responses": [
     {
       "responseId": "model-response-uuid",
-      "modelKey": "model-key-1",
-      "displayName": "Model display name",
+      "modelKey": null,
+      "displayName": "Модель A",
       "status": "success",
       "responseText": "Ответ модели",
       "errorCode": null,
@@ -685,6 +695,7 @@ Query-параметры (все необязательные):
 
 - `taskId` должен быть UUID, иначе `400 VALIDATION_ERROR`;
 - задача, которая не существует **или** не принадлежит вызывающему, возвращает `404 TASK_NOT_FOUND` (существование не раскрывается);
+- для blind-задач без best vote текущей identity `responses[].modelKey = null`, а `displayName` маскируется как `Модель A/B/...`; после best vote текущей identity возвращаются реальные `modelKey` и `displayName`;
 - read-only: история не редактируется и не запускает повторных вызовов моделей.
 
 ## `POST /api/team-run` (v2.0)
@@ -1095,7 +1106,8 @@ Rules:
 {
   "prompt": "Текст запроса (3–8000 символов)",
   "modelIds": ["model-selection-id", "model-selection-id"],
-  "modeSlug": "prompt-arena"
+  "modeSlug": "prompt-arena",
+  "blind": true
 }
 ```
 
@@ -1103,22 +1115,23 @@ Rules:
 
 ```text
 event: model_start
-data: {"modelId":"model-selection-id","modelName":"Model display name","modelRole":"General-модель"}
+data: {"modelId":"slot-a","modelName":"Модель A","modelRole":null}
 
 event: model_token
-data: {"modelId":"model-selection-id","token":"часть ответа"}
+data: {"modelId":"slot-a","token":"часть ответа"}
 
 event: model_done
-data: {"modelId":"model-selection-id","response":{"id":"model-response-uuid","modelId":"model-selection-id","modelName":"Model display name","status":"success","answerText":"полный текст","latencyMs":1234}}
+data: {"modelId":"slot-a","response":{"id":"model-response-uuid","modelId":"slot-a","modelName":"Модель A","status":"success","answerText":"полный текст","latencyMs":1234}}
 
 event: complete
-data: {"status":"success","taskId":"task-uuid","responses":[{"id":"model-response-uuid","modelId":"model-selection-id","modelName":"Model display name","status":"success","answerText":"полный текст","latencyMs":1234,"errorCode":null,"errorMessage":null}]}
+data: {"status":"success","taskId":"task-uuid","responses":[{"id":"model-response-uuid","modelId":"slot-a","modelName":"Модель A","status":"success","answerText":"полный текст","latencyMs":1234,"errorCode":null,"errorMessage":null}]}
 ```
 
 При ошибке конкретной модели вместо `model_done` отправляется `model_error` (`response.status: "error"`, заполнены `errorCode`/`errorMessage`). Pre-stream ошибки возвращаются как JSON (не SSE).
 
 Rules:
 - Тело: `prompt` 3–8000 символов (иначе `400 VALIDATION_ERROR`); `modelIds` — массив из 2–5 непустых уникальных строк-`selectionId` (иначе `400 VALIDATION_ERROR`); `modeSlug` опционален (default `"prompt-arena"`), допустимы `prompt-arena`/`code-arena` (иначе `400 INVALID_MODE`). Невалидный JSON → `400 INVALID_JSON`.
+- `blind: true` включает server-side blind mode: backend Fisher-Yates shuffle выбранных моделей, во все SSE-события и `complete.responses[]` отдаёт только `slot-a`/`slot-b` и `Модель A`/`Модель B`, а реальные `model_key`/`display_name` остаются только в persistence до best vote текущей identity.
 - Auth: пользователь или гость; `kind: "none"` → `401 AUTH_REQUIRED`.
 - Дневной лимит (`checkDailyLimit`, по `tasks` за сутки UTC; anonymous=5/free=20/pro=100/admin=9999): превышение → `429` с телом `{ "error": "DAILY_LIMIT_EXCEEDED", "used", "limit", "message" }`.
 - Rate limit: ключ `stream-compare:user:<id>` / `stream-compare:guest:<id>`; пользователь 10 / гость 5 запросов за 60 000 мс; превышение → `429 RATE_LIMIT` с `Retry-After: 60`.
@@ -1128,9 +1141,9 @@ Rules:
 
 ## `GET /api/tasks/[taskId]`
 
-Возвращает одну задачу Arena по её UUID вместе со всеми ответами моделей и id ответа-победителя. Публичный, без авторизации.
+Возвращает одну задачу Arena по её UUID вместе со всеми ответами моделей и id ответа-победителя. Доступен только авторизованному владельцу задачи.
 
-> **Identity:** публичный маршрут — куки/идентичность не проверяются; любой клиент может прочитать задачу по её UUID.
+> **Identity:** Supabase user cookie обязателен. Service-role read дополнительно фильтруется по `tasks.user_id = current userId`; чужие задачи возвращают `404`.
 
 Минимальный ответ:
 
@@ -1144,13 +1157,13 @@ Rules:
     "status": "completed",
     "createdAt": "2026-06-20T10:00:00.000Z",
     "settings": {},
+    "isBlind": true,
     "winnerResponseId": "model-response-uuid",
     "judgeVerdict": null,
     "responses": [
       {
         "id": "model-response-uuid",
-        "modelKey": "provider/model-key",
-        "modelName": "Model display name",
+        "modelName": "Модель A",
         "status": "completed",
         "answerText": "Model answer text or null"
       }
@@ -1160,11 +1173,12 @@ Rules:
 ```
 
 Rules:
-- Auth: нет (public). Rate limit отсутствует.
+- Auth: только авторизованный пользователь; guest/anonymous → `401 AUTH_REQUIRED`. Rate limit отсутствует.
 - `taskId` обязан соответствовать `/^[0-9a-f-]{36}$/`; иначе `400 INVALID_ID`. Если Supabase-клиент недоступен → `503 DB_UNAVAILABLE`.
-- `title` → `null`, `settings` → `{}`, `judgeVerdict` → `null` при отсутствии. В `responses[]`: `modelName` = `display_name` или `model_key`; `answerText` → `null`; `latencyMs`/`errorCode`/`errorMessage` опускаются, если отсутствуют.
+- `title` → `null`, `settings` → `{}`, `judgeVerdict` → `null` при отсутствии. В `responses[]`: `answerText` → `null`; `latencyMs`/`errorCode`/`errorMessage` опускаются, если отсутствуют.
+- Если `isBlind = true` и у текущего пользователя ещё нет `best` vote по задаче, responses сортируются по `model_responses.created_at`, `modelName` маскируется как `Модель A/B/...`, а `modelKey` не отдаётся. После best vote текущей identity возвращаются реальные `modelKey` и `display_name`.
 - Коды `400/404/503` возвращаются в форме `{ "error": { "code": "..." } }`; путь `500` — в форме `{ "status": "error", "errorCode": "INTERNAL_ERROR", "message": "..." }`.
-- `winnerResponseId` — `model_response_id` из голоса с `vote_type = 'best'` (через вложенный `votes(id, model_response_id, vote_type)`), иначе `null`.
+- `winnerResponseId` — `model_response_id` из scoped голоса текущего пользователя с `vote_type = 'best'`, иначе `null`.
 - safe errors include `INVALID_ID`, `DB_UNAVAILABLE`, `NOT_FOUND`, `INTERNAL_ERROR`.
 
 ## `POST /api/guest`

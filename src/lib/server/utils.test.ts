@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from "vitest";
 import {
   ApiError,
   TimeoutError,
+  blindSlotId,
+  blindSlotName,
   createErrorResponse,
+  fisherYatesShuffle,
   isUuid,
   logApiRequest,
   validatePrompt,
@@ -127,6 +130,27 @@ describe("withTimeout", () => {
     await expect(withTimeout(new Promise(() => {}), 1, "slow operation")).rejects.toBeInstanceOf(
       TimeoutError
     );
+  });
+});
+
+describe("fisherYatesShuffle", () => {
+  it("keeps the same length and multiset without mutating the input", () => {
+    const original = ["a", "b", "c", "d"];
+
+    const shuffled = fisherYatesShuffle(original);
+
+    expect(shuffled).toHaveLength(original.length);
+    expect([...shuffled].sort()).toEqual([...original].sort());
+    expect(original).toEqual(["a", "b", "c", "d"]);
+  });
+});
+
+describe("blind slots", () => {
+  it("uses stable ids and display names", () => {
+    expect(blindSlotId(0)).toBe("slot-a");
+    expect(blindSlotId(1)).toBe("slot-b");
+    expect(blindSlotName(0)).toBe("Модель A");
+    expect(blindSlotName(1)).toBe("Модель B");
   });
 });
 

@@ -11,6 +11,7 @@ const { resolveIdentityMock, supabaseMock } = vi.hoisted(() => {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     single: vi.fn(),
+    maybeSingle: vi.fn(),
   };
   return { resolveIdentityMock: vi.fn(), supabaseMock };
 });
@@ -41,12 +42,13 @@ const GUEST_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const VALID_TASK_ROW = {
   id: TASK_ID,
   mode_slug: "prompt-arena",
-  prompt_text: "Hello world",
+  task_text: "Hello world",
   title: null,
   status: "completed",
   created_at: "2026-06-28T00:00:00Z",
   settings: {},
   judge_verdict: null,
+  is_blind: false,
   model_responses: [],
   votes: [],
 };
@@ -61,11 +63,13 @@ beforeEach(() => {
   supabaseMock.select.mockReset().mockReturnThis();
   supabaseMock.eq.mockReset().mockReturnThis();
   supabaseMock.single.mockReset();
+  supabaseMock.maybeSingle.mockReset();
 
   // Default: authenticated user
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
   // Default: task found and owned
   supabaseMock.single.mockResolvedValue({ data: VALID_TASK_ROW, error: null });
+  supabaseMock.maybeSingle.mockResolvedValue({ data: null, error: null });
 });
 
 // ---------------------------------------------------------------------------
@@ -166,5 +170,90 @@ describe("GET /api/tasks/[taskId] — owner scope", () => {
     expect(body.task).toBeDefined();
     expect(body.task?.id).toBe(TASK_ID);
     expect(body.task?.modeSlug).toBe("prompt-arena");
+  });
+
+  it("masks model identity for blind tasks until the owner has a best vote", async () => {
+    supabaseMock.single.mockResolvedValue({
+      data: {
+        ...VALID_TASK_ROW,
+        is_blind: true,
+        model_responses: [
+          {
+            id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+            model_key: "provider/real-a",
+            display_name: "Real Model A",
+            status: "success",
+            response_text: "answer a",
+            latency_ms: 100,
+            error_code: null,
+            error_message: null,
+            created_at: "2026-06-28T00:00:01Z",
+          },
+          {
+            id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+            model_key: "provider/real-b",
+            display_name: "Real Model B",
+            status: "success",
+            response_text: "answer b",
+            latency_ms: 120,
+            error_code: null,
+            error_message: null,
+            created_at: "2026-06-28T00:00:02Z",
+          },
+        ],
+        votes: [],
+      },
+      error: null,
+    });
+
+    const res = await GET(makeRequest(TASK_ID), { params: Promise.resolve({ taskId: TASK_ID }) });
+    const body = await res.json() as {
+      task?: { isBlind?: boolean; responses?: Array<Record<string, unknown>> };
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.task?.isBlind).toBe(true);
+    expect(body.task?.responses?.[0]?.modelName).toBe("Модель A");
+    expect(body.task?.responses?.[0]).not.toHaveProperty("modelKey");
+    expect(JSON.stringify(body)).not.toContain("provider/real-a");
+    expect(JSON.stringify(body)).not.toContain("Real Model A");
+  });
+
+  it("reveals model identity for blind tasks after a best vote exists", async () => {
+    const responseId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    supabaseMock.single.mockResolvedValue({
+      data: {
+        ...VALID_TASK_ROW,
+        is_blind: true,
+        model_responses: [
+          {
+            id: responseId,
+            model_key: "provider/real-a",
+            display_name: "Real Model A",
+            status: "success",
+            response_text: "answer a",
+            latency_ms: 100,
+            error_code: null,
+            error_message: null,
+            created_at: "2026-06-28T00:00:01Z",
+          },
+        ],
+      },
+      error: null,
+    });
+    supabaseMock.maybeSingle.mockResolvedValue({
+      data: { model_response_id: responseId },
+      error: null,
+    });
+
+    const res = await GET(makeRequest(TASK_ID), { params: Promise.resolve({ taskId: TASK_ID }) });
+    const body = await res.json() as {
+      task?: { responses?: Array<Record<string, unknown>> };
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.task?.responses?.[0]?.modelName).toBe("Real Model A");
+    expect(body.task?.responses?.[0]?.modelKey).toBe("provider/real-a");
+    expect(supabaseMock.eq).toHaveBeenCalledWith("user_id", USER_ID);
   });
 });

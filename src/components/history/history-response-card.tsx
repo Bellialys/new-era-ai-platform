@@ -7,7 +7,7 @@ import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
  * interaction (history is not editable).
  */
 export function HistoryResponseCard({ response }: { response: HistoryResponseView }) {
-  const title = response.displayName ?? response.modelKey;
+  const title = response.displayName ?? response.modelKey ?? "Модель";
   const isSuccess = response.status === "success";
   const bodyText = response.responseText ?? response.errorMessage ?? "Модель не вернула ответ.";
 
@@ -22,7 +22,9 @@ export function HistoryResponseCard({ response }: { response: HistoryResponseVie
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div className="min-w-0">
           <h2 className="truncate text-xl font-bold text-white">{title}</h2>
-          <p className="truncate text-sm text-violet-200">{response.modelKey}</p>
+          {response.modelKey ? (
+            <p className="truncate text-sm text-violet-200">{response.modelKey}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <span

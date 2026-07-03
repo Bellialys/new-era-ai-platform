@@ -28,6 +28,8 @@ type SaveArenaRunInput = {
   modeSlug?: string;
   modelKeys: string[];
   responses: ArenaResponseForPersistence[];
+  /** Whether model identity should stay hidden until this identity votes. */
+  isBlind?: boolean;
   /** Extra JSONB metadata stored in tasks.settings. */
   settings?: Record<string, unknown>;
   /** Verified owner of the run: a user id, a guest id, or neither. */
@@ -50,6 +52,7 @@ export async function saveArenaRun({
   modeSlug = MODE_SLUG_PROMPT_ARENA,
   modelKeys,
   responses,
+  isBlind = false,
   settings = {},
   owner,
 }: SaveArenaRunInput): Promise<SaveArenaRunResult> {
@@ -72,6 +75,7 @@ export async function saveArenaRun({
       status: taskStatus,
       selected_models: modelKeys,
       settings,
+      is_blind: isBlind,
       user_id: owner?.userId ?? null,
       anonymous_session_id: owner?.anonymousSessionId ?? null,
       error_message:

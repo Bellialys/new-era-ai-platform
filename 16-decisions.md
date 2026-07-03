@@ -886,3 +886,46 @@ Accepted
 
 Если документация будет вынесена в отдельный docs-site или появится отдельная
 иерархия пользовательской и developer-документации.
+
+---
+
+# DEC-014 - Server-side Blind Arena slots
+
+## Статус
+
+```text
+Accepted
+# принято в рамках TASK-3 Blind Arena SSE, 2026-07-03
+```
+
+## Решение
+
+Blind Arena не вводит новый `mode_slug`. Для `POST /api/stream-compare` используется флаг `blind?: boolean`; любое значение кроме `true` считается обычным non-blind запуском.
+
+Для blind-запусков backend:
+
+- сохраняет `tasks.is_blind = true`;
+- Fisher-Yates shuffle выбранных моделей выполняется на сервере;
+- в SSE и `complete.responses[]` отдаёт только wire slots: `slot-a`, `slot-b`, `Модель A`, `Модель B`, `modelRole: null`;
+- реальные `model_key` и display name сохраняются в `model_responses`, но не уходят клиенту до best vote текущей identity;
+- `POST /api/vote` после успешного best vote возвращает `reveal[]` с `{ responseId, modelName, modelKey }`;
+- `GET /api/tasks/[taskId]` и `GET /api/history/[taskId]` маскируют model identity до best vote текущей identity.
+
+## Контекст
+
+До TASK-3 blind mode был только client-side UI-переключателем. Серверные SSE-события и detail/history reads всё равно отдавали реальные `modelName`/`model_key`, поэтому любой клиент или network inspector мог увидеть identity моделей до голосования.
+
+## Причина
+
+Blind comparison должен быть enforced на backend. UI-маска недостаточна для честного голосования и не выдерживает replay/API access. Флаг `blind` дешевле и безопаснее нового режима, потому что Prompt Arena остаётся тем же product flow, а отличие касается только wire contract и reveal gate.
+
+## Последствия
+
+- `tasks.is_blind boolean not null default false` становится обязательной колонкой перед merge кода TASK-3.
+- Миграция `20260703221900_tasks_is_blind.sql` должна быть применена в production Supabase до merge PR с кодом.
+- Клиент больше не может локально раскрыть real model names в blind run без `reveal` из `/api/vote`.
+- История и task detail должны считать отсутствие scoped best vote причиной оставаться masked.
+
+## Когда пересмотреть
+
+Если появится отдельный режим соревнования с другими правилами раскрытия, публичными share-ссылками без owner identity или multi-vote судейством, нужно пересмотреть reveal policy и возможно вынести blind semantics в отдельный mode/permission model.
