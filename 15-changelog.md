@@ -33,6 +33,18 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ## v2.0.0-alpha.1 - AI Team Mode - 2026-06-27
 
+## TASK-1: fix(profile): rate limit avatar upload/delete + stale ext cleanup - 2026-07-03
+
+### Added
+
+- `AVATAR_RATE_LIMIT_WINDOW_MS` и `AVATAR_RATE_LIMIT_MAX_REQUESTS` (5 req / 60 s) в `src/lib/arena/constants.ts`.
+- Rate limiting на `POST /api/profile/avatar` и `DELETE /api/profile/avatar`: общий ключ `avatar:user:{userId}`, 429 с `Retry-After`.
+- Best-effort очистка устаревших форматов аватара (`avatar.jpg|png|webp`) после успешной загрузки нового; ошибка очистки не влияет на ответ.
+- Тесты `src/app/api/profile/avatar/route.test.ts`: auth guard, rate limit (POST и DELETE), stale-ext cleanup, resilience к ошибке cleanup.
+- Обновлён `28-api-contracts.md`: таблица rate limits и правила `POST`/`DELETE /api/profile/avatar`.
+- Добавлены pipeline docs: `47-kickoff-pipeline.md` в корень, раздел "Autonomous pipeline rules" в `CLAUDE.md` и `AGENTS.md`.
+
+
 ### Added
 
 - Реализован backend `POST /api/team-run` с auth gate (только авторизованные пользователи), rate limiting (3/10 min), DI-паттерном для engine и best-effort сохранением.

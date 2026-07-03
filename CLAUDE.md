@@ -62,3 +62,16 @@ npm run docs:check  # синхронизация документации
 Актуальная версия, текущая фаза, стабильный релиз и активные задачи всегда
 зафиксированы в `.project/state.json` и `AGENTS.md`. Порядок будущих этапов
 находится в `14-roadmap.md`.
+
+## Autonomous pipeline rules
+
+Обязательны для каждой агентской сессии без исключений (источник: `47-kickoff-pipeline.md`):
+
+1. **Свежая база:** `git fetch origin && git checkout main && git pull`; каждая задача — новая ветка `fix/task-<N>-<короткое-имя>` от актуального main.
+2. **Никогда не пушить в main:** результат каждой задачи — Pull Request через `gh pr create`; в body — номер задачи, изменённые файлы, вывод проверок.
+3. **DoD:** `npm run typecheck && npm run lint && npm run test` зелёный локально до открытия PR; падающие тесты чинить, не открывать PR с оговорками.
+4. **Документация в том же коммите:** API → `28-api-contracts.md`; БД → `08-database.md`; каждая задача → строка в `15-changelog.md`.
+5. **Миграции НЕ применять:** создать SQL-файл в `supabase/migrations/` с timestamp, в body PR — `⚠️ MIGRATION PENDING — применяет Claude (web) через Supabase MCP после merge`.
+6. **Секреты:** не создавать `.env*` (кроме `.env.example`), не вписывать ключи в код, тесты и документацию.
+7. **Границы задач буквально:** замечания вне скоупа — отдельным списком в body PR, не в коде.
+8. **Стиль ошибок:** `ApiError` + `createErrorResponse` (`{status, errorCode, message}`), `logApiRequest` на каждом выходе, 429 всегда с `Retry-After`; эталон: `src/app/api/vote/route.ts`.

@@ -45,6 +45,8 @@ Frontend вызывает только backend route handlers.
 | `POST /api/image-compare` | 5 req | 60 сек | user UUID; guests are not allowed |
 | `GET /api/history` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `GET /api/history/[taskId]` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `POST /api/profile/avatar` | 5 req | 60 сек | user UUID |
+| `DELETE /api/profile/avatar` | 5 req | 60 сек | user UUID (общий счётчик с POST) |
 | `GET /api/admin/audit` | no public quota | admin Supabase session | `requireAdmin()` |
 | `GET /api/admin/usage` | no public quota | admin Supabase session | `requireAdmin()` |
 
@@ -855,13 +857,15 @@ file=<binary image data>   # image/jpeg | image/png | image/webp, ≤ 2 MB
 
 Rules:
 - Auth обязательна: без валидной Supabase user-cookie — `401 AUTH_REQUIRED`.
+- Rate limit: 5 запросов / 60 сек на пользователя (ключ `avatar:user:{userId}`, общий с `DELETE`); превышение → `429 RATE_LIMIT` с заголовком `Retry-After`.
 - Тело должно быть `multipart/form-data`; иначе `400 INVALID_REQUEST`.
 - Поле `file` обязательно и должно быть `File`; иначе `400 VALIDATION_ERROR`.
 - Допустимые MIME: `image/jpeg`, `image/png`, `image/webp`; максимальный размер 2 MB; нарушение → `400 VALIDATION_ERROR`.
 - Файл сохраняется по пути `avatars/{userId}/avatar.{ext}` с `upsert: true` (перезаписывает существующий).
+- После успешной загрузки best-effort удаляются устаревшие варианты других расширений (`avatar.jpg|png|webp`, кроме текущего); сбой очистки не влияет на ответ.
 - При ошибке загрузки в Storage — `500 UPLOAD_FAILED`; при ошибке генерации подписанного URL (TTL 1 год) или несконфигурированном клиенте — `500 INTERNAL_ERROR`.
 - Обновление `profiles.avatar_url` не фатально: при ошибке записи ответ всё равно `200` с `avatarUrl`.
-- safe errors include `AUTH_REQUIRED`, `INVALID_REQUEST`, `VALIDATION_ERROR`, `UPLOAD_FAILED`, `INTERNAL_ERROR`.
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_REQUEST`, `VALIDATION_ERROR`, `UPLOAD_FAILED`, `INTERNAL_ERROR`.
 
 ## `DELETE /api/profile/avatar`
 
@@ -879,10 +883,11 @@ Rules:
 
 Rules:
 - Auth обязательна: без валидной Supabase user-cookie — `401 AUTH_REQUIRED`.
+- Rate limit: 5 запросов / 60 сек на пользователя (ключ `avatar:user:{userId}`, общий счётчик с `POST`); превышение → `429 RATE_LIMIT` с заголовком `Retry-After`.
 - Если Supabase-клиент не сконфигурирован — `500 INTERNAL_ERROR`.
 - Удаляет из бакета `avatars` все варианты расширений: `{userId}/avatar.jpg|png|webp` одним вызовом `remove`.
 - Устанавливает `profiles.avatar_url = null`; результаты `remove`/update не проверяются — при отсутствии исключения возвращается `200`.
-- safe errors include `AUTH_REQUIRED`, `INTERNAL_ERROR`.
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INTERNAL_ERROR`.
 
 ## `POST /api/profile/email`
 
