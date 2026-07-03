@@ -17,6 +17,9 @@ export const ARENA_CONSTANTS = {
   // Avatar uploads hit Supabase Storage (paid egress/writes); keep tight per user.
   AVATAR_RATE_LIMIT_WINDOW_MS: 60_000,
   AVATAR_RATE_LIMIT_MAX_REQUESTS: 5,
+  // Email changes send confirmation messages to old and new addresses; keep strict.
+  EMAIL_CHANGE_RATE_LIMIT_WINDOW_MS: 3_600_000,
+  EMAIL_CHANGE_RATE_LIMIT_MAX_REQUESTS: 3,
   // GET /api/models is a cheap read; 60 req/min is generous but prevents scraping.
   MODELS_RATE_LIMIT_WINDOW_MS: 60_000,
   MODELS_RATE_LIMIT_MAX_REQUESTS: 60,
@@ -115,6 +118,8 @@ export const {
   VOTE_RATE_LIMIT_MAX_REQUESTS,
   AVATAR_RATE_LIMIT_WINDOW_MS,
   AVATAR_RATE_LIMIT_MAX_REQUESTS,
+  EMAIL_CHANGE_RATE_LIMIT_WINDOW_MS,
+  EMAIL_CHANGE_RATE_LIMIT_MAX_REQUESTS,
   MODELS_RATE_LIMIT_WINDOW_MS,
   MODELS_RATE_LIMIT_MAX_REQUESTS,
   HISTORY_RATE_LIMIT_WINDOW_MS,

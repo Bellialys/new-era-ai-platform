@@ -44,6 +44,14 @@ v2.0.0-alpha.1 - AI Team Mode
 - Обновлён `28-api-contracts.md`: таблица rate limits и правила `POST`/`DELETE /api/profile/avatar`.
 - Добавлены pipeline docs: `47-kickoff-pipeline.md` в корень, раздел "Autonomous pipeline rules" в `CLAUDE.md` и `AGENTS.md`.
 
+## TASK-2: fix(profile): rate limit email change requests - 2026-07-03
+
+### Added
+
+- Добавлен строгий лимит `POST /api/profile/email`: 3 запроса / 3600 сек на verified user UUID, ключ `email-change:user:{userId}`.
+- Добавлены константы `EMAIL_CHANGE_RATE_LIMIT_WINDOW_MS` и `EMAIL_CHANGE_RATE_LIMIT_MAX_REQUESTS` в `src/lib/arena/constants.ts`.
+- Добавлены route-тесты на `401 AUTH_REQUIRED`, `429 RATE_LIMIT` с `Retry-After` и отсутствие вызова `supabase.auth.updateUser` при превышении лимита.
+- `28-api-contracts.md` синхронизирован с лимитом и safe error `RATE_LIMIT` для смены email.
 
 ### Added
 
