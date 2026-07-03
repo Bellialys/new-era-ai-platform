@@ -345,8 +345,12 @@ async function main() {
 }
 
 main()
-  .then((code) => process.exit(code))
+  .then((code) => {
+    // Let the event loop drain naturally. Direct process.exit() can force-close
+    // undici fetch sockets and trip UV_HANDLE_CLOSING on Windows / Node >= 24.
+    process.exitCode = code;
+  })
   .catch((err) => {
-    console.error(`smoke-check: unexpected failure: ${err.message}`);
-    process.exit(EXIT_CODES.FAIL);
+    console.error(`smoke-check: unexpected failure: ${err?.message ?? err}`);
+    process.exitCode = EXIT_CODES.FAIL;
   });

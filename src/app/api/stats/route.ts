@@ -36,8 +36,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (taskErr) throw taskErr;
 
-    // Get all votes with winner_response_id for this user's tasks
-    // Join through tasks to filter by identity
+    // Tally 'best' votes per model for this identity's tasks. The votes table
+    // stores the winning response in model_response_id with vote_type = "best".
     const taskIds = (taskCounts ?? []).map((t) => (t as { id: string }).id);
 
     let winnerStats: { display_name: string; count: number }[] = [];
@@ -45,9 +45,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (taskIds.length > 0) {
       const { data: voteData, error: voteErr } = await supabase
         .from("votes")
-        .select("winner_response_id, model_responses!inner(display_name, model_key)")
+        .select("model_response_id, model_responses!inner(display_name, model_key)")
         .in("task_id", taskIds.slice(0, 500)) // cap at 500 tasks
-        .not("winner_response_id", "is", null);
+        .eq("vote_type", "best");
 
       if (voteErr) throw voteErr;
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const tallyMap = new Map<string, number>();
       for (const vote of voteData ?? []) {
         const voteRecord = (vote as unknown) as {
-          winner_response_id: string;
+          model_response_id: string;
           model_responses: { display_name: string | null; model_key: string } | { display_name: string | null; model_key: string }[] | null;
         };
         const mr = Array.isArray(voteRecord.model_responses)

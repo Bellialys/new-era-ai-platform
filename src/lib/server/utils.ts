@@ -30,6 +30,42 @@ export class ApiError extends Error {
   }
 }
 
+/** Error thrown when a backend dependency exceeds an explicit route timeout. */
+export class TimeoutError extends Error {
+  constructor(label: string, timeoutMs: number) {
+    super(`${label} timed out after ${timeoutMs}ms`);
+    this.name = "TimeoutError";
+  }
+}
+
+/**
+ * Bound a backend dependency call so API routes can degrade instead of hanging.
+ *
+ * The wrapped operation may still finish in the background if its underlying
+ * client does not support cancellation, but this promise resolves/rejects within
+ * the requested timeout and prevents user-facing route timeouts.
+ */
+export async function withTimeout<T>(
+  operation: PromiseLike<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new TimeoutError(label, timeoutMs)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 /**
  * Safe error response for API
  * - Does not expose internal stack traces

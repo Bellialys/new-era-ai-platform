@@ -1,12 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   ApiError,
+  TimeoutError,
   createErrorResponse,
   isUuid,
   logApiRequest,
   validatePrompt,
   validateModelIds,
   validateModeSlug,
+  withTimeout,
 } from "./utils";
 import { MODE_SLUG_CODE_ARENA, MODE_SLUG_PROMPT_ARENA } from "@/lib/arena/constants";
 
@@ -113,6 +115,18 @@ describe("isUuid", () => {
     expect(isUuid("not-a-uuid")).toBe(false);
     expect(isUuid(42)).toBe(false);
     expect(isUuid(null)).toBe(false);
+  });
+});
+
+describe("withTimeout", () => {
+  it("returns the operation result when it completes in time", async () => {
+    await expect(withTimeout(Promise.resolve("ok"), 100, "fast operation")).resolves.toBe("ok");
+  });
+
+  it("rejects with TimeoutError when the operation does not complete in time", async () => {
+    await expect(withTimeout(new Promise(() => {}), 1, "slow operation")).rejects.toBeInstanceOf(
+      TimeoutError
+    );
   });
 });
 
