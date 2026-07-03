@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   );
   const openRouterConfigured = Boolean(process.env.OPENROUTER_API_KEY);
+  const upstashConfigured = Boolean(
+    (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+      (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
+  );
+  const rateLimitBackend: "upstash" | "in-memory" = upstashConfigured ? "upstash" : "in-memory";
 
   let supabaseReachable: boolean | null = null;
   let supabaseModelsCount: number | null = null;
@@ -84,6 +89,7 @@ export async function GET(request: NextRequest) {
   logApiRequest("GET", "/api/health", 200, Date.now() - startTime);
   return NextResponse.json({
     status,
+    rateLimitBackend,
     version: process.env.npm_package_version ?? null,
     vercel: {
       environment: process.env.VERCEL_ENV ?? null,

@@ -41,6 +41,15 @@ v2.0.0-alpha.1 - AI Team Mode
 - `src/lib/server/votes.ts` маппит `TASK_STILL_RUNNING` в `409` и `TASK_NOT_FOUND` в `404`.
 - Добавлены тесты на RPC error mapping и ответ `POST /api/vote` с `409 TASK_STILL_RUNNING`.
 - `28-api-contracts.md` и `08-database.md` синхронизированы с новым vote gate.
+
+## TASK-5: fix(health): expose rate limit backend diagnostics - 2026-07-03
+
+### Added
+
+- Авторизованный `GET /api/health` теперь возвращает `rateLimitBackend: "upstash" | "in-memory"` без изменения публичного ответа `{ "status": "ok" }`.
+- Добавлены route-тесты для public health ответа, Upstash/KV alias detection и in-memory fallback.
+- `28-api-contracts.md` синхронизирован с авторизованным diagnostic-полем health-check.
+
 ## TASK-1: fix(profile): rate limit avatar upload/delete + stale ext cleanup - 2026-07-03
 
 ### Added
