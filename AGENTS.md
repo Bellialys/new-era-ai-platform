@@ -293,3 +293,7 @@ modelIds могут временно совпадать с server-side allowlist
 - `CLAUDE.md` — краткий обзор стека, ключевых ограничений и команд для AI-агентов;
 - `AGENTS.md` (этот файл) — общие правила и текущий статус проекта;
 - `24-codex-active-rule-set.md` — полный индекс действующих правил.
+
+## Autonomous pipeline rules
+
+See "Autonomous pipeline rules" in `CLAUDE.md` — mandatory for all agent sessions (Claude Code, Codex, и любой другой агент-исполнитель). Источник задач: `46-p0-fix-specs.md` в корне репо; инструкция запуска конвейера: `47-kickoff-pipeline.md`.

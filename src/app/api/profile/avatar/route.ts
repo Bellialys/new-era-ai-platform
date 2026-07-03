@@ -7,8 +7,18 @@
  * Updates profiles.avatar_url with the signed URL.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createErrorResponse, logApiRequest, ApiError, getAuthenticatedUserId } from "@/lib/server";
+import {
+  createErrorResponse,
+  logApiRequest,
+  ApiError,
+  getAuthenticatedUserId,
+  checkRateLimit,
+} from "@/lib/server";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
+import {
+  AVATAR_RATE_LIMIT_MAX_REQUESTS,
+  AVATAR_RATE_LIMIT_WINDOW_MS,
+} from "@/lib/arena/constants";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -28,6 +38,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         createErrorResponse(new ApiError(401, "AUTH_REQUIRED", "Sign in to upload an avatar.")),
         { status: 401 }
+      );
+    }
+
+    const rl = await checkRateLimit(
+      `avatar:user:${userId}`,
+      AVATAR_RATE_LIMIT_MAX_REQUESTS,
+      AVATAR_RATE_LIMIT_WINDOW_MS
+    );
+    if (rl.limited) {
+      logApiRequest("POST", "/api/profile/avatar", 429, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(429, "RATE_LIMIT", "Too many uploads. Please try again later.")
+        ),
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.max(
+              Math.ceil((rl.resetAt - Date.now()) / 1000),
+              1
+            ).toString(),
+          },
+        }
       );
     }
 
@@ -71,6 +104,17 @@ export async function POST(request: NextRequest) {
       throw new ApiError(500, "UPLOAD_FAILED", "Failed to upload avatar. Please try again.");
     }
 
+    // Best-effort: drop stale variants left from a previous format (e.g. jpg -> webp).
+    // Missing paths are a no-op for Supabase; network errors must not fail the upload.
+    const staleExts = Object.values(EXT_MAP).filter((e) => e !== ext);
+    try {
+      await supabase.storage
+        .from("avatars")
+        .remove(staleExts.map((e) => `${userId}/avatar.${e}`));
+    } catch (cleanupError) {
+      console.error("Avatar stale-ext cleanup failed (non-fatal):", cleanupError);
+    }
+
     // Generate a signed URL valid for 1 year
     const { data: signedData, error: signError } = await supabase.storage
       .from("avatars")
@@ -112,6 +156,29 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         createErrorResponse(new ApiError(401, "AUTH_REQUIRED", "Sign in to delete your avatar.")),
         { status: 401 }
+      );
+    }
+
+    const rl = await checkRateLimit(
+      `avatar:user:${userId}`,
+      AVATAR_RATE_LIMIT_MAX_REQUESTS,
+      AVATAR_RATE_LIMIT_WINDOW_MS
+    );
+    if (rl.limited) {
+      logApiRequest("DELETE", "/api/profile/avatar", 429, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(429, "RATE_LIMIT", "Too many requests. Please try again later.")
+        ),
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.max(
+              Math.ceil((rl.resetAt - Date.now()) / 1000),
+              1
+            ).toString(),
+          },
+        }
       );
     }
 
