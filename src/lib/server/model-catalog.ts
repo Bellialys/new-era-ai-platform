@@ -18,7 +18,7 @@
  */
 
 import type { ArenaModel } from "@/types/arena";
-import { ApiError } from "./utils";
+import { ApiError, withTimeout } from "./utils";
 import { getSupabaseServerClient } from "./supabase";
 import { ALLOWED_MODELS } from "./models";
 import type { RequestIdentity } from "./auth";
@@ -60,6 +60,8 @@ const ROLE_LABELS: Record<string, string> = {
   "open-source": "Открытая модель",
 };
 
+const MODEL_CATALOG_QUERY_TIMEOUT_MS = 3_500;
+
 function roleFromTags(tags: string[] | null): string {
   const matched = tags?.find((tag) => ROLE_LABELS[tag]);
   return matched ? ROLE_LABELS[matched] : "General-модель";
@@ -90,11 +92,15 @@ async function fetchUserPlan(userId: string): Promise<string | null> {
   const supabase = getSupabaseServerClient();
   if (!supabase) return null;
   try {
-    const { data } = await supabase
-      .from("profiles")
-      .select("role, plan")
-      .eq("id", userId)
-      .single();
+    const { data } = await withTimeout(
+      supabase
+        .from("profiles")
+        .select("role, plan")
+        .eq("id", userId)
+        .single(),
+      MODEL_CATALOG_QUERY_TIMEOUT_MS,
+      "profiles plan query"
+    );
     if (!data) return null;
     const row = data as { role: string; plan: string };
     if (row.role === "admin") return "admin";
@@ -149,13 +155,17 @@ export async function loadModelCatalog(
   const levels = allowedLevelsFor(identity, plan);
 
   try {
-    const { data, error } = await supabase
-      .from("models")
-      .select("id, model_key, display_name, description, role_tags, price_label, access_level")
-      .eq("is_active", true)
-      .eq("is_public", true)
-      .in("access_level", levels)
-      .order("sort_order", { ascending: true });
+    const { data, error } = await withTimeout(
+      supabase
+        .from("models")
+        .select("id, model_key, display_name, description, role_tags, price_label, access_level")
+        .eq("is_active", true)
+        .eq("is_public", true)
+        .in("access_level", levels)
+        .order("sort_order", { ascending: true }),
+      MODEL_CATALOG_QUERY_TIMEOUT_MS,
+      "models catalog query"
+    );
 
     if (error) {
       logModelCatalogFailure("models table query failed; using hardcoded catalog", error);
@@ -247,12 +257,16 @@ export async function resolveSelectedModels(
     allModels = fallbackCatalog(null);
   } else {
     try {
-      const { data, error } = await supabase
-        .from("models")
-        .select("id, model_key, display_name, description, role_tags, price_label, access_level")
-        .eq("is_active", true)
-        .eq("is_public", true)
-        .in("id", ids);
+      const { data, error } = await withTimeout(
+        supabase
+          .from("models")
+          .select("id, model_key, display_name, description, role_tags, price_label, access_level")
+          .eq("is_active", true)
+          .eq("is_public", true)
+          .in("id", ids),
+        MODEL_CATALOG_QUERY_TIMEOUT_MS,
+        "models selected ids query"
+      );
 
       if (error || !data) {
         // Fallback to full catalog resolution

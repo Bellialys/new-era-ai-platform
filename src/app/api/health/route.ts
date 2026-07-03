@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAvailableModels, getSupabaseServerClient, logApiRequest } from "@/lib/server";
+import { getAvailableModels, getSupabaseServerClient, logApiRequest, withTimeout } from "@/lib/server";
 
 type HealthStatus = "ok" | "degraded";
+
+const HEALTH_DEPENDENCY_TIMEOUT_MS = 3_500;
+
+function toSafeHealthError(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown model catalog error";
+}
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -33,22 +39,37 @@ export async function GET(request: NextRequest) {
   const supabase = getSupabaseServerClient();
 
   if (supabase) {
-    const { count, error } = await supabase
-      .from("models")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true)
-      .eq("is_public", true);
+    try {
+      const { count, error } = await withTimeout(
+        supabase
+          .from("models")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+          .eq("is_public", true),
+        HEALTH_DEPENDENCY_TIMEOUT_MS,
+        "Supabase health models count"
+      );
 
-    supabaseReachable = !error;
-    supabaseModelsCount = error ? null : count ?? 0;
+      supabaseReachable = !error;
+      supabaseModelsCount = error ? null : count ?? 0;
+    } catch (error) {
+      const message = toSafeHealthError(error);
+      console.warn("Supabase health probe failed; reporting degraded.", { message });
+      supabaseReachable = false;
+      supabaseModelsCount = null;
+    }
   }
 
   try {
-    const models = await getAvailableModels();
+    const models = await withTimeout(
+      getAvailableModels(),
+      HEALTH_DEPENDENCY_TIMEOUT_MS,
+      "model catalog health query"
+    );
     publicModelsCount = models.length;
   } catch (error) {
     catalogStatus = "error";
-    catalogError = error instanceof Error ? error.message : "Unknown model catalog error";
+    catalogError = toSafeHealthError(error);
   }
 
   const status: HealthStatus =
