@@ -196,7 +196,7 @@ function resolveValue(variable) {
 
 /**
  * Decode a JWT payload without logging it.
- * Requires Node >=20.9.0 (native base64url — matches project engines field).
+ * Requires Node >=24 (native base64url — matches project engines field).
  */
 function decodeJwtPayload(token) {
   const parts = token.split(".");

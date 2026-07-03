@@ -186,7 +186,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - `next.config.ts` (TypeScript, не .js)
 - Type-safe валидация переменных окружения — `@t3-oss/env-nextjs` + zod (`src/lib/env.ts`)
 - `.env.example` с комментариями для всех переменных
-- `.nvmrc` + `engines` в `package.json` (Node.js 20)
+- `.nvmrc` + `engines` в `package.json` (Node.js 24 LTS)
 - `NEXT_TELEMETRY_DISABLED=1` в CI и production
 - `poweredByHeader: false`
 - Security headers в `next.config.ts`: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security`
