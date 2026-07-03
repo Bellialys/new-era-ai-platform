@@ -295,7 +295,8 @@ Storage bucket и RLS policies должны быть проверены отде
 
 Атомарная функция для сохранения best vote. Добавлена миграцией
 `20260615191924_atomic_best_vote_rpc.sql` и усилена release-gate migration
-`20260617212741_reconcile_release_gate_security_and_models.sql`.
+`20260617212741_reconcile_release_gate_security_and_models.sql`, затем расширена
+миграцией `20260703142630_vote_gate_task_running.sql`.
 
 Сигнатура:
 
@@ -314,6 +315,8 @@ set search_path = public
 Поведение:
 
 - Если у данного пользователя/guest уже есть best vote на этот `task_id` — заменяет его (upsert по уникальному индексу).
+- Если `task_id` не найден — возвращает RPC exception `TASK_NOT_FOUND`.
+- Если `tasks.status = 'running'` — возвращает RPC exception `TASK_STILL_RUNNING`; голосование открывается после завершения всех моделей.
 - Возвращает запись `public.votes`.
 - Функция работает как `SECURITY INVOKER`; execute grant оставлен только для
   `service_role` и `postgres`, `anon`/`authenticated` не имеют прямого execute.
@@ -479,6 +482,7 @@ with check (true);
 | `20260617212741_reconcile_release_gate_security_and_models.sql` | Release-gate reconciliation: governance metadata, deactivation of unavailable model IDs, generated `models.status`, `cast_best_vote` security-invoker hardening |
 | `20260624034630_add_judge_verdict_to_tasks.sql` | Добавляет `tasks.judge_verdict jsonb null` для результата `POST /api/judge` |
 | `20260624055408_add_audit_log.sql` | Создаёт `public.audit_log`, индексы, service_role grants и RLS policies без прямого доступа anon/authenticated |
+| `20260703142630_vote_gate_task_running.sql` | Усиливает `cast_best_vote`: блокирует best vote, пока `tasks.status = 'running'` |
 
 Release-gate note:
 

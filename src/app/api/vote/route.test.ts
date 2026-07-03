@@ -28,6 +28,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
 });
 
 import { POST } from "./route";
+import { ApiError } from "@/lib/server";
 import {
   VOTE_RATE_LIMIT_MAX_REQUESTS,
   VOTE_RATE_LIMIT_WINDOW_MS,
@@ -182,5 +183,24 @@ describe("POST /api/vote — success", () => {
         userId: USER_ID,
       })
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Save errors
+// ---------------------------------------------------------------------------
+
+describe("POST /api/vote — save errors", () => {
+  it("returns 409 TASK_STILL_RUNNING when the vote gate rejects a running task", async () => {
+    saveBestVoteMock.mockRejectedValue(
+      new ApiError(409, "TASK_STILL_RUNNING", "Voting opens when all models finish. Please wait.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { errorCode?: string; message?: string };
+
+    expect(res.status).toBe(409);
+    expect(body.errorCode).toBe("TASK_STILL_RUNNING");
+    expect(body.message).toBe("Voting opens when all models finish. Please wait.");
   });
 });
