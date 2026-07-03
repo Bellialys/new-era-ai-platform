@@ -47,6 +47,10 @@ beforeEach(() => {
   delete process.env.HEALTH_CHECK_SECRET;
   delete process.env.VERCEL_ENV;
   delete process.env.VERCEL_GIT_COMMIT_SHA;
+  delete process.env.UPSTASH_REDIS_REST_URL;
+  delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  delete process.env.KV_REST_API_URL;
+  delete process.env.KV_REST_API_TOKEN;
 });
 
 // ---------------------------------------------------------------------------
@@ -65,6 +69,7 @@ describe("GET /api/health — public response (no/wrong secret)", () => {
     // Must NOT expose internal diagnostics
     expect(body.services).toBeUndefined();
     expect(body.vercel).toBeUndefined();
+    expect(body.rateLimitBackend).toBeUndefined();
   });
 
   it("returns { status: 'ok' } without diagnostics when the wrong secret is provided", async () => {
@@ -76,6 +81,7 @@ describe("GET /api/health — public response (no/wrong secret)", () => {
     const body = await res.json() as Record<string, unknown>;
     expect(body.status).toBe("ok");
     expect(body.services).toBeUndefined();
+    expect(body.rateLimitBackend).toBeUndefined();
   });
 
   it("returns minimal public response when HEALTH_CHECK_SECRET is not configured (fail-safe)", async () => {
@@ -86,6 +92,7 @@ describe("GET /api/health — public response (no/wrong secret)", () => {
     const body = await res.json() as Record<string, unknown>;
     expect(body.status).toBe("ok");
     expect(body.services).toBeUndefined();
+    expect(body.rateLimitBackend).toBeUndefined();
   });
 });
 
@@ -103,6 +110,7 @@ describe("GET /api/health — authorized detailed response", () => {
     expect(res.status).toBe(200);
     const body = await res.json() as {
       status?: string;
+      rateLimitBackend?: string;
       services?: { supabase?: unknown; openRouter?: unknown; modelCatalog?: unknown };
       vercel?: { environment?: string };
     };
@@ -111,7 +119,30 @@ describe("GET /api/health — authorized detailed response", () => {
     expect(body.services?.supabase).toBeDefined();
     expect(body.services?.openRouter).toBeDefined();
     expect(body.services?.modelCatalog).toBeDefined();
+    expect(body.rateLimitBackend).toBe("in-memory");
     expect(body.vercel?.environment).toBe("preview");
+  });
+
+  it("reports upstash when KV aliases are configured", async () => {
+    process.env.HEALTH_CHECK_SECRET = VALID_SECRET;
+    process.env.KV_REST_API_URL = "https://upstash.example";
+    process.env.KV_REST_API_TOKEN = "test-token";
+
+    const res = await GET(makeRequest(VALID_SECRET));
+    const body = await res.json() as { rateLimitBackend?: string };
+
+    expect(body.rateLimitBackend).toBe("upstash");
+  });
+
+  it("reports upstash when canonical Upstash env vars are configured", async () => {
+    process.env.HEALTH_CHECK_SECRET = VALID_SECRET;
+    process.env.UPSTASH_REDIS_REST_URL = "https://upstash.example";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
+
+    const res = await GET(makeRequest(VALID_SECRET));
+    const body = await res.json() as { rateLimitBackend?: string };
+
+    expect(body.rateLimitBackend).toBe("upstash");
   });
 
   it("reports degraded status when the model catalog is empty", async () => {

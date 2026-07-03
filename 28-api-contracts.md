@@ -957,13 +957,24 @@ Rules:
 
 ## `GET /api/health`
 
-Публичный health-check: сообщает агрегированный статус сервиса и конфигурацию/доступность Supabase, OpenRouter и каталога моделей. Всегда отвечает HTTP 200, здоровье выражается полем `status`.
+Публичный health-check всегда отвечает HTTP 200 и без авторизующего секрета не раскрывает внутреннее состояние сервисов.
 
-Минимальный ответ:
+Публичный ответ:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+Авторизованный diagnostic-ответ доступен только при настроенном `HEALTH_CHECK_SECRET` и совпадающем заголовке `x-health-secret`. Он сообщает агрегированный статус сервиса, конфигурацию/доступность Supabase, OpenRouter, каталога моделей и backend rate limiter.
+
+Авторизованный ответ:
 
 ```json
 {
   "status": "ok",
+  "rateLimitBackend": "upstash",
   "version": "1.7.0-alpha.1",
   "vercel": {
     "environment": "production",
@@ -979,8 +990,10 @@ Rules:
 
 Rules:
 - Public route: no auth, no cookies, no rate limit.
+- Без валидного `x-health-secret` ответ всегда минимальный: `{ "status": "ok" }`.
 - HTTP-код всегда `200`; `status` принимает только `"ok"` или `"degraded"`.
 - `status === "ok"` только когда одновременно: Supabase сконфигурирован (`NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`), OpenRouter сконфигурирован (`OPENROUTER_API_KEY`), Supabase достижим (`reachable !== false`), каталог собрался без ошибки и `publicModels > 0`; иначе `"degraded"`.
+- `rateLimitBackend` возвращается только в авторизованном diagnostic-ответе: `"upstash"` при наличии пары `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` или Vercel Marketplace alias-пары `KV_REST_API_URL`/`KV_REST_API_TOKEN`; иначе `"in-memory"`.
 - `version` = `npm_package_version` или `null`; `vercel.environment` = `VERCEL_ENV` или `null`; `vercel.commit` = первые 7 символов `VERCEL_GIT_COMMIT_SHA` или `null`.
 - `supabase.reachable`: `true`/`false` после count-запроса к `models` (`is_active = true and is_public = true`), либо `null`, если клиент не сконфигурирован.
 - `supabase.activePublicModels` / `modelCatalog.publicModels`: число или `null` при ошибке/несконфигурированном клиенте; `modelCatalog.error` — строка сообщения при сбое сборки каталога, иначе `null`.
