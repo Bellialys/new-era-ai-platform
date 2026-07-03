@@ -9,7 +9,16 @@
  * (handle_new_user_profile) on user update that syncs the email column.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createErrorResponse, logApiRequest, ApiError } from "@/lib/server";
+import {
+  createErrorResponse,
+  logApiRequest,
+  ApiError,
+  checkRateLimit,
+} from "@/lib/server";
+import {
+  EMAIL_CHANGE_RATE_LIMIT_MAX_REQUESTS,
+  EMAIL_CHANGE_RATE_LIMIT_WINDOW_MS,
+} from "@/lib/arena/constants";
 import { createServerClient } from "@supabase/ssr";
 
 export async function POST(request: NextRequest) {
@@ -40,6 +49,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         createErrorResponse(new ApiError(401, "AUTH_REQUIRED", "Sign in to change your email.")),
         { status: 401 }
+      );
+    }
+
+    const rateLimit = await checkRateLimit(
+      `email-change:user:${userData.user.id}`,
+      EMAIL_CHANGE_RATE_LIMIT_MAX_REQUESTS,
+      EMAIL_CHANGE_RATE_LIMIT_WINDOW_MS
+    );
+    if (rateLimit.limited) {
+      logApiRequest("POST", "/api/profile/email", 429, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(429, "RATE_LIMIT", "Too many email change requests. Please try again later.")
+        ),
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.max(
+              Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+              1
+            ).toString(),
+          },
+        }
       );
     }
 

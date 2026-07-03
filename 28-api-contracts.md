@@ -37,6 +37,7 @@ Frontend вызывает только backend route handlers.
 | `GET /api/models` | 60 req | 60 сек | IP-адрес |
 | `POST /api/compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/vote` | 30 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `POST /api/profile/email` | 3 req | 3600 сек | user UUID |
 | `GET /api/code-models` | 60 req | 60 сек | IP-адрес |
 | `POST /api/code-compare` | 8 req / 3 guest req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/judge` | 3 req / 1 guest req | 60 сек | user UUID или guest cookie `na_guest` |
@@ -913,13 +914,13 @@ Rules:
 ```
 
 Rules:
-- Требуется авторизация; при отсутствии пользователя — `401 AUTH_REQUIRED`. Rate limit отсутствует.
+- Требуется авторизация; при отсутствии пользователя — `401 AUTH_REQUIRED`. Rate limit: 3 запроса / 3600 сек, ключ `email-change:user:{userId}`; превышение → `429 RATE_LIMIT` с `Retry-After`.
 - `newEmail` обязателен, строка; перед валидацией `trim()` + `toLowerCase()`. Пустое/нестроковое → `400 VALIDATION_ERROR`.
 - Формат проверяется регуляркой `^[^\s@]+@[^\s@]+\.[^\s@]+$`; несоответствие → `400 VALIDATION_ERROR`.
 - Новый адрес должен отличаться от текущего (case-insensitive), иначе → `400 VALIDATION_ERROR`. Невалидный JSON → `400 INVALID_JSON`.
 - Side effect: `supabase.auth.updateUser({ email }, { emailRedirectTo })` (redirect на `${NEXT_PUBLIC_SITE_URL ?? origin}/auth/callback?next=/profile`).
 - Если адрес уже занят (сообщение содержит `already registered`) → `409 EMAIL_IN_USE`; прочие ошибки Supabase / отсутствие конфигурации → `500 INTERNAL_ERROR`.
-- safe errors include `AUTH_REQUIRED`, `INVALID_JSON`, `VALIDATION_ERROR`, `EMAIL_IN_USE`, `INTERNAL_ERROR`.
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `EMAIL_IN_USE`, `INTERNAL_ERROR`.
 
 ## `GET /api/profile/stats`
 
