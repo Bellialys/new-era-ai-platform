@@ -87,6 +87,27 @@ describe("saveBestVote", () => {
     ).rejects.toMatchObject({ statusCode: 404, errorCode: "RESPONSE_NOT_FOUND" });
   });
 
+  it("maps TASK_NOT_FOUND to a 404", async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: "TASK_NOT_FOUND" } });
+    await expect(
+      saveBestVote({ taskId: TASK_ID, responseId: RESPONSE_ID, anonymousSessionId: ANON_ID })
+    ).rejects.toMatchObject({ statusCode: 404, errorCode: "TASK_NOT_FOUND" });
+  });
+
+  it("maps TASK_STILL_RUNNING to a 409", async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: "TASK_STILL_RUNNING" },
+    });
+    await expect(
+      saveBestVote({ taskId: TASK_ID, responseId: RESPONSE_ID, userId: USER_ID })
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      errorCode: "TASK_STILL_RUNNING",
+      message: "Voting opens when all models finish. Please wait.",
+    });
+  });
+
   it("maps INVALID_VOTE_TARGET to a 400", async () => {
     rpcMock.mockResolvedValue({
       data: null,

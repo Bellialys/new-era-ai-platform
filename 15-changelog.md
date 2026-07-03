@@ -33,6 +33,14 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ## v2.0.0-alpha.1 - AI Team Mode - 2026-06-27
 
+## TASK-4: fix(vote): block best vote while task is running - 2026-07-03
+
+### Fixed
+
+- Добавлена миграция `20260703142630_vote_gate_task_running.sql`: `cast_best_vote` теперь возвращает `TASK_STILL_RUNNING`, если `tasks.status = 'running'`.
+- `src/lib/server/votes.ts` маппит `TASK_STILL_RUNNING` в `409` и `TASK_NOT_FOUND` в `404`.
+- Добавлены тесты на RPC error mapping и ответ `POST /api/vote` с `409 TASK_STILL_RUNNING`.
+- `28-api-contracts.md` и `08-database.md` синхронизированы с новым vote gate.
 ## TASK-1: fix(profile): rate limit avatar upload/delete + stale ext cleanup - 2026-07-03
 
 ### Added

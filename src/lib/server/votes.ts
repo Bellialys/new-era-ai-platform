@@ -73,6 +73,12 @@ export async function saveBestVote({
     if (message.includes("RESPONSE_NOT_FOUND")) {
       throw new ApiError(404, "RESPONSE_NOT_FOUND", "Selected response was not found for this task.");
     }
+    if (message.includes("TASK_NOT_FOUND")) {
+      throw new ApiError(404, "TASK_NOT_FOUND", "Task was not found.");
+    }
+    if (message.includes("TASK_STILL_RUNNING")) {
+      throw new ApiError(409, "TASK_STILL_RUNNING", "Voting opens when all models finish. Please wait.");
+    }
     if (message.includes("INVALID_VOTE_TARGET")) {
       throw new ApiError(400, "INVALID_VOTE_TARGET", "Only successful responses can be selected as best.");
     }
