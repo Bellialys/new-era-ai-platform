@@ -243,6 +243,13 @@ const PUBLIC_ARENA_TABLES_WITHOUT_LEGACY_PUBLIC_DDL_GRANTS = [
 
 const LEGACY_PUBLIC_DDL_PRIVILEGES = ["TRUNCATE", "REFERENCES", "TRIGGER"];
 
+const SERVICE_ROLE_REQUIRED_TABLE_GRANTS = [
+  { table: "votes", privilege: "SELECT" },
+  { table: "votes", privilege: "INSERT" },
+  { table: "votes", privilege: "UPDATE" },
+  { table: "votes", privilege: "DELETE" },
+];
+
 const REQUIRED_GRANT_CHECKS = [
   ...PROFILE_CLIENT_UPDATE_COLUMNS.map((column) => ({
     id:        `authenticated_profiles_${column}_update_allowed`,
@@ -282,6 +289,14 @@ const REQUIRED_GRANT_CHECKS = [
       })),
     ),
   ),
+  ...SERVICE_ROLE_REQUIRED_TABLE_GRANTS.map(({ table, privilege }) => ({
+    id:        `service_role_${table}_${privilege.toLowerCase()}_allowed`,
+    kind:      "table",
+    grantee:   "service_role",
+    table,
+    privilege,
+    expected:  true,
+  })),
 ];
 
 // ---------------------------------------------------------------------------

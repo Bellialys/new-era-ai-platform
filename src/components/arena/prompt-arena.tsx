@@ -558,6 +558,14 @@ export function PromptArena() {
   }
 
   async function handleSelectWinner(responseId: string) {
+    if (voteStatus === "saving" || savingVoteResponseId) {
+      return;
+    }
+
+    if (winnerResponseId === responseId) {
+      return;
+    }
+
     if (!taskId) {
       setVoteStatus("error");
       setVoteMessage("Winner voting недоступен: сравнение не сохранено в Supabase.");
