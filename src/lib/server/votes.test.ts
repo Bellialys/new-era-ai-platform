@@ -24,6 +24,23 @@ beforeEach(() => {
   getClientMock.mockReturnValue({ rpc: rpcMock });
 });
 
+function createVoteLookupClient(row: unknown) {
+  const query = {
+    select: vi.fn(function (this: typeof query) { return this; }),
+    eq: vi.fn(function (this: typeof query) { return this; }),
+    maybeSingle: vi.fn().mockResolvedValue({
+      data: row,
+      error: null,
+    }),
+  };
+
+  return {
+    rpc: rpcMock,
+    from: vi.fn(() => query),
+    query,
+  };
+}
+
 describe("validateVoteIds", () => {
   it("accepts valid uuids", () => {
     expect(validateVoteIds(TASK_ID, RESPONSE_ID)).toEqual({
@@ -116,6 +133,36 @@ describe("saveBestVote", () => {
     await expect(
       saveBestVote({ taskId: TASK_ID, responseId: RESPONSE_ID, anonymousSessionId: ANON_ID })
     ).rejects.toMatchObject({ statusCode: 400, errorCode: "INVALID_VOTE_TARGET" });
+  });
+
+  it("returns the existing best vote when a duplicate request already saved the same response", async () => {
+    const client = createVoteLookupClient({
+      id: VOTE_ID,
+      task_id: TASK_ID,
+      model_response_id: RESPONSE_ID,
+    });
+    getClientMock.mockReturnValue(client);
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        code: "23505",
+        message: 'duplicate key value violates unique constraint "votes_best_per_anon_uniq"',
+      },
+    });
+
+    await expect(
+      saveBestVote({ taskId: TASK_ID, responseId: RESPONSE_ID, anonymousSessionId: ANON_ID })
+    ).resolves.toEqual({
+      voteId: VOTE_ID,
+      taskId: TASK_ID,
+      responseId: RESPONSE_ID,
+      voteType: "best",
+    });
+
+    expect(client.from).toHaveBeenCalledWith("votes");
+    expect(client.query.eq).toHaveBeenCalledWith("task_id", TASK_ID);
+    expect(client.query.eq).toHaveBeenCalledWith("vote_type", "best");
+    expect(client.query.eq).toHaveBeenCalledWith("anonymous_session_id", ANON_ID);
   });
 
   it("maps an unknown RPC error to VOTE_SAVE_FAILED", async () => {

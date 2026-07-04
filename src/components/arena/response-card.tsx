@@ -96,7 +96,7 @@ export function ResponseCard({
       </div>
 
       <div className="relative mt-5">
-        <div className="max-h-[28rem] overflow-auto rounded-[18px] border border-white/10 bg-slate-950/45 p-4 text-sm">
+        <div className="max-h-[28rem] overflow-auto rounded-[18px] border border-white/10 bg-slate-950/45 p-4 text-sm sm:pr-28">
           {response.status === "success" && response.answerText ? (
             <>
               {!expanded && responseText.length > COLLAPSE_THRESHOLD ? (
@@ -124,7 +124,7 @@ export function ResponseCard({
           <button
             onClick={handleCopy}
             title="Скопировать ответ"
-            className="absolute right-3 top-3 rounded-lg border border-white/10 bg-slate-900/60 px-2 py-1 text-xs text-slate-400 transition hover:border-white/25 hover:text-white"
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-400 transition hover:border-white/25 hover:text-white sm:absolute sm:right-3 sm:top-3 sm:mt-0 sm:min-h-0 sm:px-2 sm:py-1"
             type="button"
           >
             Копировать
