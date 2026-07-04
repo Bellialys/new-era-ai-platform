@@ -11,7 +11,7 @@ import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 // ---------------------------------------------------------------------------
 type TaskResponse = {
   id: string;
-  modelKey: string;
+  modelKey?: string;
   modelName: string;
   status: string;
   answerText: string | null;
@@ -37,11 +37,12 @@ type TaskDetail = {
 // Helpers
 // ---------------------------------------------------------------------------
 function toArenaView(r: TaskResponse): ArenaResponseView {
+  const modelKey = r.modelKey ?? r.id;
   return {
     id: r.id,
-    modelId: r.modelKey,
+    modelId: modelKey,
     modelName: r.modelName,
-    modelRole: r.modelKey,
+    modelRole: modelKey,
     status: r.status === "success" ? "success" : "error",
     answerText: r.answerText ?? null,
     latencyMs: r.latencyMs,

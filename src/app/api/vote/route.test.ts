@@ -9,10 +9,12 @@ const {
   resolveIdentityMock,
   checkRateLimitMock,
   saveBestVoteMock,
+  getBlindRevealMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   saveBestVoteMock: vi.fn(),
+  getBlindRevealMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -22,6 +24,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     resolveRequestIdentity: resolveIdentityMock,
     checkRateLimit: checkRateLimitMock,
     saveBestVote: saveBestVoteMock,
+    getBlindReveal: getBlindRevealMock,
     applyGuestCookie: vi.fn(),
     logApiRequest: vi.fn(),
   };
@@ -65,6 +68,7 @@ beforeEach(() => {
   resolveIdentityMock.mockReset();
   checkRateLimitMock.mockReset();
   saveBestVoteMock.mockReset();
+  getBlindRevealMock.mockReset();
 
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
   checkRateLimitMock.mockResolvedValue(NOT_LIMITED);
@@ -74,6 +78,7 @@ beforeEach(() => {
     responseId: RESPONSE_ID,
     voteType: "best",
   });
+  getBlindRevealMock.mockResolvedValue(null);
 });
 
 // ---------------------------------------------------------------------------
@@ -165,12 +170,14 @@ describe("POST /api/vote — success", () => {
       taskId?: string;
       responseId?: string;
       voteType?: string;
+      reveal?: unknown;
     };
     expect(body.status).toBe("success");
     expect(body.voteId).toBe("vote-uuid");
     expect(body.taskId).toBe(TASK_ID);
     expect(body.responseId).toBe(RESPONSE_ID);
     expect(body.voteType).toBe("best");
+    expect(body.reveal).toBeUndefined();
   });
 
   it("calls saveBestVote with the correct IDs", async () => {
@@ -183,6 +190,31 @@ describe("POST /api/vote — success", () => {
         userId: USER_ID,
       })
     );
+  });
+
+  it("returns blind reveal details when the saved task is blind", async () => {
+    getBlindRevealMock.mockResolvedValue([
+      {
+        responseId: RESPONSE_ID,
+        modelName: "Real Model",
+        modelKey: "provider/real-model",
+      },
+    ]);
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      reveal?: Array<{ responseId?: string; modelName?: string; modelKey?: string }>;
+    };
+    expect(getBlindRevealMock).toHaveBeenCalledWith(TASK_ID);
+    expect(body.reveal).toEqual([
+      {
+        responseId: RESPONSE_ID,
+        modelName: "Real Model",
+        modelKey: "provider/real-model",
+      },
+    ]);
   });
 });
 

@@ -37,7 +37,7 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ### Fixed
 
-- Добавлена миграция `20260703142630_vote_gate_task_running.sql`: `cast_best_vote` теперь возвращает `TASK_STILL_RUNNING`, если `tasks.status = 'running'`.
+- Добавлена миграция `20260703182026_vote_gate_task_running.sql`: `cast_best_vote` теперь возвращает `TASK_STILL_RUNNING`, если `tasks.status = 'running'`.
 - `src/lib/server/votes.ts` маппит `TASK_STILL_RUNNING` в `409` и `TASK_NOT_FOUND` в `404`.
 - Добавлены тесты на RPC error mapping и ответ `POST /api/vote` с `409 TASK_STILL_RUNNING`.
 - `28-api-contracts.md` и `08-database.md` синхронизированы с новым vote gate.
@@ -49,6 +49,16 @@ v2.0.0-alpha.1 - AI Team Mode
 - Авторизованный `GET /api/health` теперь возвращает `rateLimitBackend: "upstash" | "in-memory"` без изменения публичного ответа `{ "status": "ok" }`.
 - Добавлены route-тесты для public health ответа, Upstash/KV alias detection и in-memory fallback.
 - `28-api-contracts.md` синхронизирован с авторизованным diagnostic-полем health-check.
+
+## TASK-3: fix(arena): enforce Blind Arena SSE slots server-side - 2026-07-03
+
+### Added
+
+- Добавлена pending migration `20260703221900_tasks_is_blind.sql` для `tasks.is_blind boolean not null default false`; миграцию нужно применить в production Supabase до merge кода TASK-3.
+- `POST /api/stream-compare` принимает `blind: true`, серверно shuffle-ит выбранные модели и отдаёт в SSE только `slot-a`/`slot-b` и `Модель A`/`Модель B`, сохраняя реальные model identity только в Supabase persistence.
+- `POST /api/vote` для blind-задач возвращает `reveal[]` после успешного best vote.
+- `GET /api/tasks/[taskId]` и `GET /api/history/[taskId]` маскируют `modelKey/displayName` до best vote текущей identity.
+- Обновлены API/database/decision docs и тесты для blind SSE, reveal, task detail и history masking.
 
 ## TASK-1: fix(profile): rate limit avatar upload/delete + stale ext cleanup - 2026-07-03
 

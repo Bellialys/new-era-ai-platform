@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import {
-
   PROMPT_MIN_LENGTH,
   PROMPT_MAX_LENGTH,
   MODEL_MIN_SELECT,
@@ -23,6 +22,9 @@ import {
   getApiKey,
   logApiRequest,
   checkDailyLimit,
+  fisherYatesShuffle,
+  blindSlotId,
+  blindSlotName,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -39,12 +41,29 @@ function sse(event: string, data: unknown): Uint8Array {
   return enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+type WireModelDescriptor = {
+  id: string;
+  name: string;
+  role: string | null;
+};
+
+function wireForModel(
+  model: ResolvedModel,
+  index: number,
+  isBlind: boolean
+): WireModelDescriptor {
+  return isBlind
+    ? { id: blindSlotId(index), name: blindSlotName(index), role: null }
+    : { id: model.selectionId, name: model.name, role: model.role };
+}
+
 // ---------------------------------------------------------------------------
 // Stream one model via OpenRouter streaming API
 // ---------------------------------------------------------------------------
 async function streamOneModel(
   prompt: string,
   model: ResolvedModel,
+  wire: WireModelDescriptor,
   controller: ReadableStreamDefaultController<Uint8Array>,
   signal: AbortSignal
 ): Promise<{ text: string; latencyMs: number; inputTokens: number | null; outputTokens: number | null; success: boolean; errorCode?: string; errorMessage?: string }> {
@@ -53,9 +72,9 @@ async function streamOneModel(
 
   // Announce model start
   controller.enqueue(sse("model_start", {
-    modelId: model.selectionId,
-    modelName: model.name,
-    modelRole: model.role,
+    modelId: wire.id,
+    modelName: wire.name,
+    modelRole: wire.role,
   }));
 
   try {
@@ -81,11 +100,11 @@ async function streamOneModel(
       const msg = `OpenRouter returned ${res.status}`;
       const errorCode = res.status === 429 ? "RATE_LIMIT" : res.status >= 500 ? "PROVIDER_ERROR" : "OPENROUTER_ERROR";
       controller.enqueue(sse("model_error", {
-        modelId: model.selectionId,
+        modelId: wire.id,
         response: {
           id: crypto.randomUUID(),
-          modelId: model.selectionId,
-          modelName: model.name,
+          modelId: wire.id,
+          modelName: wire.name,
           status: "error",
           answerText: null,
           errorCode,
@@ -122,7 +141,7 @@ async function streamOneModel(
           const token = parsed.choices?.[0]?.delta?.content;
           if (token) {
             accumulated += token;
-            controller.enqueue(sse("model_token", { modelId: model.selectionId, token }));
+            controller.enqueue(sse("model_token", { modelId: wire.id, token }));
           }
           if (parsed.usage) {
             inputTokens = parsed.usage.prompt_tokens ?? null;
@@ -134,11 +153,11 @@ async function streamOneModel(
 
     const latencyMs = Date.now() - startTime;
     controller.enqueue(sse("model_done", {
-      modelId: model.selectionId,
+      modelId: wire.id,
       response: {
         id: crypto.randomUUID(),
-        modelId: model.selectionId,
-        modelName: model.name,
+        modelId: wire.id,
+        modelName: wire.name,
         status: "success",
         answerText: accumulated,
         latencyMs,
@@ -150,11 +169,11 @@ async function streamOneModel(
     if (signal.aborted) return { text: "", latencyMs: 0, inputTokens: null, outputTokens: null, success: false, errorCode: "ABORTED", errorMessage: "Aborted" };
     const msg = err instanceof Error ? err.message : "Unknown error";
     controller.enqueue(sse("model_error", {
-      modelId: model.selectionId,
+      modelId: wire.id,
       response: {
         id: crypto.randomUUID(),
-        modelId: model.selectionId,
-        modelName: model.name,
+        modelId: wire.id,
+        modelName: wire.name,
         status: "error",
         answerText: null,
         errorCode: "NETWORK_ERROR",
@@ -172,6 +191,7 @@ interface StreamCompareRequest {
   prompt?: unknown;
   modelIds?: unknown;
   modeSlug?: unknown;
+  blind?: unknown;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -221,7 +241,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     return new Response(JSON.stringify({ status: "error", error: { code: "INVALID_JSON" } }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  const { prompt, modelIds, modeSlug } = body as StreamCompareRequest;
+  const { prompt, modelIds, modeSlug, blind } = body as StreamCompareRequest;
+  const isBlind = blind === true;
 
   const modeValidation = validateModeSlug(modeSlug, MODE_SLUG_PROMPT_ARENA);
   if (!modeValidation.valid) {
@@ -252,6 +273,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     return new Response(JSON.stringify({ status: "error", error: { code: ae.errorCode, message: ae.message } }), { status: ae.statusCode, headers: { "Content-Type": "application/json" } });
   }
 
+  const orderedModels = isBlind ? fisherYatesShuffle(selectedModels) : selectedModels;
+  const orderedWires = orderedModels.map((model, index) =>
+    wireForModel(model, index, isBlind)
+  );
+
   const abortController = new AbortController();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -260,11 +286,19 @@ export async function POST(request: NextRequest): Promise<Response> {
       try {
         // Stream all models in parallel
         const modelResults = await Promise.all(
-          selectedModels.map((model) => streamOneModel(cleanPrompt, model, controller, abortController.signal))
+          orderedModels.map((model, index) =>
+            streamOneModel(
+              cleanPrompt,
+              model,
+              orderedWires[index] ?? wireForModel(model, index, isBlind),
+              controller,
+              abortController.signal
+            )
+          )
         );
 
         // Persist best-effort
-        const persistItems = selectedModels.map((model, i) => {
+        const persistItems = orderedModels.map((model, i) => {
           const r = modelResults[i];
           return {
             id: crypto.randomUUID(),
@@ -287,9 +321,10 @@ export async function POST(request: NextRequest): Promise<Response> {
           const saved = await saveArenaRun({
             prompt: cleanPrompt,
             modeSlug: MODE_SLUG_PROMPT_ARENA,
-            modelKeys: selectedModels.map((m) => m.modelKey),
+            modelKeys: orderedModels.map((m) => m.modelKey),
             responses: persistItems,
             owner: { userId: identity.userId, anonymousSessionId: identity.guestId },
+            isBlind,
           });
           taskId = saved.taskId;
           responseIdsByModelId = saved.responseIdsByModelId;
@@ -298,16 +333,24 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
 
         // Build final responses array for the complete event
-        const finalResponses = persistItems.map((item) => ({
-          id: responseIdsByModelId[item.modelId] ?? item.id,
-          modelId: item.modelId,
-          modelName: item.modelName,
-          status: item.status,
-          answerText: item.answerText,
-          latencyMs: item.latencyMs,
-          errorCode: item.errorCode,
-          errorMessage: item.errorMessage,
-        }));
+        const finalResponses = persistItems.map((item, index) => {
+          const wire = orderedWires[index] ?? {
+            id: item.modelId,
+            name: item.modelName,
+            role: null,
+          };
+
+          return {
+            id: responseIdsByModelId[item.modelId] ?? item.id,
+            modelId: wire.id,
+            modelName: wire.name,
+            status: item.status,
+            answerText: item.answerText,
+            latencyMs: item.latencyMs,
+            errorCode: item.errorCode,
+            errorMessage: item.errorMessage,
+          };
+        });
 
         controller.enqueue(sse("complete", {
           status: finalResponses.some((r) => r.status === "success") ? "success" : "error",

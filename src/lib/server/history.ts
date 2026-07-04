@@ -20,7 +20,7 @@ import {
   HISTORY_PAGE_SIZE_MAX,
 } from "@/lib/arena/constants";
 import type { JudgeVerdict } from "@/types/arena";
-import { ApiError } from "./utils";
+import { ApiError, blindSlotName } from "./utils";
 import { getSupabaseServerClient } from "./supabase";
 
 /**
@@ -50,7 +50,7 @@ export type HistoryListResult = {
 
 export type HistoryResponseItem = {
   responseId: string;
-  modelKey: string;
+  modelKey: string | null;
   displayName: string | null;
   status: string;
   responseText: string | null;
@@ -87,6 +87,7 @@ type TaskDetailRow = TaskListRow & {
   settings: unknown;
   error_message: string | null;
   judge_verdict: unknown | null;
+  is_blind: boolean | null;
 };
 
 type ResponseRow = {
@@ -98,6 +99,7 @@ type ResponseRow = {
   error_code: string | null;
   error_message: string | null;
   latency_ms: number | null;
+  created_at?: string | null;
 };
 
 type OwnerFilter = {
@@ -271,7 +273,7 @@ export async function getHistoryTask({
   const { data: taskData, error: taskError } = await supabase
     .from("tasks")
     .select(
-      "id, mode_slug, task_text, status, selected_models, settings, created_at, error_message, judge_verdict"
+      "id, mode_slug, task_text, status, selected_models, settings, created_at, error_message, judge_verdict, is_blind"
     )
     .eq("id", taskId)
     .eq(owner.column, owner.value)
@@ -295,7 +297,7 @@ export async function getHistoryTask({
   const { data: responseData, error: responsesError } = await supabase
     .from("model_responses")
     .select(
-      "id, model_key, display_name, status, response_text, error_code, error_message, latency_ms"
+      "id, model_key, display_name, status, response_text, error_code, error_message, latency_ms, created_at"
     )
     .eq("task_id", taskId)
     .order("created_at", { ascending: true });
@@ -324,10 +326,12 @@ export async function getHistoryTask({
   const winnerResponseId =
     (winnerData as { model_response_id: string } | null)?.model_response_id ?? null;
 
-  const responses: HistoryResponseItem[] = ((responseData ?? []) as ResponseRow[]).map((row) => ({
+  const shouldMaskModels = Boolean(task.is_blind) && !winnerResponseId;
+
+  const responses: HistoryResponseItem[] = ((responseData ?? []) as ResponseRow[]).map((row, index) => ({
     responseId: row.id,
-    modelKey: row.model_key,
-    displayName: row.display_name,
+    modelKey: shouldMaskModels ? null : row.model_key,
+    displayName: shouldMaskModels ? blindSlotName(index) : row.display_name,
     status: row.status,
     responseText: row.response_text,
     errorCode: row.error_code,

@@ -84,6 +84,7 @@ function respRow(id: string) {
     error_code: null,
     error_message: null,
     latency_ms: 100,
+    created_at: `2026-06-20T10:00:0${id === "R1" ? "1" : "2"}.000Z`,
   };
 }
 
@@ -246,6 +247,8 @@ describe("getHistoryTask", () => {
           settings: {},
           created_at: "2026-06-20T10:00:00.000Z",
           error_message: null,
+          judge_verdict: null,
+          is_blind: false,
         },
         error: null,
       },
@@ -260,5 +263,65 @@ describe("getHistoryTask", () => {
     expect(result?.responses.find((r) => r.responseId === "R1")?.isWinner).toBe(true);
     expect(result?.responses.find((r) => r.responseId === "R2")?.isWinner).toBe(false);
     expect(result?.selectedModels).toEqual(["a", "b"]);
+  });
+
+  it("masks response model identity for a blind task without a winner vote", async () => {
+    const client = createClient({
+      tasks: {
+        data: {
+          id: TASK_ID,
+          mode_slug: "prompt-arena",
+          task_text: "compare these",
+          status: "completed",
+          selected_models: ["a", "b"],
+          settings: {},
+          created_at: "2026-06-20T10:00:00.000Z",
+          error_message: null,
+          judge_verdict: null,
+          is_blind: true,
+        },
+        error: null,
+      },
+      model_responses: { data: [respRow("R1"), respRow("R2")], error: null },
+      votes: { data: null, error: null },
+    });
+    getClientMock.mockReturnValue(client);
+
+    const result = await getHistoryTask({ identity: userIdentity, taskId: TASK_ID });
+
+    expect(result?.winnerResponseId).toBeNull();
+    expect(result?.responses[0]?.displayName).toBe("Модель A");
+    expect(result?.responses[0]?.modelKey).toBeNull();
+    expect(JSON.stringify(result)).not.toContain("key-R1");
+    expect(JSON.stringify(result)).not.toContain("Model R1");
+  });
+
+  it("reveals response model identity for a blind task after a winner vote", async () => {
+    const client = createClient({
+      tasks: {
+        data: {
+          id: TASK_ID,
+          mode_slug: "prompt-arena",
+          task_text: "compare these",
+          status: "completed",
+          selected_models: ["a", "b"],
+          settings: {},
+          created_at: "2026-06-20T10:00:00.000Z",
+          error_message: null,
+          judge_verdict: null,
+          is_blind: true,
+        },
+        error: null,
+      },
+      model_responses: { data: [respRow("R1"), respRow("R2")], error: null },
+      votes: { data: { model_response_id: "R1" }, error: null },
+    });
+    getClientMock.mockReturnValue(client);
+
+    const result = await getHistoryTask({ identity: userIdentity, taskId: TASK_ID });
+
+    expect(result?.winnerResponseId).toBe("R1");
+    expect(result?.responses[0]?.displayName).toBe("Model R1");
+    expect(result?.responses[0]?.modelKey).toBe("key-R1");
   });
 });

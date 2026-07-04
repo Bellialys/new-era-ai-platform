@@ -42,7 +42,7 @@ type CompareStreamEvent = {
 type ModelStartPayload = {
   modelId: string;
   modelName: string;
-  modelRole: string;
+  modelRole: string | null;
 };
 
 type ModelTokenPayload = {
@@ -64,6 +64,12 @@ type CompareCompletePayload = {
 type ApiErrorPayload = {
   message?: string;
   errorCode?: string;
+};
+
+type VoteRevealItem = {
+  responseId: string;
+  modelName: string;
+  modelKey: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -109,7 +115,7 @@ function asModelStartPayload(value: unknown): ModelStartPayload | null {
   if (
     typeof value.modelId !== "string" ||
     typeof value.modelName !== "string" ||
-    typeof value.modelRole !== "string"
+    (typeof value.modelRole !== "string" && value.modelRole !== null)
   ) {
     return null;
   }
@@ -119,6 +125,23 @@ function asModelStartPayload(value: unknown): ModelStartPayload | null {
     modelName: value.modelName,
     modelRole: value.modelRole,
   };
+}
+
+function asVoteReveal(value: unknown): VoteRevealItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is VoteRevealItem =>
+    isObject(item) &&
+    typeof item.responseId === "string" &&
+    typeof item.modelName === "string" &&
+    typeof item.modelKey === "string"
+  );
+}
+
+function blindSlotName(index: number): string {
+  return `Модель ${String.fromCharCode(65 + index)}`;
 }
 
 function asModelTokenPayload(value: unknown): ModelTokenPayload | null {
@@ -263,7 +286,7 @@ export function PromptArena() {
 
   function buildResponseView(
     apiResponse: ArenaApiResponse,
-    fallbackRole?: string
+    fallbackRole?: string | null
   ): ArenaResponseView {
     const matchedModel = availableModels.find((model) => model.id === apiResponse.modelId);
     return {
@@ -286,7 +309,7 @@ export function PromptArena() {
         id: `stream-${payload.modelId}`,
         modelId: payload.modelId,
         modelName: payload.modelName,
-        modelRole: payload.modelRole,
+        modelRole: payload.modelRole ?? "Blind comparison slot",
         status: "success",
         answerText: "",
         isStreaming: true,
@@ -483,6 +506,7 @@ export function PromptArena() {
             modelIds: selectedModelIds,
             modeSlug: "prompt-arena",
             stream: true,
+            blind: blindMode,
           }),
           signal: abortController.signal,
         });
@@ -556,12 +580,31 @@ export function PromptArena() {
         throw new Error(errorData.message || "Не удалось сохранить Winner vote.");
       }
 
+      const voteData = (await response.json()) as { reveal?: unknown };
+      const reveal = asVoteReveal(voteData.reveal);
+      const revealedWinner = reveal.find((item) => item.responseId === responseId);
+      if (reveal.length > 0) {
+        setResponses((currentResponses) =>
+          currentResponses.map((currentResponse) => {
+            const revealed = reveal.find((item) => item.responseId === currentResponse.id);
+            return revealed
+              ? {
+                  ...currentResponse,
+                  modelName: revealed.modelName,
+                  modelRole: revealed.modelKey,
+                }
+              : currentResponse;
+          })
+        );
+      }
+
       setWinnerResponseId(responseId);
       const winnerModel = responses.find((r) => r.id === responseId);
       if (winnerModel) {
+        const sessionWinKey = revealedWinner?.modelName ?? winnerModel.modelId;
         setSessionWins((prev) => ({
           ...prev,
-          [winnerModel.modelId]: (prev[winnerModel.modelId] ?? 0) + 1,
+          [sessionWinKey]: (prev[sessionWinKey] ?? 0) + 1,
         }));
       }
       setVoteStatus("success");
@@ -680,7 +723,7 @@ export function PromptArena() {
           isLoading={isLoading}
           loadingModelNames={availableModels
             .filter((m) => selectedModelIds.includes(m.id))
-            .map((m) => m.name)}
+            .map((m, index) => (blindMode ? blindSlotName(index) : m.name))}
           winnerResponseId={winnerResponseId}
           canSaveWinner={Boolean(taskId)}
           voteStatus={voteStatus}

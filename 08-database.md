@@ -16,6 +16,7 @@ v2.0.0-alpha.1
 # cast_best_vote — атомарный RPC для best vote
 # tasks.judge_verdict хранит JSON-вердикт POST /api/judge
 # public.audit_log хранит admin/governance audit events и не открыт anon/authenticated напрямую
+# pending release migration: 20260703221900_tasks_is_blind.sql must be applied before TASK-3 code merge
 # Migration history aligned through 20260628031516_database_v2_foundation
 ```
 
@@ -156,6 +157,7 @@ model_key нельзя доверять с frontend.
 | `selected_models` | jsonb | Список выбранных model keys для аудита запуска |
 | `settings` | jsonb | Настройки запуска |
 | `judge_verdict` | jsonb null | Вердикт `POST /api/judge`: победитель, reasoning и scores |
+| `is_blind` | boolean | `true`, если Prompt Arena запуск должен скрывать identity моделей до best vote текущей identity |
 | `error_message` | text null | Ошибка на уровне задачи |
 | `created_at` | timestamptz | Дата создания |
 | `updated_at` | timestamptz | Дата обновления |
@@ -296,7 +298,7 @@ Storage bucket и RLS policies должны быть проверены отде
 Атомарная функция для сохранения best vote. Добавлена миграцией
 `20260615191924_atomic_best_vote_rpc.sql` и усилена release-gate migration
 `20260617212741_reconcile_release_gate_security_and_models.sql`, затем расширена
-миграцией `20260703142630_vote_gate_task_running.sql`.
+миграцией `20260703182026_vote_gate_task_running.sql`.
 
 Сигнатура:
 
@@ -383,6 +385,7 @@ create table public.tasks (
   selected_models jsonb not null default '[]'::jsonb,
   settings jsonb not null default '{}'::jsonb,
   judge_verdict jsonb,
+  is_blind boolean not null default false,
   error_message text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -482,7 +485,8 @@ with check (true);
 | `20260617212741_reconcile_release_gate_security_and_models.sql` | Release-gate reconciliation: governance metadata, deactivation of unavailable model IDs, generated `models.status`, `cast_best_vote` security-invoker hardening |
 | `20260624034630_add_judge_verdict_to_tasks.sql` | Добавляет `tasks.judge_verdict jsonb null` для результата `POST /api/judge` |
 | `20260624055408_add_audit_log.sql` | Создаёт `public.audit_log`, индексы, service_role grants и RLS policies без прямого доступа anon/authenticated |
-| `20260703142630_vote_gate_task_running.sql` | Усиливает `cast_best_vote`: блокирует best vote, пока `tasks.status = 'running'` |
+| `20260703182026_vote_gate_task_running.sql` | Усиливает `cast_best_vote`: блокирует best vote, пока `tasks.status = 'running'` |
+| `20260703221900_tasks_is_blind.sql` | Добавляет `tasks.is_blind boolean not null default false` для server-side Blind Arena SSE |
 
 Release-gate note:
 

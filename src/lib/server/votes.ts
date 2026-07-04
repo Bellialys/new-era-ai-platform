@@ -17,6 +17,12 @@ type SaveBestVoteResult = {
   voteType: "best";
 };
 
+export type BlindRevealItem = {
+  responseId: string;
+  modelName: string;
+  modelKey: string;
+};
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function validateVoteIds(taskId: unknown, responseId: unknown): { taskId: string; responseId: string } {
@@ -102,4 +108,48 @@ export async function saveBestVote({
     responseId: vote.model_response_id,
     voteType: "best",
   };
+}
+
+export async function getBlindReveal(taskId: string): Promise<BlindRevealItem[] | null> {
+  const supabase = getSupabaseServerClient();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { data: task, error: taskError } = await supabase
+    .from("tasks")
+    .select("is_blind")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  if (taskError) {
+    console.error("Blind reveal task query failed:", taskError);
+    return null;
+  }
+
+  if (!(task as { is_blind?: boolean } | null)?.is_blind) {
+    return null;
+  }
+
+  const { data: responses, error: responsesError } = await supabase
+    .from("model_responses")
+    .select("id, display_name, model_key")
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: true });
+
+  if (responsesError) {
+    console.error("Blind reveal responses query failed:", responsesError);
+    return null;
+  }
+
+  return ((responses ?? []) as Array<{
+    id: string;
+    display_name: string | null;
+    model_key: string;
+  }>).map((response) => ({
+    responseId: response.id,
+    modelName: response.display_name ?? response.model_key,
+    modelKey: response.model_key,
+  }));
 }
