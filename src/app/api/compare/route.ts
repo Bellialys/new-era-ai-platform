@@ -34,6 +34,7 @@ interface CompareRequest {
   modelIds?: unknown;
   modeSlug?: unknown;
   stream?: unknown;
+  blind?: unknown;
 }
 
 interface CompareResponse {
@@ -318,8 +319,22 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const { prompt, modelIds, modeSlug, stream } = body as CompareRequest;
+    const { prompt, modelIds, modeSlug, stream, blind } = body as CompareRequest;
     const shouldStream = stream === true;
+
+    if (blind === true) {
+      logApiRequest("POST", "/api/compare", 400, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(
+            400,
+            "VALIDATION_ERROR",
+            "Blind mode is only supported via POST /api/stream-compare."
+          )
+        ),
+        { status: 400 }
+      );
+    }
 
     const modeValidation = validateModeSlug(modeSlug, MODE_SLUG_PROMPT_ARENA);
     if (!modeValidation.valid) {

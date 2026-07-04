@@ -63,7 +63,12 @@ function createClient(tables: Record<string, QueryResult>): ClientMock {
   return { from, builders };
 }
 
-function taskRow(id: string, createdAt: string, modeSlug = "prompt-arena") {
+function taskRow(
+  id: string,
+  createdAt: string,
+  modeSlug = "prompt-arena",
+  isBlind = false
+) {
   return {
     id,
     mode_slug: modeSlug,
@@ -71,6 +76,7 @@ function taskRow(id: string, createdAt: string, modeSlug = "prompt-arena") {
     status: "completed",
     selected_models: ["a", "b"],
     created_at: createdAt,
+    is_blind: isBlind,
   };
 }
 
@@ -213,6 +219,53 @@ describe("listHistory", () => {
     expect(client.builders.votes.eq).toHaveBeenCalledWith("vote_type", "best");
     expect(client.builders.votes.in).toHaveBeenCalledWith("task_id", ["T1", "T2"]);
     expect(client.builders.votes.eq).toHaveBeenCalledWith("user_id", USER_ID);
+  });
+
+  it("masks selected model names for a blind task without a winner vote", async () => {
+    const client = createClient({
+      tasks: {
+        data: [taskRow("T1", "2026-06-20T12:00:00.000Z", "prompt-arena", true)],
+        error: null,
+      },
+      votes: { data: [], error: null },
+    });
+    getClientMock.mockReturnValue(client);
+
+    const result = await listHistory({ identity: userIdentity });
+
+    expect(result.items[0]?.selectedModels).toEqual(["Модель A", "Модель B"]);
+    expect(result.items[0]?.modelCount).toBe(2);
+    expect(JSON.stringify(result.items[0])).not.toContain('"a"');
+    expect(JSON.stringify(result.items[0])).not.toContain('"b"');
+  });
+
+  it("reveals selected model names for a blind task after a winner vote", async () => {
+    const client = createClient({
+      tasks: {
+        data: [taskRow("T1", "2026-06-20T12:00:00.000Z", "prompt-arena", true)],
+        error: null,
+      },
+      votes: { data: [{ task_id: "T1" }], error: null },
+    });
+    getClientMock.mockReturnValue(client);
+
+    const result = await listHistory({ identity: userIdentity });
+
+    expect(result.items[0]?.selectedModels).toEqual(["a", "b"]);
+    expect(result.items[0]?.modelCount).toBe(2);
+  });
+
+  it("keeps selected model names unchanged for non-blind tasks without a winner vote", async () => {
+    const client = createClient({
+      tasks: { data: [taskRow("T1", "2026-06-20T12:00:00.000Z")], error: null },
+      votes: { data: [], error: null },
+    });
+    getClientMock.mockReturnValue(client);
+
+    const result = await listHistory({ identity: userIdentity });
+
+    expect(result.items[0]?.selectedModels).toEqual(["a", "b"]);
+    expect(result.items[0]?.modelCount).toBe(2);
   });
 });
 

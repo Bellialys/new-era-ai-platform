@@ -33,6 +33,15 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ## v2.0.0-alpha.1 - AI Team Mode - 2026-06-27
 
+## TASK-7: fix(arena): close blind-contract gaps - 2026-07-04
+
+### Fixed
+
+- `GET /api/history` теперь маскирует `selectedModels` как `Модель A/B/...` для blind-задач без best vote текущей identity, сохраняя корректный `modelCount`.
+- `POST /api/compare` возвращает `400 VALIDATION_ERROR` для `blind: true` и направляет blind-запуски на `POST /api/stream-compare`.
+- `scripts/check-env.mjs --mode=basic` выводит неблокирующий Upstash/KV status в build-log, чтобы fallback на per-instance in-memory rate limiting был видимым.
+- Обновлены route/lib/env-check тесты и API/env-check docs для нового контракта.
+
 ## TASK-4: fix(vote): block best vote while task is running - 2026-07-03
 
 ### Fixed

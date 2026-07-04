@@ -135,8 +135,13 @@ Streaming-запрос:
 - `modelIds` должен содержать 2-3 модели;
 - `modeSlug` сейчас должен быть `prompt-arena`;
 - `stream: true` включает SSE-ответ `text/event-stream`, обычный запрос без `stream` сохраняет JSON-контракт;
+- `blind: true` на этом endpoint отклоняется: blind mode поддерживается только через `POST /api/stream-compare`;
 - backend резолвит model selection id в server-only `model_key`;
 - сохранение `tasks` и `model_responses` выполняется best-effort.
+
+Ошибки:
+
+- `400 VALIDATION_ERROR` — если body содержит `blind: true`; сообщение: `Blind mode is only supported via POST /api/stream-compare.`
 
 Минимальный ответ:
 
@@ -653,6 +658,7 @@ Query-параметры (все необязательные):
 ```
 
 - `nextCursor` равен `null`, когда больше страниц нет;
+- для blind-задач без best vote текущей identity `selectedModels` маскируется как `Модель A/B/...`, а `modelCount` сохраняет реальное количество моделей; после best vote текущей identity возвращаются реальные имена моделей;
 - требует Supabase auth cookie или httpOnly guest cookie `na_guest`; иначе `401 AUTH_REQUIRED`;
 - когда Supabase не сконфигурирован, возвращается пустой список (graceful empty).
 

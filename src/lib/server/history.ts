@@ -81,6 +81,7 @@ type TaskListRow = {
   status: string;
   selected_models: unknown;
   created_at: string;
+  is_blind: boolean | null;
 };
 
 type TaskDetailRow = TaskListRow & {
@@ -200,7 +201,7 @@ export async function listHistory({
 
   let query = supabase
     .from("tasks")
-    .select("id, mode_slug, task_text, status, selected_models, created_at")
+    .select("id, mode_slug, task_text, status, selected_models, created_at, is_blind")
     .eq(owner.column, owner.value);
 
   if (modeSlug && isAllowedModeSlug(modeSlug)) {
@@ -234,15 +235,21 @@ export async function listHistory({
 
   const items: HistoryListItem[] = pageRows.map((row) => {
     const selectedModels = normalizeSelectedModels(row.selected_models);
+    const hasWinner = winnerTaskIds.has(row.id);
+    const visibleSelectedModels =
+      Boolean(row.is_blind) && !hasWinner
+        ? selectedModels.map((_, index) => blindSlotName(index))
+        : selectedModels;
+
     return {
       taskId: row.id,
       modeSlug: row.mode_slug,
       taskText: row.task_text,
       status: row.status,
-      selectedModels,
+      selectedModels: visibleSelectedModels,
       modelCount: selectedModels.length,
       createdAt: row.created_at,
-      hasWinner: winnerTaskIds.has(row.id),
+      hasWinner,
     };
   });
 

@@ -35,6 +35,19 @@ npm run test:env-check       # тесты самого чекера
 `prebuild` намеренно запускает `basic`, а не `migrations`/`full`, чтобы обычный
 `npm run build` не требовал `SUPABASE_DB_URL` и `SUPABASE_ACCESS_TOKEN`.
 
+В `basic` дополнительно выводится неблокирующий статус backend'а rate limiting:
+
+```text
+OK  upstash rate limit backend: configured
+WARN upstash not set — rate limiting falls back to per-instance in-memory
+```
+
+Статус считается `configured`, если задана пара
+`(UPSTASH_REDIS_REST_URL || KV_REST_API_URL)` и
+`(UPSTASH_REDIS_REST_TOKEN || KV_REST_API_TOKEN)`. Предупреждение `WARN` не
+меняет exit code и не блокирует build; оно нужно только для постоянной
+наблюдаемости в build-log.
+
 ## 3. Как работает загрузка переменных
 
 Скрипт использует `loadEnvConfig` из `@next/env`, чтобы читать `.env`-файлы так
