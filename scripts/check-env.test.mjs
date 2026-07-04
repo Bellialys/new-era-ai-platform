@@ -52,6 +52,10 @@ const SENSITIVE_INHERITED = [
   "OPENROUTER_API_KEY",
   "DATABASE_URL",
   "SUPABASE_ACCESS_TOKEN",
+  "UPSTASH_REDIS_REST_URL",
+  "UPSTASH_REDIS_REST_TOKEN",
+  "KV_REST_API_URL",
+  "KV_REST_API_TOKEN",
   "CI",
   "VERCEL",
   "VERCEL_ENV",
@@ -325,6 +329,56 @@ describe("check-env.mjs", { concurrency: true }, () => {
           stderr.includes("SUPABASE_SERVICE_ROLE_KEY"),
         "The missing variable name must appear in the output",
       );
+    }));
+  });
+
+  // ---- Basic build observability -------------------------------------------
+
+  describe("basic mode Upstash observability", () => {
+    it("warns without changing the exit code when Upstash is not configured", withRunner((r) => {
+      const { code, stdout, stderr } = r.run(["--mode=basic"], TEST_VALUES);
+
+      assertNoLeaks("stdout", stdout);
+      assertNoLeaks("stderr", stderr);
+      assert.strictEqual(code, 0);
+      assert.ok(
+        stdout.includes("WARN upstash not set — rate limiting falls back to per-instance in-memory"),
+      );
+      assert.ok(stdout.includes("ENV CHECK PASSED"));
+    }));
+
+    it("reports configured when UPSTASH_REDIS_REST_URL and token are present", withRunner((r) => {
+      const { code, stdout, stderr } = r.run(["--mode=basic"], {
+        ...TEST_VALUES,
+        UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
+        UPSTASH_REDIS_REST_TOKEN: "upstash-token-example",
+      });
+
+      assertNoLeaks("stdout", stdout);
+      assertNoLeaks("stderr", stderr);
+      assert.ok(!stdout.includes("https://example.upstash.io"));
+      assert.ok(!stderr.includes("https://example.upstash.io"));
+      assert.ok(!stdout.includes("upstash-token-example"));
+      assert.ok(!stderr.includes("upstash-token-example"));
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes("OK  upstash rate limit backend: configured"));
+    }));
+
+    it("reports configured when Vercel KV REST aliases are present", withRunner((r) => {
+      const { code, stdout, stderr } = r.run(["--mode=basic"], {
+        ...TEST_VALUES,
+        KV_REST_API_URL: "https://example.upstash.io",
+        KV_REST_API_TOKEN: "kv-token-example",
+      });
+
+      assertNoLeaks("stdout", stdout);
+      assertNoLeaks("stderr", stderr);
+      assert.ok(!stdout.includes("https://example.upstash.io"));
+      assert.ok(!stderr.includes("https://example.upstash.io"));
+      assert.ok(!stdout.includes("kv-token-example"));
+      assert.ok(!stderr.includes("kv-token-example"));
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes("OK  upstash rate limit backend: configured"));
     }));
   });
 

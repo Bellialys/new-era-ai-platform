@@ -348,10 +348,39 @@ function findDuplicateKeys() {
   return [...counts.entries()].filter(([, n]) => n > 1).map(([key]) => key);
 }
 
+/** Non-blocking build-log visibility for the production rate-limit backend. */
+function checkUpstashRateLimitBackend() {
+  const configured = Boolean(
+    (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+      (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
+  );
+
+  return configured
+    ? {
+        name: "upstash rate limit backend",
+        status: STATUS.OK,
+        required: false,
+        category: "observability",
+        message: "configured",
+        displayLine: "OK  upstash rate limit backend: configured",
+      }
+    : {
+        name: "upstash rate limit backend",
+        status: STATUS.WARNING,
+        required: false,
+        category: "observability",
+        message: "not set — rate limiting falls back to per-instance in-memory",
+        displayLine: "WARN upstash not set — rate limiting falls back to per-instance in-memory",
+      };
+}
+
 // ---------------------------------------------------------------------------
 // Output helpers
 // ---------------------------------------------------------------------------
 function formatLine(detail) {
+  if (typeof detail.displayLine === "string") {
+    return detail.displayLine;
+  }
   const label = detail.status.toUpperCase().padEnd(8);
   return `${label} ${detail.name}: ${detail.message}`;
 }
@@ -463,6 +492,9 @@ function run() {
   // 2. Variables for the selected mode.
   const inMode = config.variables.filter((v) => v.groups.includes(flags.mode));
   for (const variable of inMode) details.push(checkVariable(variable));
+  if (flags.mode === "basic") {
+    details.push(checkUpstashRateLimitBackend());
+  }
 
   // 3. Non-blocking warnings.
   if (!envLocalExisted && !isCi && !isProduction) {

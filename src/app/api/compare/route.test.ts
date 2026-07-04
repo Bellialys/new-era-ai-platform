@@ -208,6 +208,17 @@ describe("POST /api/compare — input validation", () => {
     const body = await res.json() as { errorCode?: string };
     expect(body.errorCode).toBe("INVALID_MODE");
   });
+
+  it("returns 400 when blind mode is requested on the non-blind compare route", async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, blind: true }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errorCode?: string; message?: string };
+    expect(body.errorCode).toBe("VALIDATION_ERROR");
+    expect(body.message).toBe("Blind mode is only supported via POST /api/stream-compare.");
+    expect(resolveSelectedModelsMock).not.toHaveBeenCalled();
+    expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
