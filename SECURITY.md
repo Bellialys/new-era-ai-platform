@@ -76,6 +76,7 @@
 - `organization_id` как основная граница изоляции
 - Pentest-аккаунты: `sandbox_region`, RLS-изоляция, нет доступа к production данным
 - JWT: `data_region` claim для routing, `org_id` для RLS, стандартный Supabase signing
+- **Колоночные гранты profiles:** после применения `20260704041841_security_hardening_profiles_grants.sql` роль `authenticated` имеет `UPDATE` только на `first_name`, `last_name`, `display_name`, `avatar_url`. `role`, `plan`, `email`, `id`, `created_at`, `updated_at` — server-only (service_role / триггеры БД). Self-escalation через browser-side Supabase client закрывается на уровне БД.
 
 ### SCIM / Enterprise Provisioning
 

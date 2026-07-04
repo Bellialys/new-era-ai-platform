@@ -107,6 +107,27 @@ profiles.id -> auth.users.id
 
 На раннем MVP приложение может работать без авторизации. В таком случае `tasks.user_id` может быть `null`.
 
+### Колоночная модель грантов profiles (аудит 2026-07-04)
+
+После применения миграции `20260704041841_security_hardening_profiles_grants.sql` роль `authenticated` имеет `UPDATE` только на безопасные колонки профиля. Полный `UPDATE` на таблицу отозван, чтобы browser-side Supabase client не мог менять `role`, `plan` или служебные поля.
+
+| Колонка | Кто пишет | Путь записи |
+|---|---|---|
+| `first_name`, `last_name`, `display_name` | authenticated (клиент) | `PATCH /api/profile` |
+| `avatar_url` | authenticated (клиент) | `PUT/DELETE /api/profile/avatar` |
+| `email` | Триггер БД (`handle_new_user_profile`, `AFTER INSERT on auth.users`, SECURITY DEFINER) | Только при регистрации |
+| `role`, `plan` | service_role (server-side) | `PATCH /api/admin/users/[id]` — только `requireAdmin()` |
+| `id`, `created_at` | Только БД | Устанавливаются при вставке |
+| `updated_at` | Триггер `profiles_set_updated_at` | Устанавливается автоматически |
+
+```text
+authenticated UPDATE grant (post security-hardening 2026-07-04):
+  revoke update on public.profiles from authenticated;
+  grant update (first_name, last_name, display_name, avatar_url) on public.profiles to authenticated;
+# role/plan/email/id/created_at/updated_at не обновляются authenticated клиентом.
+# legacy TRUNCATE/REFERENCES/TRIGGER сняты с anon/authenticated на всех публичных таблицах.
+```
+
 ## 2. models
 
 Список моделей, разрешённых для использования в проекте.
@@ -487,6 +508,7 @@ with check (true);
 | `20260624055408_add_audit_log.sql` | Создаёт `public.audit_log`, индексы, service_role grants и RLS policies без прямого доступа anon/authenticated |
 | `20260703182026_vote_gate_task_running.sql` | Усиливает `cast_best_vote`: блокирует best vote, пока `tasks.status = 'running'` |
 | `20260703221900_tasks_is_blind.sql` | Добавляет `tasks.is_blind boolean not null default false` для server-side Blind Arena SSE |
+| `20260704041841_security_hardening_profiles_grants.sql` | P0: колоночный `UPDATE` grant на `profiles` (только `first_name`, `last_name`, `display_name`, `avatar_url`); P1: revoke legacy `TRUNCATE`/`REFERENCES`/`TRIGGER` с `anon`/`authenticated` на публичных Arena-таблицах; hardening: явный `WITH CHECK` для Storage avatar UPDATE policy |
 
 Release-gate note:
 
