@@ -96,6 +96,13 @@
 - `file_size_limit = 2097152` (2 MB)
 - `allowed_mime_types = image/jpeg, image/png, image/webp`
 
+**Security grants:**
+
+- `authenticated` can `UPDATE` only `profiles.first_name`, `profiles.last_name`, `profiles.display_name`, `profiles.avatar_url`.
+- `authenticated` cannot `UPDATE` `profiles.id`, `profiles.email`, `profiles.role`, `profiles.plan`, `profiles.created_at`, `profiles.updated_at`.
+- `authenticated` must not have table-level `UPDATE` on `profiles`.
+- `anon` and `authenticated` must not have legacy `TRUNCATE`, `REFERENCES`, or `TRIGGER` grants on public Arena tables: `profiles`, `tasks`, `model_responses`, `models`, `votes`.
+
 `models.status` добавлен миграцией `20260610061249_add_models_status_column.sql`
 как generated stored column, производная от `models.is_active`:
 

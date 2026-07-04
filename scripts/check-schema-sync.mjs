@@ -3,8 +3,8 @@
  * Supabase Schema Sync Check
  *
  * Connects to the real Supabase PostgreSQL database and verifies that the
- * tables, columns, generated columns, RPC functions, and storage buckets the
- * project relies on actually exist.
+ * tables, columns, generated columns, RPC functions, storage buckets, and
+ * security grants the project relies on are actually present.
  *
  * SECURITY:
  *   - reads SUPABASE_DB_URL (fallback DATABASE_URL) from .env.local
@@ -26,7 +26,7 @@
  *   SCHEMA_CHECK_DEBUG=1  Print stack traces on unexpected errors
  *
  * Exit codes:
- *   0  all required schema objects are present (or --help / --version)
+ *   0  all required schema objects and grants are present (or --help / --version)
  *   1  one or more required items missing or invalid (schema drift)
  *   2  cannot run: env not configured, unknown flag, or database unreachable
  */
@@ -217,6 +217,73 @@ const REQUIRED_STORAGE_BUCKETS = [
   },
 ];
 
+const PROFILE_CLIENT_UPDATE_COLUMNS = [
+  "first_name",
+  "last_name",
+  "display_name",
+  "avatar_url",
+];
+
+const PROFILE_SERVER_ONLY_COLUMNS = [
+  "id",
+  "email",
+  "role",
+  "plan",
+  "created_at",
+  "updated_at",
+];
+
+const PUBLIC_ARENA_TABLES_WITHOUT_LEGACY_PUBLIC_DDL_GRANTS = [
+  "profiles",
+  "tasks",
+  "model_responses",
+  "models",
+  "votes",
+];
+
+const LEGACY_PUBLIC_DDL_PRIVILEGES = ["TRUNCATE", "REFERENCES", "TRIGGER"];
+
+const REQUIRED_GRANT_CHECKS = [
+  ...PROFILE_CLIENT_UPDATE_COLUMNS.map((column) => ({
+    id:        `authenticated_profiles_${column}_update_allowed`,
+    kind:      "column",
+    grantee:   "authenticated",
+    table:     "profiles",
+    column,
+    privilege: "UPDATE",
+    expected:  true,
+  })),
+  ...PROFILE_SERVER_ONLY_COLUMNS.map((column) => ({
+    id:        `authenticated_profiles_${column}_update_denied`,
+    kind:      "column",
+    grantee:   "authenticated",
+    table:     "profiles",
+    column,
+    privilege: "UPDATE",
+    expected:  false,
+  })),
+  {
+    id:        "authenticated_profiles_table_update_denied",
+    kind:      "table",
+    grantee:   "authenticated",
+    table:     "profiles",
+    privilege: "UPDATE",
+    expected:  false,
+  },
+  ...PUBLIC_ARENA_TABLES_WITHOUT_LEGACY_PUBLIC_DDL_GRANTS.flatMap((table) =>
+    ["anon", "authenticated"].flatMap((grantee) =>
+      LEGACY_PUBLIC_DDL_PRIVILEGES.map((privilege) => ({
+        id: `${grantee}_${table}_${privilege.toLowerCase()}_denied`,
+        kind: "table",
+        grantee,
+        table,
+        privilege,
+        expected: false,
+      })),
+    ),
+  ),
+];
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -259,7 +326,7 @@ function showHelp() {
       "Usage: node scripts/check-schema-sync.mjs [options]",
       "",
       "Connects to the Supabase PostgreSQL database and verifies that all required",
-      "tables, columns, generated columns, RPC functions, and storage buckets are present.",
+      "tables, columns, generated columns, RPC functions, storage buckets, and grants are present.",
       "",
       "Options:",
       "  --help, -h        Show this help and exit",
@@ -273,7 +340,7 @@ function showHelp() {
       "  SCHEMA_CHECK_DEBUG=1  Print stack traces on unexpected errors",
       "",
       "Exit codes:",
-      "  0  all required schema objects are present",
+      "  0  all required schema objects and grants are present",
       "  1  one or more items are missing or invalid (schema drift)",
       "  2  cannot run: env not configured, unknown flag, or database unreachable",
     ].join("\n"),
@@ -374,6 +441,10 @@ async function queryWithRetry(client, query, maxAttempts = 3) {
  * @typedef {{ isGenerated: string; generationExpression: string | null }} ColumnInfo
  * @typedef {{ name: string; arguments: string[] }} FunctionInfo
  * @typedef {{ public: boolean; fileSizeLimit: number | null; allowedMimeTypes: string[] | null }} StorageBucketInfo
+ * @typedef {{
+ *   id: string; kind: "table" | "column"; grantee: string; schema: string;
+ *   table: string; column: string | null; privilege: string; expected: boolean; actual: boolean;
+ * }} GrantCheckResult
  *
  * @param {import("pg").Client} client
  * @param {string} schemaName
@@ -383,6 +454,7 @@ async function queryWithRetry(client, query, maxAttempts = 3) {
  *   functions: Map<string, string[]>;
  *   storageBuckets: Map<string, StorageBucketInfo>;
  *   storageError: string | null;
+ *   grantChecks: GrantCheckResult[];
  * }>}
  */
 async function introspect(client, schemaName) {
@@ -433,8 +505,9 @@ async function introspect(client, schemaName) {
   }
 
   const { storageBuckets, storageError } = await introspectStorageBuckets(client);
+  const grantChecks = await introspectGrantChecks(client, schemaName);
 
-  return { tables, columns, functions, storageBuckets, storageError };
+  return { tables, columns, functions, storageBuckets, storageError, grantChecks };
 }
 
 /**
@@ -477,6 +550,102 @@ async function introspectStorageBuckets(client) {
   }
 }
 
+/**
+ * Checks the privilege boundary that blocks browser-side profile escalation.
+ *
+ * Table and column existence are validated separately. Missing objects return
+ * false here so grant drift is reported without leaking raw pg errors.
+ *
+ * @param {import("pg").Client} client
+ * @param {string} schemaName
+ * @returns {Promise<GrantCheckResult[]>}
+ */
+async function introspectGrantChecks(client, schemaName) {
+  if (REQUIRED_GRANT_CHECKS.length === 0) return [];
+
+  const values = [];
+  const params = [];
+
+  for (const check of REQUIRED_GRANT_CHECKS) {
+    const start = params.length + 1;
+    values.push(
+      `($${start}, $${start + 1}, $${start + 2}, $${start + 3}, ` +
+      `$${start + 4}, $${start + 5}, $${start + 6}, $${start + 7})`,
+    );
+    params.push(
+      check.id,
+      check.kind,
+      check.grantee,
+      schemaName,
+      check.table,
+      check.column ?? null,
+      check.privilege,
+      check.expected,
+    );
+  }
+
+  const result = await queryWithRetry(client, {
+    text: `
+      WITH required_grants(
+        id, kind, grantee, schema_name, table_name, column_name, privilege_name, expected
+      ) AS (
+        VALUES ${values.join(",\n               ")}
+      )
+      SELECT rg.id,
+             rg.kind,
+             rg.grantee,
+             rg.schema_name AS target_schema,
+             rg.table_name AS target_table,
+             rg.column_name AS target_column,
+             rg.privilege_name AS privilege,
+             rg.expected,
+             COALESCE(
+               CASE
+                 WHEN to_regclass(format('%I.%I', rg.schema_name, rg.table_name)) IS NULL THEN false
+                 WHEN rg.kind = 'column'
+                  AND NOT EXISTS (
+                    SELECT 1
+                      FROM information_schema.columns c
+                     WHERE c.table_schema = rg.schema_name
+                       AND c.table_name = rg.table_name
+                       AND c.column_name = rg.column_name
+                  )
+                 THEN false
+                 WHEN rg.kind = 'table'
+                 THEN has_table_privilege(
+                   rg.grantee::name,
+                   format('%I.%I', rg.schema_name, rg.table_name),
+                   rg.privilege_name
+                 )
+                 WHEN rg.kind = 'column'
+                 THEN has_column_privilege(
+                   rg.grantee::name,
+                   format('%I.%I', rg.schema_name, rg.table_name),
+                   rg.column_name,
+                   rg.privilege_name
+                 )
+                 ELSE false
+               END,
+               false
+             ) AS actual
+        FROM required_grants rg
+       ORDER BY rg.id`,
+    values: params,
+  });
+
+  return result.rows.map((row) => ({
+    id:        row.id,
+    kind:      row.kind,
+    grantee:   row.grantee,
+    schema:    row.target_schema,
+    table:     row.target_table,
+    column:    row.target_column,
+    privilege: row.privilege,
+    expected:  row.expected,
+    actual:    row.actual,
+  }));
+}
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -507,7 +676,7 @@ function sortedUniqueStrings(values) {
  * Validates the introspected schema against the project requirements.
  * Returns structured error objects; an empty array means the schema is in sync.
  */
-function validateSchema({ tables, columns, functions, storageBuckets, storageError }) {
+function validateSchema({ tables, columns, functions, storageBuckets, storageError, grantChecks }) {
   const errors = [];
 
   for (const table of REQUIRED_TABLES) {
@@ -607,6 +776,23 @@ function validateSchema({ tables, columns, functions, storageBuckets, storageErr
     }
   }
 
+  for (const check of grantChecks) {
+    if (check.actual !== check.expected) {
+      errors.push({
+        type:      "GRANT_MISMATCH",
+        id:        check.id,
+        kind:      check.kind,
+        grantee:   check.grantee,
+        schema:    check.schema,
+        table:     check.table,
+        column:    check.column,
+        privilege: check.privilege,
+        expected:  check.expected,
+        actual:    check.actual,
+      });
+    }
+  }
+
   return errors;
 }
 
@@ -652,6 +838,18 @@ function describeError(err) {
         `Storage bucket "${err.bucket}": allowed_mime_types must be ` +
         err.expected.map((t) => `"${t}"`).join(", ")
       );
+    case "GRANT_MISMATCH": {
+      const object =
+        err.kind === "column"
+          ? `"${err.schema}"."${err.table}"."${err.column}"`
+          : `"${err.schema}"."${err.table}"`;
+      const expected = err.expected ? "allowed" : "denied";
+      const actual = err.actual ? "allowed" : "denied";
+      return (
+        `Grant mismatch: ${err.grantee} ${err.privilege} on ${object} ` +
+        `must be ${expected}, got ${actual}`
+      );
+    }
     default:
       return JSON.stringify(err);
   }
@@ -678,7 +876,7 @@ function printReport(errors, { asJson, schemaName }) {
   console.log("");
 
   if (errors.length === 0) {
-    console.log("SCHEMA SYNC OK — all required schema objects are present.");
+    console.log("SCHEMA SYNC OK — all required schema objects and grants are present.");
     return;
   }
 
