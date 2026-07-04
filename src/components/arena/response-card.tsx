@@ -58,8 +58,8 @@ export function ResponseCard({
     <article
       className={
         isWinner
-          ? "rounded-3xl border border-emerald-300/50 bg-emerald-500/10 p-6 shadow-2xl shadow-emerald-950/30 backdrop-blur"
-          : "rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur"
+          ? "self-start rounded-[22px] border border-emerald-300/50 bg-emerald-500/10 p-5 shadow-2xl shadow-emerald-950/30 backdrop-blur"
+          : "self-start rounded-[22px] border border-white/10 bg-white/[0.06] p-5 backdrop-blur"
       }
     >
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -96,7 +96,7 @@ export function ResponseCard({
       </div>
 
       <div className="relative mt-5">
-        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm">
+        <div className="max-h-[28rem] overflow-auto rounded-[18px] border border-white/10 bg-slate-950/45 p-4 text-sm">
           {response.status === "success" && response.answerText ? (
             <>
               {!expanded && responseText.length > COLLAPSE_THRESHOLD ? (

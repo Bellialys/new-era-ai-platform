@@ -23,7 +23,7 @@ type ArenaResultsProps = {
 
 function getResponseGridClass(count: number): string {
   if (count <= 2) return "grid-cols-1 md:grid-cols-2";
-  if (count <= 3) return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+  if (count <= 3) return "grid-cols-1 md:grid-cols-2 xl:grid-cols-3";
   if (count <= 4) return "grid-cols-1 sm:grid-cols-2";
   return "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3";
 }
@@ -206,7 +206,7 @@ export function ArenaResults({
         </div>
       )}
 
-      <div className={`grid gap-4 ${getResponseGridClass(responses.length)}`}>
+      <div className={`grid items-start gap-4 ${getResponseGridClass(responses.length)}`}>
         {responses.map((response) => (
           <ResponseCard
             key={response.id}

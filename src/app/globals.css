@@ -1,14 +1,16 @@
 @import "tailwindcss";
-@import 'highlight.js/styles/github-dark.css';
+@import "highlight.js/styles/github-dark.css";
 
 :root {
-  --background: #060816;
-  --foreground: #f8fafc;
-  --muted: #94a3b8;
-  --panel: rgba(15, 23, 42, 0.78);
-  --panel-border: rgba(148, 163, 184, 0.24);
-  --accent: #8b5cf6;
-  --accent-soft: rgba(139, 92, 246, 0.18);
+  --background: #08090f;
+  --foreground: #f4f5fa;
+  --muted: #a2a6b8;
+  --muted-2: #8b8fa3;
+  --accent: #816ef6;
+  --accent-2: #78d7e8;
+  --success: #34d399;
+  --panel: rgba(255, 255, 255, 0.05);
+  --panel-border: rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -21,14 +23,34 @@ html {
 }
 
 body {
+  position: relative;
   min-height: 100vh;
   margin: 0;
   color: var(--foreground);
   background:
-    radial-gradient(circle at top left, rgba(99, 102, 241, 0.34), transparent 34rem),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.2), transparent 30rem),
-    linear-gradient(135deg, #020617 0%, #0f172a 52%, #111827 100%);
-  font-family: Arial, Helvetica, sans-serif;
+    radial-gradient(1000px circle at 14% -6%, rgba(129, 110, 246, 0.2), transparent 55%),
+    radial-gradient(920px circle at 108% 14%, rgba(120, 215, 232, 0.13), transparent 52%),
+    #08090f;
+  font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 58px 58px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 92%);
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 a {
@@ -44,6 +66,14 @@ select {
 }
 
 ::selection {
+  background: rgba(129, 110, 246, 0.4);
   color: #ffffff;
-  background: var(--accent);
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-manrope), Arial, Helvetica, sans-serif;
+}
+
+.font-mono-ui {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
