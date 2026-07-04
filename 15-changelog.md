@@ -37,7 +37,7 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ### Added
 
-- Добавлена pending migration `20260704041841_security_hardening_profiles_grants.sql` для закрытия self-escalation через `profiles.role`/`profiles.plan`: `authenticated` получает `UPDATE` только на `first_name`, `last_name`, `display_name`, `avatar_url`.
+- Добавлена и применена в live Supabase migration `20260704041841_security_hardening_profiles_grants.sql` для закрытия self-escalation через `profiles.role`/`profiles.plan`: `authenticated` получает `UPDATE` только на `first_name`, `last_name`, `display_name`, `avatar_url`.
 - Миграция снимает legacy `TRUNCATE`/`REFERENCES`/`TRIGGER` grants с `anon`/`authenticated` на публичных Arena-таблицах `profiles`, `tasks`, `model_responses`, `models`, `votes`.
 - Storage avatar UPDATE policy пересоздаётся с явным `WITH CHECK`, идентичным `USING`, как defense-in-depth против будущего policy drift.
 - `08-database.md` и `SECURITY.md` зафиксировали post-migration модель ownership/grants для `profiles`.
