@@ -778,7 +778,9 @@ async function introspectGrantChecks(client, schemaName) {
              rg.expected,
              COALESCE(
                CASE
-                 WHEN to_regclass(format('%I.%I', rg.schema_name, rg.table_name)) IS NULL THEN false
+                 WHEN rg.kind IN ('table', 'column')
+                  AND to_regclass(format('%I.%I', rg.schema_name, rg.table_name)) IS NULL
+                 THEN false
                  WHEN rg.kind = 'column'
                   AND NOT EXISTS (
                     SELECT 1
@@ -802,13 +804,13 @@ async function introspectGrantChecks(client, schemaName) {
                    rg.privilege_name
                  )
                  WHEN rg.kind = 'routine'
-                 THEN COALESCE(
-                   has_function_privilege(
-                     rg.grantee::name,
-                     to_regprocedure(format('%I.%I(%s)', rg.schema_name, rg.table_name, rg.column_name)),
-                     rg.privilege_name
-                   ),
-                   false
+                 THEN EXISTS (
+                   SELECT 1
+                     FROM information_schema.routine_privileges rp
+                    WHERE rp.routine_schema = rg.schema_name
+                      AND rp.routine_name = rg.table_name
+                      AND rp.grantee = rg.grantee
+                      AND rp.privilege_type = rg.privilege_name
                  )
                  ELSE false
                END,
@@ -827,8 +829,8 @@ async function introspectGrantChecks(client, schemaName) {
     table:     row.target_table,
     column:    row.target_column,
     privilege: row.privilege,
-    expected:  row.expected,
-    actual:    row.actual,
+    expected:  row.expected === true || row.expected === "true",
+    actual:    row.actual === true || row.actual === "true",
   }));
 }
 
