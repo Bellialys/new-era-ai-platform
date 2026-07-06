@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
-    "@supabase/supabase-js": "^2.108.2",
+    "@supabase/supabase-js": "^2.110.0",
     "highlight.js": "^11.11.1",
     "next": "^16.2.9",
     "pg": "^8.22.0",
