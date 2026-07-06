@@ -1,5 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import {
+  ADMIN_MUTATION_RATE_LIMIT_MAX_REQUESTS,
+  ADMIN_MUTATION_RATE_LIMIT_WINDOW_MS,
+} from "@/lib/arena/constants";
+import { checkRateLimit } from "./rate-limit";
 import { ApiError } from "./utils";
 import { getSupabaseServerClient } from "./supabase";
 
@@ -59,4 +64,12 @@ export async function requireAdmin(): Promise<{ userId: string }> {
   }
 
   return { userId };
+}
+
+export async function checkAdminMutationRateLimit(actorId: string, scope: string) {
+  return checkRateLimit(
+    `admin:mutation:${scope}:${actorId}`,
+    ADMIN_MUTATION_RATE_LIMIT_MAX_REQUESTS,
+    ADMIN_MUTATION_RATE_LIMIT_WINDOW_MS
+  );
 }

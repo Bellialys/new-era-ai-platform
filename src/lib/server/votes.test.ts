@@ -176,9 +176,11 @@ describe("saveBestVote", () => {
 describe("getBlindReveal", () => {
   function createRevealClient({
     isBlind,
+    vote = { id: VOTE_ID },
     responses = [],
   }: {
     isBlind: boolean;
+    vote?: { id: string } | null;
     responses?: Array<{ id: string; display_name: string | null; model_key: string }>;
   }) {
     const taskQuery = {
@@ -186,6 +188,14 @@ describe("getBlindReveal", () => {
       eq: vi.fn(function (this: typeof taskQuery) { return this; }),
       maybeSingle: vi.fn().mockResolvedValue({
         data: { is_blind: isBlind },
+        error: null,
+      }),
+    };
+    const voteQuery = {
+      select: vi.fn(function (this: typeof voteQuery) { return this; }),
+      eq: vi.fn(function (this: typeof voteQuery) { return this; }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: vote,
         error: null,
       }),
     };
@@ -199,23 +209,62 @@ describe("getBlindReveal", () => {
     };
 
     return {
-      from: vi.fn((table: string) => (table === "tasks" ? taskQuery : responsesQuery)),
-      builders: { taskQuery, responsesQuery },
+      from: vi.fn((table: string) => {
+        if (table === "tasks") {
+          return taskQuery;
+        }
+        if (table === "votes") {
+          return voteQuery;
+        }
+        return responsesQuery;
+      }),
+      builders: { taskQuery, voteQuery, responsesQuery },
     };
   }
+
+  it("returns null without a single voter identity", async () => {
+    const client = createRevealClient({ isBlind: true });
+    getClientMock.mockReturnValue(client);
+
+    await expect(getBlindReveal({ taskId: TASK_ID })).resolves.toBeNull();
+
+    expect(getClientMock).not.toHaveBeenCalled();
+    expect(client.from).not.toHaveBeenCalled();
+  });
 
   it("returns null when Supabase is not configured", async () => {
     getClientMock.mockReturnValue(null);
 
-    await expect(getBlindReveal(TASK_ID)).resolves.toBeNull();
+    await expect(getBlindReveal({ taskId: TASK_ID, userId: USER_ID })).resolves.toBeNull();
   });
 
   it("returns null for a non-blind task", async () => {
     const client = createRevealClient({ isBlind: false });
     getClientMock.mockReturnValue(client);
 
-    await expect(getBlindReveal(TASK_ID)).resolves.toBeNull();
+    await expect(getBlindReveal({ taskId: TASK_ID, anonymousSessionId: ANON_ID })).resolves.toBeNull();
     expect(client.from).toHaveBeenCalledWith("tasks");
+    expect(client.builders.taskQuery.eq).toHaveBeenCalledWith("anonymous_session_id", ANON_ID);
+    expect(client.from).not.toHaveBeenCalledWith("votes");
+    expect(client.from).not.toHaveBeenCalledWith("model_responses");
+  });
+
+  it("returns null until the same identity has a best vote", async () => {
+    const client = createRevealClient({
+      isBlind: true,
+      vote: null,
+      responses: [
+        { id: RESPONSE_ID, display_name: "Real Model", model_key: "provider/real" },
+      ],
+    });
+    getClientMock.mockReturnValue(client);
+
+    await expect(getBlindReveal({ taskId: TASK_ID, userId: USER_ID })).resolves.toBeNull();
+
+    expect(client.builders.taskQuery.eq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(client.builders.voteQuery.eq).toHaveBeenCalledWith("task_id", TASK_ID);
+    expect(client.builders.voteQuery.eq).toHaveBeenCalledWith("vote_type", "best");
+    expect(client.builders.voteQuery.eq).toHaveBeenCalledWith("user_id", USER_ID);
     expect(client.from).not.toHaveBeenCalledWith("model_responses");
   });
 
@@ -229,7 +278,7 @@ describe("getBlindReveal", () => {
     });
     getClientMock.mockReturnValue(client);
 
-    await expect(getBlindReveal(TASK_ID)).resolves.toEqual([
+    await expect(getBlindReveal({ taskId: TASK_ID, userId: USER_ID })).resolves.toEqual([
       {
         responseId: RESPONSE_ID,
         modelName: "Real Model",
@@ -241,6 +290,8 @@ describe("getBlindReveal", () => {
         modelKey: "provider/fallback",
       },
     ]);
+    expect(client.builders.taskQuery.eq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(client.builders.voteQuery.eq).toHaveBeenCalledWith("user_id", USER_ID);
     expect(client.builders.responsesQuery.order).toHaveBeenCalledWith("created_at", {
       ascending: true,
     });

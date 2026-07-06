@@ -5,11 +5,18 @@ import { NextRequest } from "next/server";
 // Hoist mocks before any module is imported.
 // ---------------------------------------------------------------------------
 
-const { resolveIdentityMock, checkRateLimitMock, getApiKeyMock, getClientMock } = vi.hoisted(() => ({
+const {
+  resolveIdentityMock,
+  checkRateLimitMock,
+  getApiKeyMock,
+  getClientMock,
+  lookupMock,
+} = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   getApiKeyMock: vi.fn(),
   getClientMock: vi.fn(),
+  lookupMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -25,6 +32,10 @@ vi.mock("@/lib/server", async (importOriginal) => {
 });
 
 // Stub fetch globally — no real network calls in tests.
+vi.mock("node:dns/promises", () => ({
+  lookup: lookupMock,
+}));
+
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
@@ -68,19 +79,61 @@ function mockOpenRouterError(status = 500, message = "provider error"): Response
   } as unknown as Response;
 }
 
+function mockImageDownload(options?: {
+  contentType?: string;
+  contentLength?: string;
+  byteLength?: number;
+}): Response {
+  const byteLength = options?.byteLength ?? 4;
+  const bytes = new Uint8Array(byteLength);
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({
+      "content-type": options?.contentType ?? "image/png",
+      ...(options?.contentLength ? { "content-length": options.contentLength } : {}),
+    }),
+    arrayBuffer: () => Promise.resolve(bytes.buffer.slice(0)),
+  } as unknown as Response;
+}
+
+function mockStorageClient(publicUrl = "https://storage.example/arena-images/generated.png") {
+  const uploadMock = vi.fn().mockResolvedValue({ error: null });
+  const getPublicUrlMock = vi.fn().mockReturnValue({ data: { publicUrl } });
+  const fromMock = vi.fn().mockReturnValue({
+    upload: uploadMock,
+    getPublicUrl: getPublicUrlMock,
+  });
+
+  return {
+    client: { storage: { from: fromMock } },
+    uploadMock,
+    getPublicUrlMock,
+  };
+}
+
 beforeEach(() => {
   resolveIdentityMock.mockReset();
   checkRateLimitMock.mockReset();
   getApiKeyMock.mockReset();
   getClientMock.mockReset();
+  lookupMock.mockReset();
   fetchMock.mockReset();
 
   // Happy-path defaults: authenticated user, not rate-limited, no Storage, provider succeeds.
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
   checkRateLimitMock.mockResolvedValue({ limited: false, remaining: 4, resetAt: Date.now() + 60_000 });
   getApiKeyMock.mockReturnValue("test-api-key");
-  getClientMock.mockReturnValue(null); // no Storage — uploadToStorage falls back to original URL
-  fetchMock.mockResolvedValue(mockOpenRouterSuccess());
+  getClientMock.mockReturnValue(mockStorageClient().client);
+  lookupMock.mockResolvedValue([{ address: "203.0.113.10", family: 4 }]);
+  fetchMock.mockImplementation((url: string | URL | Request) => {
+    const value = typeof url === "string" ? url : url.toString();
+    return Promise.resolve(
+      value === OPENROUTER_IMAGE_API_URL
+        ? mockOpenRouterSuccess()
+        : mockImageDownload()
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -233,7 +286,9 @@ describe("POST /api/image-compare — request validation", () => {
 describe("POST /api/image-compare — image generation", () => {
   it("returns 200 with taskId and results array on success", async () => {
     const imageUrl = "https://cdn.openrouter.ai/img/generated.png";
-    fetchMock.mockResolvedValue(mockOpenRouterSuccess(imageUrl));
+    fetchMock
+      .mockResolvedValueOnce(mockOpenRouterSuccess(imageUrl))
+      .mockResolvedValueOnce(mockImageDownload());
 
     const res = await POST(makeRequest(VALID_BODY));
     const body = await res.json() as { taskId?: string; results?: unknown[] };
@@ -246,7 +301,11 @@ describe("POST /api/image-compare — image generation", () => {
 
   it("result contains modelId, modelName, and imageUrl on success", async () => {
     const imageUrl = "https://cdn.openrouter.ai/img/generated.png";
-    fetchMock.mockResolvedValue(mockOpenRouterSuccess(imageUrl));
+    const storage = mockStorageClient("https://storage.example/arena-images/generated.png");
+    getClientMock.mockReturnValue(storage.client);
+    fetchMock
+      .mockResolvedValueOnce(mockOpenRouterSuccess(imageUrl))
+      .mockResolvedValueOnce(mockImageDownload());
 
     const res = await POST(makeRequest(VALID_BODY));
     const body = await res.json() as {
@@ -257,7 +316,7 @@ describe("POST /api/image-compare — image generation", () => {
     expect(result?.modelId).toBe(VALID_MODEL);
     expect(typeof result?.modelName).toBe("string");
     // No Storage configured → URL is the original OpenRouter URL
-    expect(result?.imageUrl).toBe(imageUrl);
+    expect(result?.imageUrl).toBe("https://storage.example/arena-images/generated.png");
   });
 
   it("returns 200 with error field in the result when the provider returns non-OK", async () => {
@@ -345,5 +404,104 @@ describe("POST /api/image-compare — security", () => {
       expect.anything(),
       expect.anything()
     );
+  });
+
+  it("rejects non-HTTPS provider image URLs before returning them to the client", async () => {
+    fetchMock.mockResolvedValueOnce(mockOpenRouterSuccess("http://cdn.openrouter.ai/img/generated.png"));
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as {
+      results?: Array<{ imageUrl?: string | null; error?: string }>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.results?.[0]?.imageUrl).toBeNull();
+    expect(body.results?.[0]?.error).toBe("Provider returned an unsupported image URL");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects provider image URLs outside the approved CDN host allowlist", async () => {
+    fetchMock.mockResolvedValueOnce(mockOpenRouterSuccess("https://attacker.example/img/generated.png"));
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as {
+      results?: Array<{ imageUrl?: string | null; error?: string }>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.results?.[0]?.imageUrl).toBeNull();
+    expect(body.results?.[0]?.error).toBe("Provider returned an unsupported image URL");
+    expect(lookupMock).not.toHaveBeenCalledWith("attacker.example", expect.anything());
+  });
+
+  it("rejects approved CDN hosts that resolve to private addresses", async () => {
+    lookupMock.mockResolvedValue([{ address: "127.0.0.1", family: 4 }]);
+    fetchMock.mockResolvedValueOnce(mockOpenRouterSuccess("https://cdn.openrouter.ai/img/generated.png"));
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as {
+      results?: Array<{ imageUrl?: string | null; error?: string }>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.results?.[0]?.imageUrl).toBeNull();
+    expect(body.results?.[0]?.error).toBe("Provider returned an unsupported image URL");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("stores only HTTPS provider images with an allowed MIME type", async () => {
+    const imageUrl = "https://cdn.openrouter.ai/img/generated.webp";
+    const storage = mockStorageClient("https://storage.example/arena-images/generated.webp");
+    getClientMock.mockReturnValue(storage.client);
+    fetchMock
+      .mockResolvedValueOnce(mockOpenRouterSuccess(imageUrl))
+      .mockResolvedValueOnce(mockImageDownload({ contentType: "image/webp" }));
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as {
+      results?: Array<{ imageUrl?: string }>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.results?.[0]?.imageUrl).toBe("https://storage.example/arena-images/generated.webp");
+    expect(storage.uploadMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\.webp$/),
+      expect.any(ArrayBuffer),
+      { contentType: "image/webp", upsert: true }
+    );
+  });
+
+  it("does not upload provider image responses that exceed the byte limit", async () => {
+    const imageUrl = "https://cdn.openrouter.ai/img/generated.png";
+    const storage = mockStorageClient();
+    getClientMock.mockReturnValue(storage.client);
+    fetchMock
+      .mockResolvedValueOnce(mockOpenRouterSuccess(imageUrl))
+      .mockResolvedValueOnce(mockImageDownload({ contentLength: String(9 * 1024 * 1024) }));
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as {
+      results?: Array<{ imageUrl?: string | null; error?: string }>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.results?.[0]?.imageUrl).toBeNull();
+    expect(body.results?.[0]?.error).toBe("Provider image failed validation");
+    expect(storage.uploadMock).not.toHaveBeenCalled();
+  });
+
+  it("does not return raw provider URLs when Storage is not configured", async () => {
+    const imageUrl = "https://cdn.openrouter.ai/img/generated.png";
+    getClientMock.mockReturnValue(null);
+    fetchMock.mockResolvedValueOnce(mockOpenRouterSuccess(imageUrl));
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as {
+      results?: Array<{ imageUrl?: string | null; error?: string }>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.results?.[0]?.imageUrl).toBeNull();
+    expect(body.results?.[0]?.error).toBe("Image storage is not configured");
   });
 });

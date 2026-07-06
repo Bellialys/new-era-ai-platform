@@ -7,6 +7,23 @@ import rehypeHighlight from "rehype-highlight";
 
 type CP = { children?: React.ReactNode };
 
+export function sanitizeMarkdownUrl(href: string | undefined): string | undefined {
+  if (!href) return undefined;
+  const value = href.trim();
+  if (!value) return undefined;
+
+  if (value.startsWith("#") || value.startsWith("/")) {
+    return value;
+  }
+
+  try {
+    const url = new URL(value);
+    return ["http:", "https:", "mailto:"].includes(url.protocol) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const components: any = {
   h1: ({ children }: CP) => (
@@ -71,16 +88,23 @@ const components: any = {
 
   hr: () => <hr className="my-4 border-white/10" />,
 
-  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-violet-300 underline underline-offset-2 transition hover:text-violet-100"
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+    const safeHref = sanitizeMarkdownUrl(href);
+    if (!safeHref) {
+      return <span className="text-slate-200">{children}</span>;
+    }
+
+    return (
+      <a
+        href={safeHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-violet-300 underline underline-offset-2 transition hover:text-violet-100"
+      >
+        {children}
+      </a>
+    );
+  },
 
   table: ({ children }: CP) => (
     <div className="my-3 overflow-x-auto">

@@ -36,6 +36,7 @@ import type { ResolvedModel } from "@/lib/server/model-catalog";
 // SSE helpers
 // ---------------------------------------------------------------------------
 const enc = new TextEncoder();
+const PUBLIC_STREAM_MODEL_ERROR_MESSAGE = "Model response failed. Please try again.";
 
 function sse(event: string, data: unknown): Uint8Array {
   return enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -167,7 +168,7 @@ async function streamOneModel(
     return { text: accumulated, latencyMs, inputTokens, outputTokens, success: true };
   } catch (err) {
     if (signal.aborted) return { text: "", latencyMs: 0, inputTokens: null, outputTokens: null, success: false, errorCode: "ABORTED", errorMessage: "Aborted" };
-    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("stream-compare model stream failed:", err);
     controller.enqueue(sse("model_error", {
       modelId: wire.id,
       response: {
@@ -177,10 +178,18 @@ async function streamOneModel(
         status: "error",
         answerText: null,
         errorCode: "NETWORK_ERROR",
-        errorMessage: msg,
+        errorMessage: PUBLIC_STREAM_MODEL_ERROR_MESSAGE,
       },
     }));
-    return { text: "", latencyMs: Date.now() - startTime, inputTokens: null, outputTokens: null, success: false, errorCode: "NETWORK_ERROR", errorMessage: msg };
+    return {
+      text: "",
+      latencyMs: Date.now() - startTime,
+      inputTokens: null,
+      outputTokens: null,
+      success: false,
+      errorCode: "NETWORK_ERROR",
+      errorMessage: PUBLIC_STREAM_MODEL_ERROR_MESSAGE,
+    };
   }
 }
 
@@ -380,7 +389,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   if (identity.kind === "guest") {
     const maxAge = 60 * 60 * 24 * 30;
-    headers["Set-Cookie"] = `na_guest=${identity.guestId}; HttpOnly; SameSite=Lax; Max-Age=${maxAge}; Path=/`;
+    const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    headers["Set-Cookie"] = `na_guest=${identity.guestId}; HttpOnly; SameSite=Lax; Max-Age=${maxAge}; Path=/${secure}`;
   }
 
   return new Response(stream, { headers });

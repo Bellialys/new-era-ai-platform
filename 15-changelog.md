@@ -16,6 +16,26 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## SECURITY: fix(vote): enforce task ownership before blind reveal - 2026-07-05
+
+### Fixed
+
+- `POST /api/vote` теперь передаёт server-resolved identity в blind reveal lookup; раскрытие `modelKey`/`display_name` возможно только для владельца задачи после его best vote.
+- `getBlindReveal()` дополнительно проверяет ownership `tasks` и наличие `vote_type = 'best'` для той же identity перед чтением `model_responses`.
+- Добавлена миграция `20260705221427_enforce_vote_task_ownership.sql`: `cast_best_vote` возвращает `TASK_NOT_FOUND`, если `task_id` не принадлежит `p_user_id`/`p_anon_id`, сохраняя `SECURITY INVOKER` и execute только для `service_role`.
+- Добавлены regression tests для user/guest identity-scoped reveal и отказа раскрытия при rejected vote.
+
+## SECURITY: fix(admin): harden admin mutations and plan enum - 2026-07-05
+
+### Fixed
+
+- Admin write routes `PATCH /api/admin/users/[id]` и `PATCH /api/admin/models/[id]` получили отдельный mutation rate limit `admin:mutation:<scope>:<actorId>`.
+- `PATCH /api/admin/users/[id]` теперь блокирует self-demotion и demotion последнего admin до записи в `profiles`.
+- Canonical `profiles.plan` закреплён как `free`/`pro`; добавлена миграция `20260705223415_align_profiles_plan_pro.sql`, profile UI и docs больше не используют `premium` как user plan.
+- Direct Supabase Data API access к `models` выровнен с `access_level` через миграцию `20260705223814_enforce_models_access_level_rls.sql`; `schema:check` теперь проверяет profile plan constraint, model grants, access-level RLS policies и `cast_best_vote` body/execute grants.
+- Закрыты low-risk hardening gaps: markdown links получили explicit URL policy, Code Arena framework теперь allowlisted по language, `stream-compare` больше не стримит raw exception messages, `SECURITY.md` больше не заявляет неподтверждённые SOC2/enterprise controls.
+- `POST /api/image-compare` больше не возвращает raw provider image URLs: разрешён только approved CDN host с public DNS, MIME/size validation и успешный Storage upload; иначе модель получает controlled error.
+
 ## Database v2 Foundation - 2026-06-28
 
 ### Added (PR25, PR26)
@@ -46,6 +66,7 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ### Fixed
 
+- `GET /api/history/[taskId]` теперь маскирует `selectedModels` как `Модель A/B/...` для blind-задач без best vote текущей identity; regression test закрывает утечку реальных model id/name через detail response.
 - `GET /api/history` теперь маскирует `selectedModels` как `Модель A/B/...` для blind-задач без best vote текущей identity, сохраняя корректный `modelCount`.
 - `POST /api/compare` возвращает `400 VALIDATION_ERROR` для `blind: true` и направляет blind-запуски на `POST /api/stream-compare`.
 - `scripts/check-env.mjs --mode=basic` выводит неблокирующий Upstash/KV status в build-log, чтобы fallback на per-instance in-memory rate limiting был видимым.
@@ -74,7 +95,7 @@ v2.0.0-alpha.1 - AI Team Mode
 
 - Добавлена pending migration `20260703221900_tasks_is_blind.sql` для `tasks.is_blind boolean not null default false`; миграцию нужно применить в production Supabase до merge кода TASK-3.
 - `POST /api/stream-compare` принимает `blind: true`, серверно shuffle-ит выбранные модели и отдаёт в SSE только `slot-a`/`slot-b` и `Модель A`/`Модель B`, сохраняя реальные model identity только в Supabase persistence.
-- `POST /api/vote` для blind-задач возвращает `reveal[]` после успешного best vote.
+- `POST /api/vote` для blind-задач возвращает `reveal[]` после успешного best vote текущей identity.
 - `GET /api/tasks/[taskId]` и `GET /api/history/[taskId]` маскируют `modelKey/displayName` до best vote текущей identity.
 - Обновлены API/database/decision docs и тесты для blind SSE, reveal, task detail и history masking.
 

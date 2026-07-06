@@ -113,6 +113,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("POST /api/stream-compare blind mode", () => {
@@ -162,5 +163,35 @@ describe("POST /api/stream-compare blind mode", () => {
     expect(saveArenaRunMock).toHaveBeenCalledTimes(1);
     const [[saveInput]] = saveArenaRunMock.mock.calls as [[{ isBlind?: boolean }]];
     expect(saveInput.isBlind).toBe(false);
+  });
+
+  it("sets Secure on refreshed guest cookies in production streams", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    resolveIdentityMock.mockResolvedValue({
+      kind: "guest",
+      userId: null,
+      guestId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    });
+
+    const response = await POST(makeRequest({}));
+    await response.text();
+
+    const cookie = response.headers.get("set-cookie");
+    expect(cookie).toContain("na_guest=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("SameSite=Lax");
+    expect(cookie).toContain("Secure");
+  });
+
+  it("does not stream raw provider exception messages to the browser", async () => {
+    fetchMock.mockRejectedValue(new Error("provider trace with secret-token=abc123"));
+
+    const response = await POST(makeRequest({}));
+    const text = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(text).toContain("Model response failed. Please try again.");
+    expect(text).not.toContain("secret-token=abc123");
+    expect(text).not.toContain("provider trace");
   });
 });
