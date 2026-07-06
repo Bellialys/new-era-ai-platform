@@ -16,8 +16,9 @@
  *   node scripts/check-env.mjs --help | --version
  *
  * Environment variables:
- *   ENV_CHECK_DIR       Override base directory for .env / .gitignore lookup
- *   ENV_CHECK_DEBUG=1   Print stack traces on unexpected errors
+ *   ENV_CHECK_DIR                              Override base directory for .env / .gitignore lookup
+ *   ENV_CHECK_CI_ALLOW_IN_MEMORY_RATE_LIMIT=1 Accept in-memory rate limiting in CI env checks
+ *   ENV_CHECK_DEBUG=1                          Print stack traces on unexpected errors
  *
  * Exit codes:
  *   0  success
@@ -129,8 +130,9 @@ Options:
   --version, -v       Show version from package.json
 
 Environment variables:
-  ENV_CHECK_DIR       Override base directory for .env / .gitignore lookup
-  ENV_CHECK_DEBUG=1   Print stack traces on unexpected errors
+  ENV_CHECK_DIR                              Override base directory for .env / .gitignore lookup
+  ENV_CHECK_CI_ALLOW_IN_MEMORY_RATE_LIMIT=1 Accept in-memory rate limiting in CI env checks
+  ENV_CHECK_DEBUG=1                          Print stack traces on unexpected errors
 
 Exit codes:
   0  all required variables present and valid
@@ -349,11 +351,22 @@ function findDuplicateKeys() {
 }
 
 /** Non-blocking build-log visibility for the production rate-limit backend. */
-function checkUpstashRateLimitBackend() {
+function checkUpstashRateLimitBackend({ allowInMemoryFallback = false } = {}) {
   const configured = Boolean(
     (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
       (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
   );
+
+  if (!configured && allowInMemoryFallback) {
+    return {
+      name: "upstash rate limit backend",
+      status: STATUS.OK,
+      required: false,
+      category: "observability",
+      message: "in-memory fallback explicitly allowed for CI",
+      displayLine: "OK  upstash rate limit backend: in-memory fallback explicitly allowed for CI",
+    };
+  }
 
   return configured
     ? {
@@ -472,6 +485,9 @@ function run() {
 
   // CI mode: accept common truthy values, not just "true".
   const isCi = flags.ci || CI_TRUTHY.has((process.env.CI ?? "").toLowerCase());
+  const allowInMemoryRateLimit =
+    isCi &&
+    CI_TRUTHY.has((process.env.ENV_CHECK_CI_ALLOW_IN_MEMORY_RATE_LIMIT ?? "").toLowerCase());
 
   const details = [];
 
@@ -493,7 +509,7 @@ function run() {
   const inMode = config.variables.filter((v) => v.groups.includes(flags.mode));
   for (const variable of inMode) details.push(checkVariable(variable));
   if (flags.mode === "basic") {
-    details.push(checkUpstashRateLimitBackend());
+    details.push(checkUpstashRateLimitBackend({ allowInMemoryFallback: allowInMemoryRateLimit }));
   }
 
   // 3. Non-blocking warnings.
