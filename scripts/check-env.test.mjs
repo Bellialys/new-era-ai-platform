@@ -56,6 +56,7 @@ const SENSITIVE_INHERITED = [
   "UPSTASH_REDIS_REST_TOKEN",
   "KV_REST_API_URL",
   "KV_REST_API_TOKEN",
+  "ENV_CHECK_CI_ALLOW_IN_MEMORY_RATE_LIMIT",
   "CI",
   "VERCEL",
   "VERCEL_ENV",
@@ -344,6 +345,41 @@ describe("check-env.mjs", { concurrency: true }, () => {
       assert.ok(
         stdout.includes("WARN upstash not set — rate limiting falls back to per-instance in-memory"),
       );
+      assert.ok(stdout.includes("ENV CHECK PASSED"));
+    }));
+
+    it("allows the in-memory rate limit fallback only when CI explicitly opts in", withRunner((r) => {
+      const { code, stdout, stderr } = r.run(["--mode=basic"], {
+        ...TEST_VALUES,
+        CI: "true",
+        ENV_CHECK_CI_ALLOW_IN_MEMORY_RATE_LIMIT: "1",
+      });
+
+      assertNoLeaks("stdout", stdout);
+      assertNoLeaks("stderr", stderr);
+      assert.strictEqual(code, 0);
+      assert.ok(
+        stdout.includes(
+          "OK  upstash rate limit backend: in-memory fallback explicitly allowed for CI",
+        ),
+      );
+      assert.ok(!stdout.includes("WARN upstash not set"));
+      assert.ok(stdout.includes("ENV CHECK PASSED"));
+    }));
+
+    it("does not hide the Upstash warning outside CI even when the opt-in flag is set", withRunner((r) => {
+      const { code, stdout, stderr } = r.run(["--mode=basic"], {
+        ...TEST_VALUES,
+        ENV_CHECK_CI_ALLOW_IN_MEMORY_RATE_LIMIT: "1",
+      });
+
+      assertNoLeaks("stdout", stdout);
+      assertNoLeaks("stderr", stderr);
+      assert.strictEqual(code, 0);
+      assert.ok(
+        stdout.includes("WARN upstash not set — rate limiting falls back to per-instance in-memory"),
+      );
+      assert.ok(!stdout.includes("in-memory fallback explicitly allowed for CI"));
       assert.ok(stdout.includes("ENV CHECK PASSED"));
     }));
 

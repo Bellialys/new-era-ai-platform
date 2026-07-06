@@ -39,6 +39,7 @@ npm run test:env-check       # тесты самого чекера
 
 ```text
 OK  upstash rate limit backend: configured
+OK  upstash rate limit backend: in-memory fallback explicitly allowed for CI
 WARN upstash not set — rate limiting falls back to per-instance in-memory
 ```
 
@@ -47,6 +48,13 @@ WARN upstash not set — rate limiting falls back to per-instance in-memory
 `(UPSTASH_REDIS_REST_TOKEN || KV_REST_API_TOKEN)`. Предупреждение `WARN` не
 меняет exit code и не блокирует build; оно нужно только для постоянной
 наблюдаемости в build-log.
+
+В GitHub Actions допускается явный CI-only override
+`ENV_CHECK_CI_ALLOW_IN_MEMORY_RATE_LIMIT=1`. Он работает только когда включен
+CI-режим (`CI=true` или `--ci`) и переводит отсутствие Upstash/KV backend в
+`OK`, чтобы CI-логи не создавали ложный шум. Этот override не заменяет
+production-конфигурацию: в Vercel Production должны оставаться реальные
+`UPSTASH_REDIS_REST_*` или `KV_REST_API_*`.
 
 ## 3. Как работает загрузка переменных
 
