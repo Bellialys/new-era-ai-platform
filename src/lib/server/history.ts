@@ -139,6 +139,18 @@ function normalizeSelectedModels(value: unknown): string[] {
   return value.filter((entry): entry is string => typeof entry === "string");
 }
 
+function visibleSelectedModels(
+  selectedModels: string[],
+  isBlind: boolean | null,
+  hasWinner: boolean
+): string[] {
+  if (Boolean(isBlind) && !hasWinner) {
+    return selectedModels.map((_, index) => blindSlotName(index));
+  }
+
+  return selectedModels;
+}
+
 function isAllowedModeSlug(modeSlug: string): boolean {
   return (ALLOWED_MODE_SLUGS as readonly string[]).includes(modeSlug);
 }
@@ -236,17 +248,13 @@ export async function listHistory({
   const items: HistoryListItem[] = pageRows.map((row) => {
     const selectedModels = normalizeSelectedModels(row.selected_models);
     const hasWinner = winnerTaskIds.has(row.id);
-    const visibleSelectedModels =
-      Boolean(row.is_blind) && !hasWinner
-        ? selectedModels.map((_, index) => blindSlotName(index))
-        : selectedModels;
 
     return {
       taskId: row.id,
       modeSlug: row.mode_slug,
       taskText: row.task_text,
       status: row.status,
-      selectedModels: visibleSelectedModels,
+      selectedModels: visibleSelectedModels(selectedModels, row.is_blind, hasWinner),
       modelCount: selectedModels.length,
       createdAt: row.created_at,
       hasWinner,
@@ -333,7 +341,9 @@ export async function getHistoryTask({
   const winnerResponseId =
     (winnerData as { model_response_id: string } | null)?.model_response_id ?? null;
 
-  const shouldMaskModels = Boolean(task.is_blind) && !winnerResponseId;
+  const hasWinner = winnerResponseId !== null;
+  const shouldMaskModels = Boolean(task.is_blind) && !hasWinner;
+  const selectedModels = normalizeSelectedModels(task.selected_models);
 
   const responses: HistoryResponseItem[] = ((responseData ?? []) as ResponseRow[]).map((row, index) => ({
     responseId: row.id,
@@ -352,7 +362,7 @@ export async function getHistoryTask({
     modeSlug: task.mode_slug,
     taskText: task.task_text,
     status: task.status,
-    selectedModels: normalizeSelectedModels(task.selected_models),
+    selectedModels: visibleSelectedModels(selectedModels, task.is_blind, hasWinner),
     settings: (task.settings ?? {}) as Record<string, unknown>,
     createdAt: task.created_at,
     errorMessage: task.error_message,

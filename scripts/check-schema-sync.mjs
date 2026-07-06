@@ -203,8 +203,47 @@ const REQUIRED_GENERATED_COLUMNS = [
 
 const REQUIRED_FUNCTIONS = [
   {
-    name:             "cast_best_vote",
-    argumentIncludes: ["p_task_id uuid", "p_response_id uuid", "p_user_id uuid", "p_anon_id text"],
+    name:               "cast_best_vote",
+    argumentIncludes:   ["p_task_id uuid", "p_response_id uuid", "p_user_id uuid", "p_anon_id text"],
+    securityDefiner:    false,
+    definitionIncludes: [
+      "where id = p_task_id and (",
+      "(p_user_id is not null and user_id = p_user_id)",
+      "(p_anon_id is not null and anonymous_session_id = p_anon_id)",
+      "v_task_status = 'running'",
+    ],
+    definitionExcludes: ["security definer"],
+  },
+];
+
+const REQUIRED_CHECK_CONSTRAINTS = [
+  {
+    id:                 "profiles_plan_check_free_pro",
+    table:              "profiles",
+    name:               "profiles_plan_check",
+    definitionIncludes: ["'free'::text", "'pro'::text"],
+    definitionExcludes: ["'premium'::text"],
+  },
+];
+
+const REQUIRED_RLS_POLICIES = [
+  {
+    id: "models_anon_access_level_policy",
+    table: "models",
+    name: "Anon can read active anonymous models",
+    command: "SELECT",
+    roles: ["anon"],
+    usingIncludes: ["is_active", "access_level", "anonymous"],
+    usingExcludes: ["is_public"],
+  },
+  {
+    id: "models_authenticated_access_level_policy",
+    table: "models",
+    name: "Authenticated can read active allowed models",
+    command: "SELECT",
+    roles: ["authenticated"],
+    usingIncludes: ["is_active", "access_level", "anonymous", "registered", "profiles", "pro", "admin"],
+    usingExcludes: ["is_public"],
   },
 ];
 
@@ -244,10 +283,16 @@ const PUBLIC_ARENA_TABLES_WITHOUT_LEGACY_PUBLIC_DDL_GRANTS = [
 const LEGACY_PUBLIC_DDL_PRIVILEGES = ["TRUNCATE", "REFERENCES", "TRIGGER"];
 
 const SERVICE_ROLE_REQUIRED_TABLE_GRANTS = [
+  { table: "models", privilege: "SELECT" },
   { table: "votes", privilege: "SELECT" },
   { table: "votes", privilege: "INSERT" },
   { table: "votes", privilege: "UPDATE" },
   { table: "votes", privilege: "DELETE" },
+];
+
+const MODELS_DATA_API_SELECT_GRANTS = [
+  { grantee: "anon", table: "models", privilege: "SELECT" },
+  { grantee: "authenticated", table: "models", privilege: "SELECT" },
 ];
 
 const REQUIRED_GRANT_CHECKS = [
@@ -297,6 +342,41 @@ const REQUIRED_GRANT_CHECKS = [
     privilege,
     expected:  true,
   })),
+  ...MODELS_DATA_API_SELECT_GRANTS.map(({ grantee, table, privilege }) => ({
+    id:        `${grantee}_${table}_${privilege.toLowerCase()}_allowed`,
+    kind:      "table",
+    grantee,
+    table,
+    privilege,
+    expected:  true,
+  })),
+  {
+    id:        "service_role_cast_best_vote_execute_allowed",
+    kind:      "routine",
+    grantee:   "service_role",
+    table:     "cast_best_vote",
+    column:    "uuid, uuid, uuid, text",
+    privilege: "EXECUTE",
+    expected:  true,
+  },
+  {
+    id:        "anon_cast_best_vote_execute_denied",
+    kind:      "routine",
+    grantee:   "anon",
+    table:     "cast_best_vote",
+    column:    "uuid, uuid, uuid, text",
+    privilege: "EXECUTE",
+    expected:  false,
+  },
+  {
+    id:        "authenticated_cast_best_vote_execute_denied",
+    kind:      "routine",
+    grantee:   "authenticated",
+    table:     "cast_best_vote",
+    column:    "uuid, uuid, uuid, text",
+    privilege: "EXECUTE",
+    expected:  false,
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -454,10 +534,10 @@ async function queryWithRetry(client, query, maxAttempts = 3) {
 
 /**
  * @typedef {{ isGenerated: string; generationExpression: string | null }} ColumnInfo
- * @typedef {{ name: string; arguments: string[] }} FunctionInfo
+ * @typedef {{ arguments: string; definition: string; securityDefiner: boolean }} FunctionInfo
  * @typedef {{ public: boolean; fileSizeLimit: number | null; allowedMimeTypes: string[] | null }} StorageBucketInfo
  * @typedef {{
- *   id: string; kind: "table" | "column"; grantee: string; schema: string;
+ *   id: string; kind: "table" | "column" | "routine"; grantee: string; schema: string;
  *   table: string; column: string | null; privilege: string; expected: boolean; actual: boolean;
  * }} GrantCheckResult
  *
@@ -466,9 +546,11 @@ async function queryWithRetry(client, query, maxAttempts = 3) {
  * @returns {Promise<{
  *   tables: Set<string>;
  *   columns: Map<string, Map<string, ColumnInfo>>;
- *   functions: Map<string, string[]>;
+ *   functions: Map<string, FunctionInfo[]>;
  *   storageBuckets: Map<string, StorageBucketInfo>;
  *   storageError: string | null;
+ *   checkConstraints: Map<string, { table: string; name: string; definition: string }>;
+ *   rlsPolicies: Map<string, { table: string; name: string; command: string; roles: string[]; usingExpression: string }>;
  *   grantChecks: GrantCheckResult[];
  * }>}
  */
@@ -490,7 +572,9 @@ async function introspect(client, schemaName) {
 
   const functionsResult = await queryWithRetry(client, {
     text: `SELECT p.proname AS function_name,
-                  pg_catalog.pg_get_function_identity_arguments(p.oid) AS arguments
+                  pg_catalog.pg_get_function_identity_arguments(p.oid) AS arguments,
+                  pg_catalog.pg_get_functiondef(p.oid) AS definition,
+                  p.prosecdef AS security_definer
              FROM pg_catalog.pg_proc p
              JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
             WHERE n.nspname = $1
@@ -516,13 +600,91 @@ async function introspect(client, schemaName) {
   const functions = new Map();
   for (const row of functionsResult.rows) {
     if (!functions.has(row.function_name)) functions.set(row.function_name, []);
-    functions.get(row.function_name).push(row.arguments ?? "");
+    functions.get(row.function_name).push({
+      arguments:       row.arguments ?? "",
+      definition:      row.definition ?? "",
+      securityDefiner: Boolean(row.security_definer),
+    });
   }
 
   const { storageBuckets, storageError } = await introspectStorageBuckets(client);
+  const checkConstraints = await introspectCheckConstraints(client, schemaName);
+  const rlsPolicies = await introspectRlsPolicies(client, schemaName);
   const grantChecks = await introspectGrantChecks(client, schemaName);
 
-  return { tables, columns, functions, storageBuckets, storageError, grantChecks };
+  return {
+    tables,
+    columns,
+    functions,
+    storageBuckets,
+    storageError,
+    checkConstraints,
+    rlsPolicies,
+    grantChecks,
+  };
+}
+
+async function introspectCheckConstraints(client, schemaName) {
+  if (REQUIRED_CHECK_CONSTRAINTS.length === 0) return new Map();
+
+  const result = await queryWithRetry(client, {
+    text: `
+      SELECT c.relname AS table_name,
+             con.conname AS constraint_name,
+             pg_get_constraintdef(con.oid) AS constraint_def
+        FROM pg_constraint con
+        JOIN pg_class c ON c.oid = con.conrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = $1
+         AND con.contype = 'c'
+         AND con.conname = ANY($2::text[])`,
+    values: [schemaName, REQUIRED_CHECK_CONSTRAINTS.map(({ name }) => name)],
+  });
+
+  const constraints = new Map();
+  for (const row of result.rows) {
+    constraints.set(`${row.table_name}.${row.constraint_name}`, {
+      table:      row.table_name,
+      name:       row.constraint_name,
+      definition: row.constraint_def,
+    });
+  }
+  return constraints;
+}
+
+async function introspectRlsPolicies(client, schemaName) {
+  if (REQUIRED_RLS_POLICIES.length === 0) return new Map();
+
+  const result = await queryWithRetry(client, {
+    text: `
+      SELECT tablename AS table_name,
+             policyname AS policy_name,
+             cmd,
+             roles,
+             qual
+        FROM pg_policies
+       WHERE schemaname = $1
+         AND policyname = ANY($2::text[])`,
+    values: [schemaName, REQUIRED_RLS_POLICIES.map(({ name }) => name)],
+  });
+
+  const policies = new Map();
+  for (const row of result.rows) {
+    policies.set(`${row.table_name}.${row.policy_name}`, {
+      table: row.table_name,
+      name: row.policy_name,
+      command: row.cmd,
+      roles: Array.isArray(row.roles)
+        ? row.roles.map(String)
+        : String(row.roles ?? "")
+            .replace(/[{}]/g, "")
+            .split(",")
+            .map((role) => role.trim())
+            .filter(Boolean),
+      usingExpression: row.qual ?? "",
+    });
+  }
+  return policies;
 }
 
 /**
@@ -639,6 +801,15 @@ async function introspectGrantChecks(client, schemaName) {
                    rg.column_name,
                    rg.privilege_name
                  )
+                 WHEN rg.kind = 'routine'
+                 THEN COALESCE(
+                   has_function_privilege(
+                     rg.grantee::name,
+                     to_regprocedure(format('%I.%I(%s)', rg.schema_name, rg.table_name, rg.column_name)),
+                     rg.privilege_name
+                   ),
+                   false
+                 )
                  ELSE false
                END,
                false
@@ -691,7 +862,16 @@ function sortedUniqueStrings(values) {
  * Validates the introspected schema against the project requirements.
  * Returns structured error objects; an empty array means the schema is in sync.
  */
-function validateSchema({ tables, columns, functions, storageBuckets, storageError, grantChecks }) {
+function validateSchema({
+  tables,
+  columns,
+  functions,
+  storageBuckets,
+  storageError,
+  checkConstraints,
+  rlsPolicies,
+  grantChecks,
+}) {
   const errors = [];
 
   for (const table of REQUIRED_TABLES) {
@@ -726,24 +906,127 @@ function validateSchema({ tables, columns, functions, storageBuckets, storageErr
     }
   }
 
-  for (const { name, argumentIncludes } of REQUIRED_FUNCTIONS) {
+  for (
+    const {
+      name,
+      argumentIncludes,
+      securityDefiner,
+      definitionIncludes,
+      definitionExcludes,
+    } of REQUIRED_FUNCTIONS
+  ) {
     const overloads = functions.get(name) ?? [];
     if (overloads.length === 0) {
       errors.push({ type: "FUNCTION_MISSING", functionName: name });
       continue;
     }
 
-    const normalizedOverloads = overloads.map(normalizeSqlFragment);
-    const hasRequiredSignature = normalizedOverloads.some((args) =>
-      argumentIncludes.every((fragment) => args.includes(normalizeSqlFragment(fragment))),
+    const matchingOverload = overloads.find((overload) =>
+      argumentIncludes.every((fragment) =>
+        normalizeSqlFragment(overload.arguments).includes(normalizeSqlFragment(fragment))
+      ),
     );
 
-    if (!hasRequiredSignature) {
+    if (!matchingOverload) {
       errors.push({
         type: "FUNCTION_ARGUMENT_MISMATCH",
         functionName: name,
         argumentIncludes,
-        found: overloads,
+        found: overloads.map(({ arguments: args }) => args),
+      });
+      continue;
+    }
+
+    if (matchingOverload.securityDefiner !== securityDefiner) {
+      errors.push({
+        type: "FUNCTION_SECURITY_MISMATCH",
+        functionName: name,
+        expectedSecurityDefiner: securityDefiner,
+        actualSecurityDefiner: matchingOverload.securityDefiner,
+      });
+    }
+
+    const normalizedDefinition = normalizeSqlFragment(matchingOverload.definition);
+    const missingDefinition = definitionIncludes.filter((fragment) =>
+      !normalizedDefinition.includes(normalizeSqlFragment(fragment))
+    );
+    const forbiddenDefinition = definitionExcludes.filter((fragment) =>
+      normalizedDefinition.includes(normalizeSqlFragment(fragment))
+    );
+
+    if (missingDefinition.length > 0 || forbiddenDefinition.length > 0) {
+      errors.push({
+        type: "FUNCTION_DEFINITION_MISMATCH",
+        functionName: name,
+        missingDefinition,
+        forbiddenDefinition,
+      });
+    }
+  }
+
+  for (const { id, table, name, definitionIncludes, definitionExcludes } of REQUIRED_CHECK_CONSTRAINTS) {
+    if (!tables.has(table)) continue; // TABLE_MISSING already recorded
+
+    const constraint = checkConstraints.get(`${table}.${name}`);
+    if (!constraint) {
+      errors.push({ type: "CHECK_CONSTRAINT_MISSING", id, table, constraint: name });
+      continue;
+    }
+
+    const normalized = normalizeSqlFragment(constraint.definition);
+    const missing = definitionIncludes.filter((fragment) =>
+      !normalized.includes(normalizeSqlFragment(fragment))
+    );
+    const forbidden = definitionExcludes.filter((fragment) =>
+      normalized.includes(normalizeSqlFragment(fragment))
+    );
+
+    if (missing.length > 0 || forbidden.length > 0) {
+      errors.push({
+        type: "CHECK_CONSTRAINT_MISMATCH",
+        id,
+        table,
+        constraint: name,
+        missing,
+        forbidden,
+      });
+    }
+  }
+
+  for (const { id, table, name, command, roles, usingIncludes, usingExcludes } of REQUIRED_RLS_POLICIES) {
+    if (!tables.has(table)) continue; // TABLE_MISSING already recorded
+
+    const policy = rlsPolicies.get(`${table}.${name}`);
+    if (!policy) {
+      errors.push({ type: "RLS_POLICY_MISSING", id, table, policy: name });
+      continue;
+    }
+
+    const normalizedUsing = normalizeSqlFragment(policy.usingExpression);
+    const missingUsing = usingIncludes.filter((fragment) =>
+      !normalizedUsing.includes(normalizeSqlFragment(fragment))
+    );
+    const forbiddenUsing = usingExcludes.filter((fragment) =>
+      normalizedUsing.includes(normalizeSqlFragment(fragment))
+    );
+    const missingRoles = roles.filter((role) => !policy.roles.includes(role));
+
+    if (
+      policy.command !== command ||
+      missingRoles.length > 0 ||
+      missingUsing.length > 0 ||
+      forbiddenUsing.length > 0
+    ) {
+      errors.push({
+        type: "RLS_POLICY_MISMATCH",
+        id,
+        table,
+        policy: name,
+        expectedCommand: command,
+        actualCommand: policy.command,
+        missingRoles,
+        missingUsing,
+        forbiddenUsing,
       });
     }
   }
@@ -837,6 +1120,51 @@ function describeError(err) {
         `Function "${err.functionName}": signature must include ` +
         err.argumentIncludes.map((t) => `"${t}"`).join(", ")
       );
+    case "FUNCTION_SECURITY_MISMATCH":
+      return (
+        `Function "${err.functionName}": security_definer must be ` +
+        `${err.expectedSecurityDefiner}, got ${err.actualSecurityDefiner}`
+      );
+    case "FUNCTION_DEFINITION_MISMATCH":
+      return (
+        `Function "${err.functionName}": definition has an unexpected body` +
+        (err.missingDefinition.length > 0
+          ? `; missing ${err.missingDefinition.map((t) => `"${t}"`).join(", ")}`
+          : "") +
+        (err.forbiddenDefinition.length > 0
+          ? `; forbidden ${err.forbiddenDefinition.map((t) => `"${t}"`).join(", ")}`
+          : "")
+      );
+    case "CHECK_CONSTRAINT_MISSING":
+      return `Missing check constraint: "${err.table}"."${err.constraint}"`;
+    case "CHECK_CONSTRAINT_MISMATCH":
+      return (
+        `Check constraint "${err.table}"."${err.constraint}" has an unexpected definition` +
+        (err.missing.length > 0
+          ? `; missing ${err.missing.map((t) => `"${t}"`).join(", ")}`
+          : "") +
+        (err.forbidden.length > 0
+          ? `; forbidden ${err.forbidden.map((t) => `"${t}"`).join(", ")}`
+          : "")
+      );
+    case "RLS_POLICY_MISSING":
+      return `Missing RLS policy: "${err.table}"."${err.policy}"`;
+    case "RLS_POLICY_MISMATCH":
+      return (
+        `RLS policy "${err.table}"."${err.policy}" has an unexpected definition` +
+        (err.actualCommand !== err.expectedCommand
+          ? `; command must be ${err.expectedCommand}, got ${err.actualCommand}`
+          : "") +
+        (err.missingRoles.length > 0
+          ? `; missing roles ${err.missingRoles.map((t) => `"${t}"`).join(", ")}`
+          : "") +
+        (err.missingUsing.length > 0
+          ? `; missing USING fragments ${err.missingUsing.map((t) => `"${t}"`).join(", ")}`
+          : "") +
+        (err.forbiddenUsing.length > 0
+          ? `; forbidden USING fragments ${err.forbiddenUsing.map((t) => `"${t}"`).join(", ")}`
+          : "")
+      );
     case "STORAGE_METADATA_UNAVAILABLE":
       return `Storage metadata unavailable: storage.buckets cannot be inspected (${err.code})`;
     case "STORAGE_BUCKET_MISSING":
@@ -855,7 +1183,9 @@ function describeError(err) {
       );
     case "GRANT_MISMATCH": {
       const object =
-        err.kind === "column"
+        err.kind === "routine"
+          ? `"${err.schema}"."${err.table}"(${err.column})`
+          : err.kind === "column"
           ? `"${err.schema}"."${err.table}"."${err.column}"`
           : `"${err.schema}"."${err.table}"`;
       const expected = err.expected ? "allowed" : "denied";

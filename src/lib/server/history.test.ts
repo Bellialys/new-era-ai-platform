@@ -7,6 +7,7 @@ vi.mock("./supabase", () => ({
 }));
 
 import { listHistory, getHistoryTask } from "./history";
+import { blindSlotName } from "./utils";
 
 const USER_ID = "33333333-3333-4333-8333-333333333333";
 const ANON_ID = "44444444-4444-4444-8444-444444444444";
@@ -319,6 +320,7 @@ describe("getHistoryTask", () => {
   });
 
   it("masks response model identity for a blind task without a winner vote", async () => {
+    const privateSelectedModels = ["openrouter/private-alpha", "openrouter/private-beta"];
     const client = createClient({
       tasks: {
         data: {
@@ -326,7 +328,7 @@ describe("getHistoryTask", () => {
           mode_slug: "prompt-arena",
           task_text: "compare these",
           status: "completed",
-          selected_models: ["a", "b"],
+          selected_models: privateSelectedModels,
           settings: {},
           created_at: "2026-06-20T10:00:00.000Z",
           error_message: null,
@@ -343,13 +345,17 @@ describe("getHistoryTask", () => {
     const result = await getHistoryTask({ identity: userIdentity, taskId: TASK_ID });
 
     expect(result?.winnerResponseId).toBeNull();
-    expect(result?.responses[0]?.displayName).toBe("Модель A");
+    expect(result?.selectedModels).toEqual([blindSlotName(0), blindSlotName(1)]);
+    expect(result?.responses[0]?.displayName).toBe(blindSlotName(0));
     expect(result?.responses[0]?.modelKey).toBeNull();
+    expect(JSON.stringify(result)).not.toContain(privateSelectedModels[0]);
+    expect(JSON.stringify(result)).not.toContain(privateSelectedModels[1]);
     expect(JSON.stringify(result)).not.toContain("key-R1");
     expect(JSON.stringify(result)).not.toContain("Model R1");
   });
 
   it("reveals response model identity for a blind task after a winner vote", async () => {
+    const privateSelectedModels = ["openrouter/revealed-alpha", "openrouter/revealed-beta"];
     const client = createClient({
       tasks: {
         data: {
@@ -357,7 +363,7 @@ describe("getHistoryTask", () => {
           mode_slug: "prompt-arena",
           task_text: "compare these",
           status: "completed",
-          selected_models: ["a", "b"],
+          selected_models: privateSelectedModels,
           settings: {},
           created_at: "2026-06-20T10:00:00.000Z",
           error_message: null,
@@ -374,6 +380,7 @@ describe("getHistoryTask", () => {
     const result = await getHistoryTask({ identity: userIdentity, taskId: TASK_ID });
 
     expect(result?.winnerResponseId).toBe("R1");
+    expect(result?.selectedModels).toEqual(privateSelectedModels);
     expect(result?.responses[0]?.displayName).toBe("Model R1");
     expect(result?.responses[0]?.modelKey).toBe("key-R1");
   });

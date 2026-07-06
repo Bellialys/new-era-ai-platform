@@ -1,3 +1,5 @@
+import { lookup } from "node:dns/promises";
+import net from "node:net";
 import { NextRequest, NextResponse } from "next/server";
 import { IMAGE_MODELS } from "@/lib/arena/image-models";
 import {
@@ -18,9 +20,123 @@ import {
 
 export const maxDuration = 60;
 
+const PROVIDER_IMAGE_FETCH_TIMEOUT_MS = 10_000;
+const PROVIDER_IMAGE_DNS_TIMEOUT_MS = 2_000;
+const PROVIDER_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+const PROVIDER_IMAGE_ALLOWED_HOSTS = new Set(["cdn.openrouter.ai"]);
+const PROVIDER_IMAGE_CONTENT_TYPES = new Map([
+  ["image/png", "png"],
+  ["image/jpeg", "jpg"],
+  ["image/webp", "webp"],
+]);
+
 interface ImageGenerationResult {
   data?: { url?: string }[];
   error?: { message?: string; code?: string | number };
+}
+
+function parseProviderImageUrl(value: string): URL | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+function isPrivateOrLocalAddress(address: string): boolean {
+  const family = net.isIP(address);
+  if (family === 4) {
+    const [first = 0, second = 0, third = 0] = address.split(".").map(Number);
+    return (
+      first === 0 ||
+      first === 10 ||
+      first === 127 ||
+      first >= 224 ||
+      (first === 100 && second >= 64 && second <= 127) ||
+      (first === 169 && second === 254) ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168) ||
+      (first === 192 && second === 0 && third === 0)
+    );
+  }
+
+  if (family === 6) {
+    const normalized = address.toLowerCase();
+    return (
+      normalized === "::1" ||
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd") ||
+      normalized.startsWith("fe80") ||
+      normalized.startsWith("::ffff:127.") ||
+      normalized.startsWith("::ffff:10.") ||
+      normalized.startsWith("::ffff:192.168.")
+    );
+  }
+
+  return true;
+}
+
+async function resolvesToPublicAddresses(hostname: string): Promise<boolean> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const records = await Promise.race([
+      lookup(hostname, { all: true }),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("DNS_LOOKUP_TIMEOUT")), PROVIDER_IMAGE_DNS_TIMEOUT_MS);
+      }),
+    ]);
+    return records.length > 0 && records.every((record) => !isPrivateOrLocalAddress(record.address));
+  } catch {
+    return false;
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+async function getSafeProviderImageUrl(value: string): Promise<URL | null> {
+  const url = parseProviderImageUrl(value);
+  if (!url || !PROVIDER_IMAGE_ALLOWED_HOSTS.has(url.hostname.toLowerCase())) {
+    return null;
+  }
+
+  return (await resolvesToPublicAddresses(url.hostname)) ? url : null;
+}
+
+function getProviderImageType(response: Response): { contentType: string; extension: string } | null {
+  const contentType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+  if (!contentType) return null;
+
+  const extension = PROVIDER_IMAGE_CONTENT_TYPES.get(contentType);
+  return extension ? { contentType, extension } : null;
+}
+
+function exceedsProviderImageLimit(response: Response): boolean {
+  const rawLength = response.headers.get("content-length");
+  if (!rawLength) return false;
+
+  const contentLength = Number(rawLength);
+  return Number.isFinite(contentLength) && contentLength > PROVIDER_IMAGE_MAX_BYTES;
+}
+
+async function readProviderImage(response: Response): Promise<{
+  bytes: ArrayBuffer;
+  contentType: string;
+  extension: string;
+} | null> {
+  const imageType = getProviderImageType(response);
+  if (!imageType || exceedsProviderImageLimit(response)) {
+    return null;
+  }
+
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > PROVIDER_IMAGE_MAX_BYTES) {
+    return null;
+  }
+
+  return { bytes, ...imageType };
 }
 
 async function generateImage(
@@ -54,6 +170,9 @@ async function generateImage(
   if (!url) {
     return { error: "No image URL returned by provider" };
   }
+  if (!(await getSafeProviderImageUrl(url))) {
+    return { error: "Provider returned an unsupported image URL" };
+  }
   return { url };
 }
 
@@ -61,33 +180,42 @@ async function uploadToStorage(
   taskId: string,
   modelId: string,
   imageUrl: string
-): Promise<string> {
+): Promise<{ url: string } | { error: string }> {
   const supabase = getSupabaseServerClient();
   if (!supabase) {
-    return imageUrl;
+    return { error: "Image storage is not configured" };
   }
 
-  let imageBytes: ArrayBuffer;
+  const safeImageUrl = await getSafeProviderImageUrl(imageUrl);
+  if (!safeImageUrl) {
+    return { error: "Provider returned an unsupported image URL" };
+  }
+
+  let image: { bytes: ArrayBuffer; contentType: string; extension: string };
   try {
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) return imageUrl;
-    imageBytes = await imgRes.arrayBuffer();
+    const imgRes = await fetch(safeImageUrl.toString(), {
+      signal: AbortSignal.timeout(PROVIDER_IMAGE_FETCH_TIMEOUT_MS),
+    });
+    if (!imgRes.ok) return { error: "Provider image could not be fetched" };
+    const downloadedImage = await readProviderImage(imgRes);
+    if (!downloadedImage) return { error: "Provider image failed validation" };
+    image = downloadedImage;
   } catch {
-    return imageUrl;
+    return { error: "Provider image could not be fetched" };
   }
 
-  const path = `arena-images/${taskId}/${modelId.replace(/\//g, "-")}.png`;
+  const path = `arena-images/${taskId}/${modelId.replace(/\//g, "-")}.${image.extension}`;
   const { error } = await supabase.storage
     .from("images")
-    .upload(path, imageBytes, { contentType: "image/png", upsert: true });
+    .upload(path, image.bytes, { contentType: image.contentType, upsert: true });
 
   if (error) {
     console.warn("[image-compare] Storage upload failed:", error.message);
-    return imageUrl;
+    return { error: "Image storage upload failed" };
   }
 
   const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return data.publicUrl;
+  return { url: data.publicUrl };
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -169,8 +297,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return { modelId, modelName, imageUrl: null, error: generated.error };
       }
 
-      const imageUrl = await uploadToStorage(taskId, modelId, generated.url);
-      return { modelId, modelName, imageUrl, error: undefined };
+      const uploaded = await uploadToStorage(taskId, modelId, generated.url);
+      if ("error" in uploaded) {
+        return { modelId, modelName, imageUrl: null, error: uploaded.error };
+      }
+      return { modelId, modelName, imageUrl: uploaded.url, error: undefined };
     })
   );
 

@@ -17,7 +17,7 @@ v2.0.0-alpha.1
 # tasks.judge_verdict хранит JSON-вердикт POST /api/judge
 # public.audit_log хранит admin/governance audit events и не открыт anon/authenticated напрямую
 # pending release migration: 20260703221900_tasks_is_blind.sql must be applied before TASK-3 code merge
-# Migration history aligned through 20260628031516_database_v2_foundation
+# Migration history aligned through 20260705223814_enforce_models_access_level_rls
 ```
 
 ## Главная идея базы
@@ -94,7 +94,7 @@ prompt_text
 | `last_name` | text null | Фамилия |
 | `avatar_url` | text null | URL аватара из Supabase Storage |
 | `role` | text | `user`, `admin` |
-| `plan` | text | `free`, `premium` |
+| `plan` | text | `free`, `pro` |
 | `created_at` | timestamptz | Дата создания |
 | `updated_at` | timestamptz | Дата обновления |
 
@@ -319,7 +319,8 @@ Storage bucket и RLS policies должны быть проверены отде
 Атомарная функция для сохранения best vote. Добавлена миграцией
 `20260615191924_atomic_best_vote_rpc.sql` и усилена release-gate migration
 `20260617212741_reconcile_release_gate_security_and_models.sql`, затем расширена
-миграцией `20260703182026_vote_gate_task_running.sql`.
+миграцией `20260703182026_vote_gate_task_running.sql`, затем усилена
+миграцией `20260705221427_enforce_vote_task_ownership.sql`.
 
 Сигнатура:
 
@@ -338,7 +339,7 @@ set search_path = public
 Поведение:
 
 - Если у данного пользователя/guest уже есть best vote на этот `task_id` — заменяет его (upsert по уникальному индексу).
-- Если `task_id` не найден — возвращает RPC exception `TASK_NOT_FOUND`.
+- Если `task_id` не найден или не принадлежит `p_user_id`/`p_anon_id` — возвращает RPC exception `TASK_NOT_FOUND`.
 - Если `tasks.status = 'running'` — возвращает RPC exception `TASK_STILL_RUNNING`; голосование открывается после завершения всех моделей.
 - Возвращает запись `public.votes`.
 - Функция работает как `SECURITY INVOKER`; execute grant оставлен только для
@@ -509,6 +510,9 @@ with check (true);
 | `20260703182026_vote_gate_task_running.sql` | Усиливает `cast_best_vote`: блокирует best vote, пока `tasks.status = 'running'` |
 | `20260703221900_tasks_is_blind.sql` | Добавляет `tasks.is_blind boolean not null default false` для server-side Blind Arena SSE |
 | `20260704041841_security_hardening_profiles_grants.sql` | P0: колоночный `UPDATE` grant на `profiles` (только `first_name`, `last_name`, `display_name`, `avatar_url`); P1: revoke legacy `TRUNCATE`/`REFERENCES`/`TRIGGER` с `anon`/`authenticated` на публичных Arena-таблицах; hardening: явный `WITH CHECK` для Storage avatar UPDATE policy |
+| `20260705221427_enforce_vote_task_ownership.sql` | Усиливает `cast_best_vote`: best vote разрешён только владельцу `tasks.user_id`/`tasks.anonymous_session_id`; execute остаётся только у `service_role` |
+| `20260705223415_align_profiles_plan_pro.sql` | Закрепляет canonical `profiles.plan` как `free`/`pro` и мигрирует legacy `premium` в `pro` |
+| `20260705223814_enforce_models_access_level_rls.sql` | Выравнивает direct Data API SELECT на `models` с `access_level`: anon=`anonymous`, authenticated=`anonymous`/`registered`, `pro`/`admin`=`premium` |
 
 Release-gate note:
 

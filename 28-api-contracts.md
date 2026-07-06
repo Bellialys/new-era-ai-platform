@@ -50,6 +50,8 @@ Frontend вызывает только backend route handlers.
 | `DELETE /api/profile/avatar` | 5 req | 60 сек | user UUID (общий счётчик с POST) |
 | `GET /api/admin/audit` | no public quota | admin Supabase session | `requireAdmin()` |
 | `GET /api/admin/usage` | no public quota | admin Supabase session | `requireAdmin()` |
+| `PATCH /api/admin/models/[id]` | 10 req | 60 сек | admin user UUID |
+| `PATCH /api/admin/users/[id]` | 10 req | 60 сек | admin user UUID |
 
 Ответ при превышении:
 
@@ -185,14 +187,16 @@ Streaming-запрос:
 
 - `taskId` и `responseId` должны быть UUID;
 - `responseId` должен принадлежать указанному `taskId`;
+- `taskId` должен принадлежать текущей server-resolved identity (`userId` или `na_guest`); чужие задачи возвращают `404 TASK_NOT_FOUND`;
 - выбирать можно только response со статусом `success`;
 - голосование по задаче со статусом `running` блокируется: `409 TASK_STILL_RUNNING`;
 - актуальная схема БД использует `votes.model_response_id` и `vote_type = 'best'`;
-- для blind-задач успешный best vote может вернуть `reveal` с реальными именами моделей;
+- для blind-задач `reveal` возвращается только после успешного best vote той же identity, которая владеет задачей;
 - старое значение `winner` не должно использоваться в новом frontend-коде или документации.
 
 Ошибки:
 
+- `404 TASK_NOT_FOUND` — задача не существует или не принадлежит текущей identity.
 - `409 TASK_STILL_RUNNING` — задача ещё выполняется; голосование открывается после завершения всех моделей.
 
 Минимальный ответ:
@@ -214,7 +218,7 @@ Streaming-запрос:
 }
 ```
 
-`reveal` присутствует только для задач с `tasks.is_blind = true` после успешного сохранения best vote. Для обычных задач поле отсутствует.
+`reveal` присутствует только для задач с `tasks.is_blind = true` после успешного сохранения best vote текущей identity. Сервер дополнительно проверяет ownership задачи и наличие `vote_type = 'best'` для той же identity перед раскрытием `modelKey`/`display_name`. Для обычных задач поле отсутствует.
 
 Streaming events:
 
@@ -485,6 +489,7 @@ Rules:
 - Список берётся из таблицы `models` (поля `id, display_name, model_key, role_tags, price_label, is_active, access_level`), сортировка по `display_name`. Поле ответа `name` маппится из `display_name`; колонок `name`/`badge` в таблице нет.
 - `badge` — массив: вычисляется через `badgeFromTags(role_tags, price_label)`; единственно возможные значения — `["Free Coding"]`, `["Free Reasoning"]`, `["Free Fast"]` или `["Free"]` (при `price_label === "free"`), иначе пустой массив `[]`.
 - `access_level` берётся из строки модели; если значение отсутствует — подставляется `"registered"`.
+- Direct Supabase Data API SELECT на `models` защищён тем же `access_level` boundary через RLS: `anon` видит только `anonymous`, `authenticated` видит `anonymous`/`registered`, `pro`/`admin` видит также `premium`; frontend всё равно должен использовать backend `/api/models`.
 - `totalResponses` — число строк в `model_responses` с данным `model_id` (агрегируется в памяти; строки с `model_id === null` игнорируются).
 - Возвращает `200` с `{ status: "success", models }`; ошибки — `4xx/5xx` с телом `{ status: "error", errorCode, message, requestId? }`.
 - safe errors include `FORBIDDEN` (403, не admin или нет сессии), `INTERNAL_ERROR` (500, Supabase не сконфигурирован / сбой запроса к `models`).
@@ -514,7 +519,7 @@ Rules:
 ```
 
 Rules:
-- Только `requireAdmin()`; публичной квоты / rate limit нет. Неаутентифицированный пользователь или не-админ → `403 FORBIDDEN`.
+- Только `requireAdmin()`; mutation rate limit `admin:mutation:models.patch:<actorId>` — 10 запросов / 60 000 мс, превышение → `429 RATE_LIMIT` с `Retry-After`. Неаутентифицированный пользователь или не-админ → `403 FORBIDDEN`.
 - Тело должно быть валидным JSON, иначе `400 INVALID_JSON`.
 - Поддерживаются только три поля; каждое опционально, но должно быть передано хотя бы одно:
   - `is_active` — обязательно `boolean`, иначе `400 VALIDATION_ERROR`.
@@ -609,11 +614,12 @@ Rules:
 ```
 
 Rules:
-- Требует `requireAdmin()`; нет публичной квоты / нет rate limit.
+- Требует `requireAdmin()`; mutation rate limit `admin:mutation:users.patch:<actorId>` — 10 запросов / 60 000 мс, превышение → `429 RATE_LIMIT` с `Retry-After`.
 - Тело должно быть валидным JSON, иначе `400 INVALID_JSON`.
 - Оба поля опциональны, но хотя бы одно из `role` / `plan` обязано присутствовать; пустой набор → `400 VALIDATION_ERROR` ("No valid fields to update.").
 - `role` — одно из `user`, `admin`; `plan` — одно из `free`, `pro`. Иначе `400 VALIDATION_ERROR`.
-- Применяет только распознанные поля к строке `profiles` с `id = [id]`; неизвестные ключи игнорируются. Несуществующий `id` не возвращает ошибку — ответ всё равно `{ "status": "success" }`.
+- Применяет только распознанные поля к строке `profiles` с `id = [id]`; неизвестные ключи игнорируются. Несуществующий `id` → `404 USER_NOT_FOUND`.
+- Demotion guard: admin не может понизить собственный аккаунт (`409 ADMIN_SELF_DEMOTION`) или последнего оставшегося admin (`409 ADMIN_LAST_ADMIN`).
 - Перед обновлением читает прежние `role, plan` и пишет аудит-событие `user.role_change` (если менялась роль) либо `user.plan_change` с `payload.before`/`payload.after`. Сбой аудита логируется, но не влияет на ответ.
 - Сбой клиента Supabase или ошибка update → `500 INTERNAL_ERROR`.
 - safe errors include `FORBIDDEN`, `INVALID_JSON`, `VALIDATION_ERROR`, `INTERNAL_ERROR`.
@@ -701,7 +707,7 @@ Query-параметры (все необязательные):
 
 - `taskId` должен быть UUID, иначе `400 VALIDATION_ERROR`;
 - задача, которая не существует **или** не принадлежит вызывающему, возвращает `404 TASK_NOT_FOUND` (существование не раскрывается);
-- для blind-задач без best vote текущей identity `responses[].modelKey = null`, а `displayName` маскируется как `Модель A/B/...`; после best vote текущей identity возвращаются реальные `modelKey` и `displayName`;
+- для blind-задач без best vote текущей identity `selectedModels` маскируется как `Модель A/B/...`, `responses[].modelKey = null`, а `displayName` маскируется как `Модель A/B/...`; после best vote текущей identity возвращаются реальные `selectedModels`, `modelKey` и `displayName`;
 - read-only: история не редактируется и не запускает повторных вызовов моделей.
 
 ## `POST /api/team-run` (v2.0)
@@ -785,7 +791,8 @@ Rules:
 
 - requires a real Supabase authenticated user; guest or unauthenticated → `401 AUTH_REQUIRED`;
 - backend validates `modeSlug = image-arena` and that selected models have image output capability;
-- images are uploaded to Supabase Storage bucket `images` when the server storage client and provider download are available; in alpha degraded mode the response may return the provider URL when storage upload is unavailable or fails;
+- provider image URLs must be `https`, use an approved provider CDN host, resolve to public IP addresses, return an allowed image MIME type, and stay within the server byte limit before upload to Supabase Storage bucket `images`;
+- raw provider image URLs are never returned to the client; if Storage is unavailable, provider fetch validation fails, or upload fails, that model result returns `imageUrl: null` with a controlled `error`;
 - frontend does NOT call image providers directly — only `POST /api/image-compare`;
 - response contains image URLs/metadata, not binary image data or provider secrets;
 - safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INTERNAL_ERROR`.
@@ -1133,7 +1140,7 @@ event: complete
 data: {"status":"success","taskId":"task-uuid","responses":[{"id":"model-response-uuid","modelId":"slot-a","modelName":"Модель A","status":"success","answerText":"полный текст","latencyMs":1234,"errorCode":null,"errorMessage":null}]}
 ```
 
-При ошибке конкретной модели вместо `model_done` отправляется `model_error` (`response.status: "error"`, заполнены `errorCode`/`errorMessage`). Pre-stream ошибки возвращаются как JSON (не SSE).
+При ошибке конкретной модели вместо `model_done` отправляется `model_error` (`response.status: "error"`, заполнены `errorCode`/`errorMessage`). Raw provider/network exception text не стримится клиенту; `NETWORK_ERROR` использует стабильное публичное сообщение. Pre-stream ошибки возвращаются как JSON (не SSE).
 
 Rules:
 - Тело: `prompt` 3–8000 символов (иначе `400 VALIDATION_ERROR`); `modelIds` — массив из 2–5 непустых уникальных строк-`selectionId` (иначе `400 VALIDATION_ERROR`); `modeSlug` опционален (default `"prompt-arena"`), допустимы `prompt-arena`/`code-arena` (иначе `400 INVALID_MODE`). Невалидный JSON → `400 INVALID_JSON`.

@@ -11,6 +11,7 @@ import {
   GUEST_CODE_COMPARE_RATE_LIMIT_WINDOW_MS,
   MODE_SLUG_CODE_ARENA,
   CODE_ARENA_LANGUAGES,
+  CODE_ARENA_FRAMEWORKS,
 } from "@/lib/arena/constants";
 import {
   validatePrompt,
@@ -88,11 +89,27 @@ function validateLanguage(language: unknown): { valid: true; value: string } | {
   return { valid: true, value: clean };
 }
 
-function validateFramework(framework: unknown): string | null {
-  if (framework === null || framework === undefined || framework === "") return null;
-  if (typeof framework !== "string") return null;
+export function validateCodeFramework(
+  framework: unknown,
+  language: string
+): { valid: true; value: string | null } | { valid: false; error: string } {
+  if (framework === null || framework === undefined || framework === "") {
+    return { valid: true, value: null };
+  }
+  if (typeof framework !== "string") {
+    return { valid: false, error: "Framework must be a string." };
+  }
   const clean = framework.trim();
-  return clean || null;
+  if (!clean) {
+    return { valid: true, value: null };
+  }
+
+  const allowed = CODE_ARENA_FRAMEWORKS[language] ?? [];
+  if (!allowed.includes(clean)) {
+    return { valid: false, error: `Framework must be one of: ${allowed.join(", ")}.` };
+  }
+
+  return { valid: true, value: clean };
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<CodeCompareResponse | ReturnType<typeof createErrorResponse>>> {
@@ -165,7 +182,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<CodeCompa
       );
     }
     const cleanLanguage = languageValidation.value;
-    const cleanFramework = validateFramework(framework);
+    const frameworkValidation = validateCodeFramework(framework, cleanLanguage);
+    if (!frameworkValidation.valid) {
+      logApiRequest("POST", "/api/code-compare", 400, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(new ApiError(400, "VALIDATION_ERROR", frameworkValidation.error)),
+        { status: 400 }
+      );
+    }
+    const cleanFramework = frameworkValidation.value;
 
     const promptValidation = validatePrompt(prompt, CODE_PROMPT_MIN_LENGTH, CODE_PROMPT_MAX_LENGTH);
     if (!promptValidation.valid) {

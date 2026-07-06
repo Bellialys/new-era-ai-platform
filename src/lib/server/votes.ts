@@ -10,6 +10,12 @@ type SaveBestVoteInput = {
   anonymousSessionId?: string | null;
 };
 
+type VoteIdentityInput = Pick<SaveBestVoteInput, "userId" | "anonymousSessionId">;
+
+type GetBlindRevealInput = {
+  taskId: string;
+} & VoteIdentityInput;
+
 type SaveBestVoteResult = {
   voteId: string;
   taskId: string;
@@ -35,6 +41,13 @@ export function validateVoteIds(taskId: unknown, responseId: unknown): { taskId:
   }
 
   return { taskId, responseId };
+}
+
+function hasExactlyOneVoterIdentity({
+  userId,
+  anonymousSessionId,
+}: VoteIdentityInput): boolean {
+  return Boolean(userId) !== Boolean(anonymousSessionId);
 }
 
 type CastBestVoteRow = {
@@ -68,7 +81,7 @@ export async function saveBestVote({
     throw new ApiError(503, "DATABASE_NOT_CONFIGURED", "Voting is not available yet.");
   }
 
-  if (!userId && !anonymousSessionId) {
+  if (!hasExactlyOneVoterIdentity({ userId, anonymousSessionId })) {
     throw new ApiError(400, "VOTER_REQUIRED", "Voting requires a session.");
   }
 
@@ -149,6 +162,10 @@ async function getExistingBestVote({
     return null;
   }
 
+  if (!hasExactlyOneVoterIdentity({ userId, anonymousSessionId })) {
+    return null;
+  }
+
   let query = supabase
     .from("votes")
     .select("id, task_id, model_response_id")
@@ -183,18 +200,33 @@ async function getExistingBestVote({
   };
 }
 
-export async function getBlindReveal(taskId: string): Promise<BlindRevealItem[] | null> {
+export async function getBlindReveal({
+  taskId,
+  userId = null,
+  anonymousSessionId = null,
+}: GetBlindRevealInput): Promise<BlindRevealItem[] | null> {
+  if (!hasExactlyOneVoterIdentity({ userId, anonymousSessionId })) {
+    return null;
+  }
+
   const supabase = getSupabaseServerClient();
 
   if (!supabase) {
     return null;
   }
 
-  const { data: task, error: taskError } = await supabase
+  let taskQuery = supabase
     .from("tasks")
     .select("is_blind")
-    .eq("id", taskId)
-    .maybeSingle();
+    .eq("id", taskId);
+
+  if (userId) {
+    taskQuery = taskQuery.eq("user_id", userId);
+  } else {
+    taskQuery = taskQuery.eq("anonymous_session_id", anonymousSessionId);
+  }
+
+  const { data: task, error: taskError } = await taskQuery.maybeSingle();
 
   if (taskError) {
     console.error("Blind reveal task query failed:", taskError);
@@ -202,6 +234,29 @@ export async function getBlindReveal(taskId: string): Promise<BlindRevealItem[] 
   }
 
   if (!(task as { is_blind?: boolean } | null)?.is_blind) {
+    return null;
+  }
+
+  let voteQuery = supabase
+    .from("votes")
+    .select("id")
+    .eq("task_id", taskId)
+    .eq("vote_type", "best");
+
+  if (userId) {
+    voteQuery = voteQuery.eq("user_id", userId);
+  } else {
+    voteQuery = voteQuery.eq("anonymous_session_id", anonymousSessionId);
+  }
+
+  const { data: vote, error: voteError } = await voteQuery.maybeSingle();
+
+  if (voteError) {
+    console.error("Blind reveal vote query failed:", voteError);
+    return null;
+  }
+
+  if (!(vote as { id?: string } | null)?.id) {
     return null;
   }
 

@@ -207,7 +207,11 @@ describe("POST /api/vote — success", () => {
     const body = await res.json() as {
       reveal?: Array<{ responseId?: string; modelName?: string; modelKey?: string }>;
     };
-    expect(getBlindRevealMock).toHaveBeenCalledWith(TASK_ID);
+    expect(getBlindRevealMock).toHaveBeenCalledWith({
+      taskId: TASK_ID,
+      userId: USER_ID,
+      anonymousSessionId: null,
+    });
     expect(body.reveal).toEqual([
       {
         responseId: RESPONSE_ID,
@@ -215,6 +219,20 @@ describe("POST /api/vote — success", () => {
         modelKey: "provider/real-model",
       },
     ]);
+  });
+
+  it("passes the guest identity to blind reveal lookup", async () => {
+    const GUEST_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    resolveIdentityMock.mockResolvedValue({ kind: "guest", userId: null, guestId: GUEST_ID });
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+    expect(getBlindRevealMock).toHaveBeenCalledWith({
+      taskId: TASK_ID,
+      userId: null,
+      anonymousSessionId: GUEST_ID,
+    });
   });
 });
 
@@ -234,5 +252,19 @@ describe("POST /api/vote — save errors", () => {
     expect(res.status).toBe(409);
     expect(body.errorCode).toBe("TASK_STILL_RUNNING");
     expect(body.message).toBe("Voting opens when all models finish. Please wait.");
+    expect(getBlindRevealMock).not.toHaveBeenCalled();
+  });
+
+  it("does not attempt blind reveal when task ownership is rejected", async () => {
+    saveBestVoteMock.mockRejectedValue(
+      new ApiError(404, "TASK_NOT_FOUND", "Task was not found.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { errorCode?: string };
+
+    expect(res.status).toBe(404);
+    expect(body.errorCode).toBe("TASK_NOT_FOUND");
+    expect(getBlindRevealMock).not.toHaveBeenCalled();
   });
 });

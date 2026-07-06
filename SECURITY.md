@@ -1,6 +1,6 @@
 # SECURITY.md
 
-> Этот документ обязателен для SOC 2 Type II и описывает политику безопасности платформы "Новая эпоха".
+> Внутренний draft security policy для платформы "Новая эпоха". Это не SOC 2 Type II evidence package и не внешний disclosure policy, пока не назначены официальные контакты, SLA и процесс сбора доказательств.
 
 ---
 
@@ -9,12 +9,12 @@
 | Роль | Контакт |
 |------|---------|
 | Security Lead | TBD: официальный security mailbox перед public disclosure |
-| Data Protection Officer (DPO) | TBD: официальный DPO/privacy mailbox перед SOC 2/GDPR-ready релизом |
-| Incident Response | TBD: официальный 24/7 incident contact перед enterprise release |
+| Data Protection Officer (DPO) | TBD: официальный DPO/privacy mailbox перед GDPR-ready релизом |
+| Incident Response | TBD: официальный incident contact и escalation rota перед enterprise release |
 
 **Responsible Disclosure:** до настройки официального security mailbox этот документ является внутренним draft-policy и не должен публиковаться как внешний disclosure policy.
 Не публикуйте и не эксплуатируйте уязвимость до координации с командой.
-Мы обязуемся ответить в течение 5 рабочих дней и не преследовать исследователей, действующих добросовестно.
+SLA ответа и safe-harbor wording будут опубликованы только после назначения официального security mailbox и владельца процесса.
 
 ---
 
@@ -139,9 +139,9 @@
 
 | Control | Статус |
 |---------|--------|
-| Append-Only audit log | ✅ Внедрено (PostgreSQL triggers) |
-| Crypto-Shredding GDPR | ✅ Внедрено (v2.8) |
-| RBAC + RLS | ✅ Внедрено |
+| Append-Only audit log | Partial: `audit_log` есть, immutability/evidence retention требуют отдельной проверки |
+| Crypto-Shredding GDPR | Roadmap: не подтверждено текущей реализацией |
+| RBAC + RLS | Partial: Supabase RLS/grants есть для основных таблиц; полный enterprise RBAC не заявлен |
 | Vanta/Drata integration | 📋 Roadmap (v2.8+) |
 | Quarterly Restore Drills | 📋 Roadmap |
 | Penetration Testing | 📋 Annual (v3.0+) |
@@ -155,7 +155,7 @@
 
 - **Append-Only:** PostgreSQL triggers запрещают UPDATE/DELETE на `organization_audit_log`
 - **Что логируется:** все чувствительные действия (login, API key creation, settings change, GDPR request, billing)
-- **Retention:** минимум 1 год для SOC 2, 3 года для Enterprise
+- **Retention:** целевой минимум 1 год для SOC 2 и 3 года для Enterprise; до отдельного retention audit это не считается подтверждённым контролем.
 
 ### Request Logs
 

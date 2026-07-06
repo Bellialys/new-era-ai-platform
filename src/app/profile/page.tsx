@@ -207,7 +207,7 @@ export default function ProfilePage() {
     );
   }
 
-  const planLabel = profile.plan === "premium" ? "Premium" : "Free";
+  const planLabel = profile.plan === "pro" ? "Pro" : "Free";
   const roleLabel = profile.role === "admin" ? "Admin" : "User";
 
   return (
@@ -335,7 +335,7 @@ export default function ProfilePage() {
           <div className="flex justify-between">
             <dt className="text-slate-400">План</dt>
             <dd>
-              <span className={profile.plan === "premium"
+              <span className={profile.plan === "pro"
                 ? "rounded-full bg-violet-600/20 px-2 py-0.5 text-xs font-semibold text-violet-300"
                 : "rounded-full bg-slate-700/50 px-2 py-0.5 text-xs font-semibold text-slate-300"
               }>{planLabel}</span>

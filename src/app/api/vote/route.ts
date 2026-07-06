@@ -111,7 +111,11 @@ export async function POST(
       userId: identity.userId,
       anonymousSessionId: identity.guestId,
     });
-    const reveal = await getBlindReveal(ids.taskId);
+    const reveal = await getBlindReveal({
+      taskId: ids.taskId,
+      userId: identity.userId,
+      anonymousSessionId: identity.guestId,
+    });
 
     logApiRequest("POST", "/api/vote", 200, Date.now() - startTime);
 

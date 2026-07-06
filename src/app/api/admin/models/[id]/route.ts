@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   ApiError,
+  checkAdminMutationRateLimit,
   createErrorResponse,
   logApiRequest,
   requireAdmin,
@@ -28,6 +29,23 @@ export async function PATCH(
 
   try {
     const { userId: actorId } = await requireAdmin();
+
+    const rateLimit = await checkAdminMutationRateLimit(actorId, "models.patch");
+    if (rateLimit.limited) {
+      logApiRequest("PATCH", `/api/admin/models/${id}`, 429, Date.now() - startTime, requestId);
+      return NextResponse.json(
+        createErrorResponse(new ApiError(429, "RATE_LIMIT", "Too many admin mutation requests."), requestId),
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.max(
+              Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+              1
+            ).toString(),
+          },
+        }
+      );
+    }
 
     const supabase = getSupabaseServerClient();
     if (!supabase) throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
