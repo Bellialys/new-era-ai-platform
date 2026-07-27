@@ -132,6 +132,14 @@ npm run env:check
 # проверяет обязательные переменные окружения (без вывода значений секретов)
 ```
 
+## Code intelligence graph
+
+Для структурной навигации и impact analysis проект поддерживает локальный
+`code-review-graph`. Инструмент не входит в runtime-зависимости приложения,
+не нужен для Vercel build и по умолчанию работает без embeddings. Установка,
+MCP-подключение к Codex, команды `graph:*`, измерения пользы и rollback
+описаны в [полном руководстве](docs/tooling/code-review-graph.md).
+
 ## Переменные окружения
 
 Создай `.env.local` на основе `.env.local.example`. Файл `.env.example`

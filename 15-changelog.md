@@ -16,6 +16,23 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Tooling: local code intelligence graph - 2026-07-27
+
+### Added
+
+- Добавлена локальная интеграция `code-review-graph` 2.3.7 без runtime/npm
+  dependency, cloud embeddings и влияния на production build.
+- Добавлены переносимые npm wrapper-команды, read-only диагностика, общий
+  `.code-review-graphignore` и правила graph-first для структурных задач.
+- Зафиксированы baseline, MCP-настройка Codex, Windows runbook, rollback и
+  измеренные token-efficiency результаты для трёх сценариев.
+
+### Decision
+
+- CRG не добавлен в обязательный CI и Git hooks: обновление выполняется
+  вручную или локальным watch mode, а отсутствие Python-инструмента не
+  блокирует commit, test, build или deploy.
+
 ## SECURITY: fix(vote): enforce task ownership before blind reveal - 2026-07-05
 
 ### Fixed

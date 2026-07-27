@@ -103,6 +103,7 @@
     "docs/slo.md",
     "docs/release-checklist.md",
     "docs/privacy-retention.md",
+    "docs/tooling/code-review-graph.md",
     "docs/adr/001-hmac-sha256-vs-bcrypt-for-api-keys.md",
     "docs/adr/002-double-entry-ledger-billing.md",
     "docs/adr/003-reconciliation-alert-only.md",
