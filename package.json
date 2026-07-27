@@ -40,6 +40,13 @@
     "sync:status": "node scripts/git/sync-after-commit.mjs --dry-run",
     "sync:after-commit": "node scripts/git/sync-after-commit.mjs",
     "sync:install-hook": "git config core.hooksPath .githooks && node -e \"const fs=require('fs');fs.readdirSync('.githooks').forEach(f=>fs.chmodSync('.githooks/'+f,'755'))\"",
+    "graph:build": "node scripts/tooling/code-review-graph.mjs build",
+    "graph:update": "node scripts/tooling/code-review-graph.mjs update",
+    "graph:status": "node scripts/tooling/code-review-graph.mjs status",
+    "graph:changes": "node scripts/tooling/code-review-graph.mjs detect-changes --brief",
+    "graph:verify": "node scripts/tooling/code-review-graph.mjs detect-changes --brief --verify",
+    "graph:watch": "node scripts/tooling/code-review-graph.mjs watch",
+    "graph:doctor": "node scripts/tooling/check-code-review-graph.mjs",
     "check": "run-p typecheck lint",
     "verify": "npm run check && npm run build && npm run docs:check",
     "precommit": "lint-staged"
