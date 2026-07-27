@@ -50,6 +50,13 @@ Thumbs.db
 .eslintcache
 .codex/
 
+# code-review-graph (local development tooling only)
+.code-review-graph/
+.code-review-graph.db*
+.crg/
+*.crg.db
+.tools/code-review-graph-venv/
+
 # project state sync (local backups only; state/tasks ARE committed)
 .project/backups/
 supabase/.branches/
