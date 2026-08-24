@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { getAvailableModels, resolveSelectedModels } from "./model-catalog";
+import {
+  getAvailableCodeModels,
+  getAvailableModels,
+  resolveSelectedCodeModels,
+  resolveSelectedModels,
+} from "./model-catalog";
 import { getSupabaseServerClient } from "./supabase";
 import { ALLOWED_MODELS } from "./models";
 import { ApiError } from "./utils";
@@ -10,11 +15,17 @@ vi.mock("./supabase", () => ({
 
 const mockedGetSupabaseServerClient = vi.mocked(getSupabaseServerClient);
 
+const EXPECTED_FALLBACK_CODE_MODEL_IDS = [
+  "poolside/laguna-s-2.1:free",
+  "poolside/laguna-xs-2.1:free",
+  "cohere/north-mini-code:free",
+] as const;
+
 const dbRows = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    model_key: "openai/gpt-oss-120b:free",
-    display_name: "GPT-OSS 120B",
+    model_key: "z-ai/glm-5.2:free",
+    display_name: "GLM 5.2",
     description: "DB model",
     role_tags: ["general", "fast"],
     price_label: "free",
@@ -22,8 +33,8 @@ const dbRows = [
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
-    model_key: "meta-llama/llama-3.3-70b-instruct:free",
-    display_name: "Llama 3.3 70B",
+    model_key: "thinkingmachines/inkling:free",
+    display_name: "Inkling",
     description: null,
     role_tags: ["balanced"],
     price_label: "free",
@@ -60,8 +71,30 @@ describe("model catalog (fallback mode)", () => {
     const models = await getAvailableModels();
     expect(models).toHaveLength(ALLOWED_MODELS.length);
     expect(models[0].id).toBe(ALLOWED_MODELS[0].id);
-    // ArenaModel must not leak any server-only key field
+    // ArenaModel must not leak any server-only fields.
     expect(models[0]).not.toHaveProperty("modelKey");
+    expect(models[0]).not.toHaveProperty("supportsCode");
+  });
+
+  it("returns the exact approved code-capable fallback catalog", async () => {
+    const models = await getAvailableCodeModels();
+
+    expect(models.map((model) => model.id)).toEqual(EXPECTED_FALLBACK_CODE_MODEL_IDS);
+    models.forEach((model) => expect(model).not.toHaveProperty("supportsCode"));
+  });
+
+  it("resolves every approved fallback coding model for Code Arena", async () => {
+    const resolved = await resolveSelectedCodeModels([...EXPECTED_FALLBACK_CODE_MODEL_IDS]);
+
+    expect(resolved.map((model) => model.modelKey)).toEqual(EXPECTED_FALLBACK_CODE_MODEL_IDS);
+    expect(resolved.every((model) => model.supportsCode)).toBe(true);
+  });
+
+  it("rejects a fallback model without explicit code capability", async () => {
+    await expect(resolveSelectedCodeModels([ALLOWED_MODELS[0].id])).rejects.toMatchObject({
+      statusCode: 400,
+      errorCode: "MODEL_NOT_CODE_CAPABLE",
+    });
   });
 
   it("resolveSelectedModels maps selection ids to OpenRouter keys", async () => {

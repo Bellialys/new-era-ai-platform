@@ -1,7 +1,7 @@
 /**
  * Hardcoded model list — the offline fallback for the model catalog.
  *
- * In v0.5.3 the live catalog is read from Supabase (see model-catalog.ts). This
+ * In v2.0.0-alpha.1 the live catalog is read from Supabase (see model-catalog.ts). This
  * list is used only when Supabase is not configured or the `models` table is
  * empty, so the app still works without a database.
  *
@@ -10,75 +10,52 @@
 
 import type { ArenaModel } from "@/types/arena";
 
-// Curated set of free OpenRouter text/chat model keys mirrored by
-// supabase/migrations/0002_sync_free_models.sql. Run `npm run models:verify`
-// before public deploy or whenever this fallback list changes.
+export type LocalArenaModel = ArenaModel & {
+  /** Server-side capability metadata used when Supabase catalog is unavailable. */
+  supportsCode: boolean;
+};
+
+// Curated set of free OpenRouter text/chat model keys mirrored by the latest
+// forward-only catalog migration. Run `npm run models:verify` before public
+// deploy or whenever this fallback list changes.
 // Order matters: the UI preselects the first models.
-export const ALLOWED_MODELS: ArenaModel[] = [
+export const ALLOWED_MODELS: LocalArenaModel[] = [
   // --- General-purpose (default selection) ---
   {
-    id: "openai/gpt-oss-120b:free",
-    name: "GPT-OSS 120B",
+    id: "z-ai/glm-5.2:free",
+    name: "GLM 5.2",
     role: "Сильная general-модель",
     provider: "openrouter",
+    supportsCode: false,
     badge: "Free",
-    description: "Бесплатная открытая модель OpenAI на 120B — сильный универсальный baseline.",
+    description: "Бесплатная универсальная модель Z.AI для сложных инструкций и общих задач.",
   },
   {
-    id: "meta-llama/llama-3.3-70b-instruct:free",
-    name: "Llama 3.3 70B",
-    role: "Сбалансированный instruct",
+    id: "thinkingmachines/inkling:free",
+    name: "Inkling",
+    role: "Сильная reasoning-модель",
     provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная instruct-модель Meta 70B — хороший баланс качества и скорости.",
+    supportsCode: false,
+    badge: "Free Reasoning",
+    description: "Бесплатная модель Thinking Machines для рассуждений и многошаговых задач.",
   },
   {
-    id: "qwen/qwen3-next-80b-a3b-instruct:free",
-    name: "Qwen3 Next 80B",
-    role: "Сбалансированный instruct",
+    id: "thinkingmachines/inkling-small:free",
+    name: "Inkling Small",
+    role: "Быстрое рассуждение",
     provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная instruct-модель Qwen 80B с большим контекстом.",
-  },
-  {
-    id: "google/gemma-4-31b-it:free",
-    name: "Gemma 4 31B",
-    role: "Открытая general-модель",
-    provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная модель Google Gemma 4 для общих ответов, контекст 262K.",
-  },
-  {
-    id: "google/gemma-4-26b-a4b-it:free",
-    name: "Gemma 4 26B A4B",
-    role: "Открытая general-модель (MoE)",
-    provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная MoE-модель Google Gemma 4 — быстрее за счёт активных 4B параметров.",
-  },
-  {
-    id: "nousresearch/hermes-3-llama-3.1-405b:free",
-    name: "Hermes 3 405B",
-    role: "Крупная general-модель",
-    provider: "openrouter",
-    badge: "Free",
-    description: "Бесплатная 405B-модель Nous Research на базе Llama 3.1.",
-  },
-  {
-    id: "openai/gpt-oss-20b:free",
-    name: "GPT-OSS 20B",
-    role: "Быстрая general-модель",
-    provider: "openrouter",
+    supportsCode: false,
     badge: "Free Fast",
-    description: "Бесплатная компактная открытая модель OpenAI 20B для быстрых ответов.",
+    description: "Бесплатная компактная модель Thinking Machines для быстрых рассуждений.",
   },
   {
-    id: "meta-llama/llama-3.2-3b-instruct:free",
-    name: "Llama 3.2 3B",
-    role: "Быстрая лёгкая модель",
+    id: "nvidia/nemotron-3.5-lightning:free",
+    name: "Nemotron 3.5 Lightning",
+    role: "Быстрая agentic-модель",
     provider: "openrouter",
+    supportsCode: false,
     badge: "Free Fast",
-    description: "Бесплатная компактная модель Meta 3B — очень быстрая, для простых задач.",
+    description: "Бесплатная быстрая модель NVIDIA для agentic-сценариев и общих задач.",
   },
 
   // --- Reasoning ---
@@ -87,6 +64,7 @@ export const ALLOWED_MODELS: ArenaModel[] = [
     name: "Nemotron 3 Ultra",
     role: "Глубокое рассуждение",
     provider: "openrouter",
+    supportsCode: false,
     badge: "Free Reasoning",
     description: "Бесплатная reasoning-модель NVIDIA 550B с контекстом 1M.",
   },
@@ -95,59 +73,74 @@ export const ALLOWED_MODELS: ArenaModel[] = [
     name: "Nemotron 3 Super",
     role: "Рассуждение",
     provider: "openrouter",
+    supportsCode: false,
     badge: "Free Reasoning",
-    description: "Бесплатная reasoning-модель NVIDIA 120B, контекст 1M.",
+    description: "Бесплатная reasoning-модель NVIDIA 120B с контекстом 262K.",
   },
   {
-    id: "nvidia/nemotron-3-nano-30b-a3b:free",
-    name: "Nemotron 3 Nano 30B",
-    role: "Лёгкое рассуждение",
+    id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    name: "Nemotron 3 Nano Omni",
+    role: "Компактное рассуждение",
     provider: "openrouter",
+    supportsCode: false,
     badge: "Free Reasoning",
-    description: "Бесплатная компактная reasoning-модель NVIDIA 30B.",
+    description: "Бесплатная компактная omni reasoning-модель NVIDIA 30B.",
   },
   {
-    id: "nvidia/nemotron-nano-9b-v2:free",
-    name: "Nemotron Nano 9B",
-    role: "Быстрое рассуждение",
+    id: "google/gemma-4-31b-it:free",
+    name: "Gemma 4 31B",
+    role: "Открытая general-модель",
     provider: "openrouter",
-    badge: "Free Fast",
-    description: "Бесплатная маленькая reasoning-модель NVIDIA 9B для быстрых ответов.",
+    supportsCode: false,
+    badge: "Free",
+    description: "Бесплатная модель Google Gemma 4 для общих ответов, контекст 262K.",
   },
-
+  {
+    id: "google/gemma-4-26b-a4b-it:free",
+    name: "Gemma 4 26B A4B",
+    role: "Открытая general-модель (MoE)",
+    provider: "openrouter",
+    supportsCode: false,
+    badge: "Free",
+    description: "Бесплатная MoE-модель Google Gemma 4 — быстрее за счёт активных 4B параметров.",
+  },
   // --- Coding ---
   {
-    id: "qwen/qwen3-coder:free",
-    name: "Qwen3 Coder 480B",
+    id: "poolside/laguna-s-2.1:free",
+    name: "Laguna S 2.1",
     role: "Coding / code-oriented",
     provider: "openrouter",
+    supportsCode: true,
     badge: "Free Coding",
-    description: "Бесплатная крупная code-модель Qwen3 Coder 480B с контекстом 1M.",
+    description: "Бесплатная code-oriented модель Poolside для сложных задач программирования.",
   },
   {
-    id: "poolside/laguna-m.1:free",
-    name: "Laguna M.1",
+    id: "poolside/laguna-xs-2.1:free",
+    name: "Laguna XS 2.1",
     role: "Coding / code-oriented",
     provider: "openrouter",
-    badge: "Free Coding",
-    description: "Бесплатная code-oriented модель Poolside для задач по программированию.",
-  },
-  {
-    id: "poolside/laguna-xs.2:free",
-    name: "Laguna XS.2",
-    role: "Coding / code-oriented",
-    provider: "openrouter",
+    supportsCode: true,
     badge: "Free Coding",
     description: "Бесплатная компактная code-oriented модель Poolside для быстрых coding-сравнений.",
   },
-
-  // --- Compact / experimental ---
   {
-    id: "liquid/lfm-2.5-1.2b-instruct:free",
-    name: "LFM 2.5 1.2B",
+    id: "cohere/north-mini-code:free",
+    name: "North Mini Code",
+    role: "Coding / code-oriented",
+    provider: "openrouter",
+    supportsCode: true,
+    badge: "Free Coding",
+    description: "Бесплатная компактная модель Cohere, оптимизированная для программирования.",
+  },
+
+  // --- Compact ---
+  {
+    id: "liquid/lfm-2.5-2.6b:free",
+    name: "LFM 2.5 2.6B",
     role: "Сверхбыстрая лёгкая модель",
     provider: "openrouter",
+    supportsCode: false,
     badge: "Free Fast",
-    description: "Бесплатная очень маленькая instruct-модель LiquidAI 1.2B для мгновенных ответов.",
+    description: "Бесплатная компактная модель LiquidAI 2.6B для быстрых ответов.",
   },
 ];

@@ -66,9 +66,10 @@ v2.0.0-alpha.1 - AI Team Mode
 - Leaderboard;
 - admin routes для audit/usage/model/user management;
 - Code Arena Runner через внешний Piston runner для авторизованных пользователей;
-- подготовленные governance metadata для model catalog без утверждения live-verification OpenRouter IDs;
+- P0 provider recovery: локальный curated catalog из 13 text IDs проверен по OpenRouter discovery 2026-08-24; production Supabase alignment ожидает forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`;
 - AI Team Mode: `POST /api/team-run` (auth gate, rate 3/10 min, 4 роли) + страница `/team` за feature flag; current runtime persistence: `tasks` + `model_responses`;
-- Image Arena backend: `POST /api/image-compare` alpha (auth only, Supabase Storage with degraded provider-URL fallback);
+- Image Arena backend: `POST /api/image-compare` alpha (auth only), provider `POST /api/v1/images`, base64 raster validation и обязательный Supabase Storage upload без provider-URL fallback;
+- обязательный scheduled `models:verify`: text/Team/Judge/Image discovery ежедневно в `03:17 UTC` и вручную; secret `OPENROUTER_API_KEY` scoped только к live-step и пока ожидается, поэтому monitoring ещё не operational. Pull request CI запускает только `test:models-verify` с mock discovery без provider secret и сам по себе не подтверждает live catalog;
 - DB v2 Foundation: 8 таблиц аналитики и истории (`usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`); миграция создана, не применена; runtime writes to `usage_events` and `team_runs`/`team_run_steps` are planned for v2.1.
 
 Текущий release-gate для v2.0:
@@ -78,6 +79,8 @@ v2.0.0-alpha.1 - AI Team Mode
 # AI Team Mode в alpha за feature flag NEXT_PUBLIC_ENABLE_TEAM_MODE ✅
 # DB v2 Foundation файл создан; применить в Supabase Dashboard перед stable
 # Upstash Redis требует настройки в Vercel перед stable release
+# P0 model catalog migration и Actions OPENROUTER_API_KEY ожидают owner configuration
+# paid Image generation/Storage smoke не запускался
 # Перевод в stable только после full smoke-test на production окружении
 ```
 
@@ -1030,14 +1033,15 @@ OWASP ASVS, OWASP LLM Top 10, NIST SSDF, SLSA, ISO 27001/SOC 2 readiness, Google
 
 ## Image Arena MVP
 
-Цель: добавить будущий визуальный режим только после стабильной Prompt Arena, Storage, лимитов и safety-контролей.
+Цель: стабилизировать текущий auth-only alpha визуального режима после Stable Prompt Arena, Storage, лимитов и safety-контролей.
 
 Главный сценарий:
 
 - пользователь вводит одну визуальную идею;
-- выбирает 2-3 image-capable модели;
-- backend вызывает модели через OpenRouter;
-- изображения сохраняются в Supabase Storage в стабильном режиме; текущий alpha backend может вернуть provider URL, если Storage upload/fetch недоступен;
+- выбирает 1-3 image-capable модели;
+- backend вызывает registered-only модели через OpenRouter `POST /api/v1/images` с portable body `model`, `prompt`, `n: 1`, `aspect_ratio: "1:1"`;
+- provider base64 декодируется server-side; разрешены только PNG/JPEG/WebP до 5 MiB;
+- проверенные raster bytes напрямую сохраняются в Supabase Storage; отсутствие Storage client даёт fail-fast `503 IMAGE_STORAGE_UNAVAILABLE` до provider fan-out, а ошибка отдельной generation/upload возвращает controlled per-model error и `imageUrl: null`, без raw provider URL/base64 fallback;
 - metadata и storage path сохраняются в Supabase PostgreSQL после выделенной Image Arena persistence-задачи;
 - пользователь сравнивает сетку изображений и выбирает победителя.
 

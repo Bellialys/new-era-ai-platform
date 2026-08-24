@@ -16,6 +16,27 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## P0 Provider Recovery - 2026-08-24
+
+### Changed
+
+- Server fallback catalog заменён на 13 бесплатных text-моделей, подтверждённых OpenRouter discovery 2026-08-24; Team default переведён на `nvidia/nemotron-3-super-120b-a12b:free`.
+- Judge использует `nvidia/nemotron-3-ultra-550b-a55b:free` как primary и `nvidia/nemotron-3-super-120b-a12b:free` как fallback.
+- Image catalog полностью заменён registered-only моделями `openai/gpt-image-1-mini`, `google/gemini-3.1-flash-lite-image` и `black-forest-labs/flux.2-klein-4b`.
+- Image provider integration переведена на `POST /api/v1/images`: общий body содержит `model`, `prompt`, `n: 1`, `aspect_ratio: "1:1"`; ответ `data[].b64_json` декодируется server-side, сверяется по raster signature/MIME и лимиту 5 MiB, затем напрямую загружается в Supabase Storage. Raw provider URL и base64 клиенту не возвращаются; отдельная ошибка модели сохраняет partial results остальных моделей.
+
+### Added
+
+- Forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`: старые OpenRouter rows сохраняются для истории, но деактивируются; curated recovery set upsert-ится по `model_key`.
+- `models:verify` расширен на text fallback catalog, Team default, Judge primary/fallback и Image catalog: проверяются минимальный text count, уникальные непустые IDs, text/image output modalities, различие Judge primary/fallback и Image parameters `aspect_ratio`/`n`. Scheduled GitHub Actions workflow запускает verifier tests и fail-closed live verification ежедневно в `03:17 UTC` и через `workflow_dispatch`; Pull request CI запускает только mock `test:models-verify` без provider secret.
+- `POST /api/image-compare` проверяет Storage configuration до платного provider fan-out и возвращает `503 IMAGE_STORAGE_UNAVAILABLE`, если результат заведомо невозможно сохранить; transient upload failures остаются изолированными per-model.
+
+### Release gates
+
+- Migration подготовлена, но её применение к production Supabase ожидает owner/reviewer gate.
+- Scheduled/manual live-step требует repository secret `OPENROUTER_API_KEY`; добавление секрета в GitHub Actions пока ожидается. Secret не передаётся mock-тесту в Pull request CI. Schedule является operational monitoring, а не branch-protected PR gate.
+- Paid Image generation smoke не запускался; discovery и локальные contract tests не подтверждают фактическую платную генерацию/Storage upload в production.
+
 ## SECURITY: fix(vote): enforce task ownership before blind reveal - 2026-07-05
 
 ### Fixed

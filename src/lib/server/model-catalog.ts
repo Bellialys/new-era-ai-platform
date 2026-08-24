@@ -3,7 +3,7 @@
  *
  * Supabase models is the primary source of available models for both
  * /api/models and /api/compare. The hardcoded list in models.ts is an offline
- * fallback and must mirror the seed in supabase/migrations/0002_sync_free_models.sql.
+ * fallback and must mirror the latest forward-only model catalog migration.
  *
  * Access level filtering (v0.6.2):
  *   anonymous  → guests and authenticated users see these models
@@ -123,7 +123,7 @@ function fallbackCatalog(identity: RequestIdentity | null): ResolvedModel[] {
     badge: model.badge,
     description: model.description,
     accessLevel: "anonymous" as const,
-    supportsCode: false,
+    supportsCode: model.supportsCode,
   }));
 }
 

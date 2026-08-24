@@ -24,6 +24,7 @@
 
 - Prompt Arena;
 - Code Arena;
+- Image Arena;
 - Multi Model Battle;
 - AI Team Mode;
 - Judge Mode;
@@ -49,11 +50,11 @@ Endpoint должен возвращать только модели, досту
 
 ---
 
-## 3.1. MVP status v0.5.3
+## 3.1. Runtime status v2.0.0-alpha.1
 
 `32-model-catalog-governance.md` описывает целевой стандарт зрелого каталога моделей.
 
-Текущая MVP-схема меньше и использует:
+Текущая Supabase-схема меньше и использует:
 
 - `model_key`;
 - `provider`;
@@ -67,7 +68,7 @@ Endpoint должен возвращать только модели, досту
 - `max_output_tokens`;
 - `raw_metadata`.
 
-Не нужно добавлять все governance-поля в таблицу сразу. В `v0.5.3` подготовительные значения для будущего governance хранятся в `raw_metadata`:
+Не нужно добавлять все governance-поля в таблицу сразу. Подготовительные значения хранятся в `raw_metadata`:
 
 - `pricing_type`;
 - `status`;
@@ -77,7 +78,41 @@ Endpoint должен возвращать только модели, досту
 - `supports_image_generation`;
 - `verification_status`.
 
-Важно: в этом репозитории нет OpenRouter API key, поэтому model IDs не считаются live-verified в рамках `v0.5.3`. Перед public deploy нужно отдельно проверить ключи через OpenRouter `/api/v1/models` и обновить `verification_status`.
+P0 recovery catalog проверен по OpenRouter discovery 2026-08-24. Canonical text set:
+
+```text
+z-ai/glm-5.2:free
+thinkingmachines/inkling:free
+thinkingmachines/inkling-small:free
+nvidia/nemotron-3.5-lightning:free
+nvidia/nemotron-3-ultra-550b-a55b:free
+nvidia/nemotron-3-super-120b-a12b:free
+nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+google/gemma-4-31b-it:free
+google/gemma-4-26b-a4b-it:free
+poolside/laguna-s-2.1:free
+poolside/laguna-xs-2.1:free
+cohere/north-mini-code:free
+liquid/lfm-2.5-2.6b:free
+```
+
+Canonical registered-only Image set:
+
+```text
+openai/gpt-image-1-mini
+google/gemini-3.1-flash-lite-image
+black-forest-labs/flux.2-klein-4b
+```
+
+До выделенной image-model persistence-задачи источником этой тройки является общий typed allowlist `src/lib/arena/image-models.ts`: текущий UI импортирует его напрямую, а `GET /api/image-models` возвращает identity-filtered проекцию того же списка. Отдельного дублирующего каталога нет.
+
+Runtime defaults также входят в verification scope:
+
+- Team default: `nvidia/nemotron-3-super-120b-a12b:free`;
+- Judge primary: `nvidia/nemotron-3-ultra-550b-a55b:free`;
+- Judge fallback: `nvidia/nemotron-3-super-120b-a12b:free`.
+
+Локальный fallback text catalog обновлён сразу. Production `public.models` должен быть выровнен forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`; до применения migration через owner/reviewer gate live DB catalog нельзя считать синхронизированным.
 
 ---
 
@@ -124,11 +159,10 @@ Endpoint должен возвращать только модели, досту
 
 Примеры:
 
-- `qwen/qwen3-next-80b-a3b-instruct:free`
+- `z-ai/glm-5.2:free`
 - `google/gemma-4-31b-it:free`
 - `nvidia/nemotron-3-ultra-550b-a55b:free`
-- `openai/gpt-4o-mini`
-- `anthropic/claude-3-5-sonnet`
+- `openai/gpt-image-1-mini`
 
 Правила:
 
@@ -281,6 +315,19 @@ Fallback должен быть предсказуемым.
 Если модель заявлена как image input модель, дополнительно проверить простой image prompt.
 
 Если модель заявлена как JSON-mode модель, дополнительно проверить структурированный ответ.
+
+### 12.1. Continuous provider verification
+
+`npm run models:verify` обязан fail closed, если:
+
+- любой ID из `src/lib/server/models.ts` отсутствует в text discovery;
+- локальный text catalog содержит меньше `MODEL_MIN_SELECT` моделей или выбранная модель не объявляет output modality `text`;
+- Team default или Judge primary/fallback отсутствует в text discovery либо не входит в local allowlist;
+- Judge primary совпадает с Judge fallback;
+- любой ID из `src/lib/arena/image-models.ts` отсутствует в image discovery, не объявляет output modality `image` или parameters `aspect_ratio`/`n`;
+- text/image discovery вернул пустой catalog либо локальные каталоги содержат дубликаты или пустые IDs.
+
+Catalog drift завершает verifier с exit code `1`; malformed/nonliteral source, provider network/auth error или другая runtime failure — с exit code `2`. Workflow `.github/workflows/models-verify.yml` выполняет `npm run test:models-verify`, затем `npm run models:verify -- --json` ежедневно в `03:17 UTC` и вручную через `workflow_dispatch`, с `permissions: contents: read` и без `continue-on-error`. GitHub Actions secret `OPENROUTER_API_KEY` scoped только к live verification step; пока secret не добавлен, scheduled/manual monitoring остаётся pending. Pull request CI выполняет только `npm run test:models-verify` с mock discovery и без provider secret. Operational workflow выявляет provider drift, но не является branch-protected PR gate и не заменяет runtime smoke.
 
 ---
 
@@ -439,7 +486,7 @@ Codex не имеет права:
 Не внедрять всё сразу в MVP. Позже можно добавить:
 
 - JSON Schema для валидации записей;
-- CI-проверку каталога;
+- branch-protected enforcement mock verifier test после настройки repository ruleset;
 - golden prompts;
 - internal benchmark score;
 - community rating;

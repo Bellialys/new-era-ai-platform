@@ -1,19 +1,19 @@
 # 31 - Image Arena / Visual Arena Spec
 
-> **Alpha в v2.0.0-alpha.1.** Backend route `POST /api/image-compare` реализован (auth only, Supabase Storage with degraded provider-URL fallback). Публичный UI, полная Storage-политика и safety controls — за рамками текущего scope. Секции с пометкой `[future]` описывают то, что ещё не реализовано. Исходная пометка `future-only` (v0.5.3) снята: backend существует как alpha.
+> **Alpha в v2.0.0-alpha.1.** Backend route `POST /api/image-compare` и Image Arena UI реализованы только для авторизованных пользователей. Provider output принимается как base64, проходит raster/MIME/size validation и должен быть успешно загружен в Supabase Storage. Raw provider URL fallback отсутствует.
 
 ## Назначение файла
 
-Этот документ описывает будущий режим **Image Arena / Visual Arena** для проекта **Новая эпоха**.
+Этот документ описывает текущий alpha-контракт **Image Arena / Visual Arena** для проекта **Новая эпоха** и границы будущей persistence/safety работы.
 
 Важно:
 
 ```text
-Image Arena не входит в первый MVP.
-# сейчас основной MVP остаётся Prompt Arena
+Image Arena реализована как auth-only alpha в v2.0.0-alpha.1.
+# основной стабильный продукт остаётся Prompt Arena
 ```
 
-Этот файл фиксирует идею и границы будущего режима, но не является задачей на текущую реализацию.
+Dedicated Image Arena persistence, production paid-generation smoke и полный safety/storage review остаются release gates.
 
 ## Цель режима
 
@@ -29,22 +29,22 @@ Image Arena позволяет сравнить изображения, кото
 
 ## Пользовательский сценарий
 
-1. Пользователь открывает будущую страницу `/image-arena`.
+1. Авторизованный пользователь открывает Image Arena UI.
 2. Вводит одну визуальную идею.
-3. Выбирает 2-3 модели с `image` output capability.
+3. Выбирает 1-3 модели с `image` output capability.
 4. Нажимает кнопку генерации.
 5. Frontend отправляет запрос только в backend route.
 6. Backend валидирует идею, модели, лимиты и доступ.
 7. Backend вызывает image-capable модели через OpenRouter.
-8. Изображения загружаются в Supabase Storage, если server-side storage client доступен и provider URL можно скачать.
-9. В alpha degraded mode backend возвращает provider URL, если Storage недоступен или upload/fetch изображения не прошёл.
-10. Metadata и storage path сохраняются в Supabase PostgreSQL после выделенной Image Arena persistence-задачи.
-11. UI показывает сетку изображений.
-12. Пользователь выбирает лучший результат.
+8. Backend получает provider base64, декодирует его и принимает только проверенный PNG/JPEG/WebP до 5 MiB.
+9. Проверенные raster bytes загружаются напрямую в Supabase Storage.
+10. Если генерация или upload одной модели не удались, её controlled error не отменяет результаты других моделей.
+11. Metadata и storage path сохраняются в Supabase PostgreSQL после выделенной Image Arena persistence-задачи.
+12. UI показывает сетку сохранённых изображений и позволяет выбрать лучший результат локально.
 
 ## Будущие таблицы и Storage
 
-Файлы изображений должны храниться в Supabase Storage в стабильном режиме. Текущий alpha backend допускает degraded provider-URL fallback, чтобы ошибка Storage не скрывала уже полученный результат генерации.
+Файлы изображений должны храниться в Supabase Storage. Если Storage client недоступен, backend возвращает fail-fast `503 IMAGE_STORAGE_UNAVAILABLE` до платных provider calls. Если уже после генерации не удался upload отдельного результата, эта модель возвращается с `imageUrl: null`; provider URL/base64 не являются fallback и не раскрываются клиенту.
 
 PostgreSQL должен хранить только metadata:
 
@@ -76,9 +76,12 @@ artifacts
 
 ## API
 
-Alpha route (реализован в v2.0.0-alpha.1, auth only):
+Alpha routes (реализованы в v2.0.0-alpha.1):
 
 ```text
+GET /api/image-models
+# возвращает registered-only catalog с учётом текущей identity
+
 POST /api/image-compare
 # запускает Image Arena; доступен только авторизованным пользователям
 ```
@@ -89,9 +92,11 @@ POST /api/image-compare
 
 ```json
 {
-  "idea": "Футуристический город на рассвете в стиле кинематографичной иллюстрации",
-  "modelIds": ["uuid-image-model-1", "uuid-image-model-2"],
-  "modeSlug": "image-arena"
+  "prompt": "Футуристический город на рассвете в стиле кинематографичной иллюстрации",
+  "modelIds": [
+    "openai/gpt-image-1-mini",
+    "google/gemini-3.1-flash-lite-image"
+  ]
 }
 ```
 
@@ -99,27 +104,64 @@ POST /api/image-compare
 
 ```json
 {
-  "status": "success",
-  "taskId": "uuid-task-id",
-  "images": [
+  "taskId": "generated-uuid",
+  "results": [
     {
-      "id": "uuid-image-generation-id",
-      "modelId": "uuid-image-model-1",
-      "status": "success",
-      "storagePath": "image-arena/task-id/model-id.png"
+      "modelId": "openai/gpt-image-1-mini",
+      "modelName": "GPT Image 1 Mini",
+      "imageUrl": "https://storage.example/images/arena-images/generated-uuid/openai-gpt-image-1-mini.png"
+    },
+    {
+      "modelId": "google/gemini-3.1-flash-lite-image",
+      "modelName": "Gemini 3.1 Flash Lite Image",
+      "imageUrl": null,
+      "error": "Controlled per-model error"
     }
   ]
 }
 ```
 
+### Registered Image catalog
+
+| Provider model ID | Display name | Access |
+|---|---|---|
+| `openai/gpt-image-1-mini` | GPT Image 1 Mini | `registered` |
+| `google/gemini-3.1-flash-lite-image` | Gemini 3.1 Flash Lite Image | `registered` |
+| `black-forest-labs/flux.2-klein-4b` | FLUX.2 Klein 4B | `registered` |
+
+### Provider contract
+
+Backend отправляет отдельный запрос каждой выбранной модели:
+
+```text
+POST https://openrouter.ai/api/v1/images
+Authorization: Bearer <server-only OPENROUTER_API_KEY>
+Content-Type: application/json
+```
+
+```json
+{
+  "model": "openai/gpt-image-1-mini",
+  "prompt": "Validated user prompt",
+  "n": 1,
+  "aspect_ratio": "1:1"
+}
+```
+
+Это общий portable body для выбранной тройки. `resolution` и `output_format` не отправляются глобально: capability-наборы моделей различаются и проверяются scheduled discovery.
+
+Успешный provider response должен содержать `data[0].b64_json`; `media_type` опционален. Backend декодирует base64, определяет формат по сигнатуре, сверяет объявленный MIME и принимает только `image/png`, `image/jpeg` или `image/webp` размером не более 5 MiB. SVG и неизвестные форматы отклоняются.
+
 Правила API:
 
 - frontend не вызывает OpenRouter напрямую;
-- backend проверяет `modeSlug = image-arena`;
-- backend разрешает только модели с `image` output capability;
-- route применяет rate limit и cost limit;
+- backend принимает `prompt` длиной до 1000 символов и 1–3 model IDs из typed allowlist;
+- backend разрешает только три registered-only модели из текущего Image catalog;
+- route применяет rate limit и ограничивает один запрос максимум тремя моделями; отдельный monetary budget guard пока не реализован;
 - response не должен содержать secret keys;
-- response возвращает metadata и storage path, а не provider secret data.
+- response возвращает stored URL/metadata, а не provider base64 или raw provider URL;
+- ошибка отдельной модели сохраняет partial results других моделей;
+- scheduled/manual `models:verify` ежедневно в `03:17 UTC` проверяет наличие Image IDs, output modality `image` и advertised parameters `aspect_ratio`/`n` через OpenRouter discovery; только live-step получает Actions secret `OPENROUTER_API_KEY`. Pull request CI запускает mock `test:models-verify` без provider secret.
 
 ## Риски и ограничения
 
@@ -137,13 +179,13 @@ POST /api/image-compare
 
 ```text
 Stable Prompt Arena готова.
-# Image Arena не должна идти раньше основного MVP
+# prerequisite выполнен
 
 Supabase Storage готов.
 # изображения нельзя хранить в PostgreSQL
 
-Storage fallback описан и протестирован.
-# alpha может вернуть provider URL, если Storage недоступен
+Storage upload обязателен для успешного результата.
+# raw provider URL/base64 никогда не возвращаются клиенту
 
 Лимиты генераций готовы.
 # иначе режим может быстро стать дорогим
@@ -159,11 +201,11 @@ Safety controls готовы.
 
 Не добавлять в текущий код:
 
-- страницу `/image-arena`;
 - route `/api/image-arena/generate`;
-- вызовы image-моделей;
 - новые обязательные таблицы для текущего MVP;
 - Storage buckets как обязательную часть Prompt Arena;
-- UI для генерации изображений.
+- paid generation smoke без явного budget approval;
+- provider-specific request options как общие для всех моделей без capability discovery;
+- raw provider URL/base64 fallback.
 
-Backend `POST /api/image-compare` существует как alpha (v2.0.0-alpha.1). Публичный UI и полная Safety/Storage-политика — follow-up задачи.
+Backend `POST /api/image-compare` существует как auth-only alpha (v2.0.0-alpha.1). Dedicated persistence, подтверждённый production Storage policy и полный safety review — follow-up задачи.
