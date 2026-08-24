@@ -42,7 +42,7 @@ export function LoginForm() {
     });
 
     if (error) {
-      setErrorMessage(getAuthErrorMessage(error.message));
+      setErrorMessage(getAuthErrorMessage(error.message, "login"));
       setIsSubmitting(false);
       return;
     }
@@ -86,7 +86,7 @@ export function LoginForm() {
       ) : null}
 
       {urlError && !errorMessage ? (
-        <p className={errorBorder}>{decodeURIComponent(urlError)}</p>
+        <p className={errorBorder}>Authentication failed. Please try again.</p>
       ) : null}
 
       {errorMessage ? (

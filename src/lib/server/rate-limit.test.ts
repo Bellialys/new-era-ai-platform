@@ -3,6 +3,7 @@ import {
   checkRateLimitInMemory,
   checkRateLimit,
   getRateLimitKeyFromHeaders,
+  InMemoryRateLimitStore,
 } from "./rate-limit";
 
 describe("checkRateLimitInMemory", () => {
@@ -31,6 +32,27 @@ describe("checkRateLimitInMemory", () => {
     expect(checkRateLimitInMemory(key, 1, 5_000).limited).toBe(false);
 
     now.mockRestore();
+  });
+});
+
+describe("InMemoryRateLimitStore capacity", () => {
+  it("evicts the least-recently-used bucket instead of growing without a bound", () => {
+    const store = new InMemoryRateLimitStore(2);
+    store.check("oldest", 1, 60_000, 1_000);
+    store.check("newer", 1, 60_000, 1_000);
+    store.check("overflow", 1, 60_000, 1_000);
+
+    expect(store.check("oldest", 1, 60_000, 1_001).limited).toBe(false);
+    expect(store.check("overflow", 1, 60_000, 1_001).limited).toBe(true);
+  });
+
+  it("removes expired buckets before evicting an active bucket", () => {
+    const store = new InMemoryRateLimitStore(2);
+    store.check("expired", 1, 10, 1_000);
+    store.check("active", 1, 60_000, 1_000);
+    store.check("replacement", 1, 60_000, 1_011);
+
+    expect(store.check("active", 1, 60_000, 1_012).limited).toBe(true);
   });
 });
 

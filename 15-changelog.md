@@ -16,6 +16,16 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## SECURITY: fix(low): close auth, rendering, limiter and admin integrity gaps - 2026-08-24
+
+### Fixed
+
+- Auth callback нормализует `next` и проверяет итоговый origin; protocol-relative и backslash bypass отклоняются.
+- Login/signup/reset/email-change используют account-enumeration-safe ответы без provider error disclosure.
+- AI Markdown больше не загружает remote images автоматически; разрешены только same-origin image paths.
+- In-memory rate-limit fallback ограничен 10 000 LRU buckets с очисткой истёкших записей.
+- Добавлена pending-миграция `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql`: admin mutations и audit insert атомарны, last-admin demotion сериализован transaction advisory lock; RPC execute разрешён только `service_role`.
+
 ## SECURITY: fix(vote): enforce task ownership before blind reveal - 2026-07-05
 
 ### Fixed

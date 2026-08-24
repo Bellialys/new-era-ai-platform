@@ -14,10 +14,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-function safeNextPath(value: string | null): string {
+export function safeNextPath(value: string | null): string {
   if (!value) return "/";
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/";
+
+  try {
+    const base = new URL("https://auth-callback.invalid");
+    const candidate = new URL(value, base);
+    if (candidate.origin !== base.origin) return "/";
+    return `${candidate.pathname}${candidate.search}${candidate.hash}`;
+  } catch {
+    return "/";
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -61,9 +69,9 @@ export async function GET(request: NextRequest) {
     // PKCE code exchange (OAuth, magic link, email confirmation in some flows)
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      console.error("Auth callback code exchange error:", error.message);
+      console.error("Auth callback code exchange failed:", error.code ?? "unknown");
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent(error.message)}`, redirectBase)
+        new URL("/login?error=auth_callback_failed", redirectBase)
       );
     }
     return response;
@@ -73,9 +81,9 @@ export async function GET(request: NextRequest) {
     // Token hash verification (email confirmation, password reset)
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as Parameters<typeof supabase.auth.verifyOtp>[0]["type"] });
     if (error) {
-      console.error("Auth callback OTP verification error:", error.message);
+      console.error("Auth callback OTP verification failed:", error.code ?? "unknown");
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent(error.message)}`, redirectBase)
+        new URL("/login?error=auth_callback_failed", redirectBase)
       );
     }
 

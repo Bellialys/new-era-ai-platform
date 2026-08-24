@@ -5,7 +5,6 @@ import {
   createErrorResponse,
   logApiRequest,
   requireAdmin,
-  logAuditEvent,
 } from "@/lib/server";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
 import { resolveRequestId } from "@/lib/server/utils";
@@ -14,11 +13,6 @@ const VALID_ROLES = ["user", "admin"] as const;
 const VALID_PLANS = ["free", "pro"] as const;
 type UserRole = (typeof VALID_ROLES)[number];
 type UserPlan = (typeof VALID_PLANS)[number];
-
-type ProfileBeforeUpdate = {
-  role: string;
-  plan: string;
-};
 
 interface PatchBody {
   role?: unknown;
@@ -83,44 +77,28 @@ export async function PATCH(
       throw new ApiError(400, "VALIDATION_ERROR", "No valid fields to update.");
     }
 
-    const { data: before, error: beforeError } = await supabase
-      .from("profiles")
-      .select("role, plan")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (beforeError) {
-      console.error("Admin user lookup error:", beforeError);
-      throw new ApiError(500, "INTERNAL_ERROR", "Failed to fetch user.");
-    }
-
-    if (!before) {
-      throw new ApiError(404, "USER_NOT_FOUND", "User was not found.");
-    }
-
-    await assertAdminRoleTransitionAllowed({
-      actorId,
-      targetId: id,
-      before: before as ProfileBeforeUpdate,
-      updates,
-      supabase,
+    const { error } = await supabase.rpc("admin_update_user_with_audit", {
+      p_actor_id: actorId,
+      p_target_id: id,
+      p_updates: updates,
     });
-
-    const { error } = await supabase.from("profiles").update(updates).eq("id", id);
 
     if (error) {
-      console.error("Admin user update error:", error);
+      if (error.message === "ADMIN_AUTH_REQUIRED") {
+        throw new ApiError(403, "FORBIDDEN", "Admin access required.");
+      }
+      if (error.message === "USER_NOT_FOUND") {
+        throw new ApiError(404, "USER_NOT_FOUND", "User was not found.");
+      }
+      if (error.message === "ADMIN_SELF_DEMOTION") {
+        throw new ApiError(409, "ADMIN_SELF_DEMOTION", "Admins cannot demote their own account.");
+      }
+      if (error.message === "ADMIN_LAST_ADMIN") {
+        throw new ApiError(409, "ADMIN_LAST_ADMIN", "Cannot demote the final admin account.");
+      }
+      console.error("Admin user mutation RPC error:", error.code ?? "unknown");
       throw new ApiError(500, "INTERNAL_ERROR", "Failed to update user.");
     }
-
-    const action = "role" in updates ? "user.role_change" : "user.plan_change";
-    await logAuditEvent({
-      actorId: actorId,
-      action,
-      targetType: "user",
-      targetId: id,
-      payload: { before: before ?? null, after: updates },
-    });
 
     logApiRequest("PATCH", `/api/admin/users/${id}`, 200, Date.now() - startTime, requestId);
     return NextResponse.json({ status: "success" });
@@ -128,45 +106,5 @@ export async function PATCH(
     const statusCode = error instanceof ApiError ? error.statusCode : 500;
     logApiRequest("PATCH", `/api/admin/users/${id}`, statusCode, Date.now() - startTime, requestId);
     return NextResponse.json(createErrorResponse(error, requestId), { status: statusCode });
-  }
-}
-
-async function assertAdminRoleTransitionAllowed({
-  actorId,
-  targetId,
-  before,
-  updates,
-  supabase,
-}: {
-  actorId: string;
-  targetId: string;
-  before: ProfileBeforeUpdate;
-  updates: Record<string, string>;
-  supabase: ReturnType<typeof getSupabaseServerClient>;
-}) {
-  if (updates["role"] !== "user" || before.role !== "admin") {
-    return;
-  }
-
-  if (targetId === actorId) {
-    throw new ApiError(409, "ADMIN_SELF_DEMOTION", "Admins cannot demote their own account.");
-  }
-
-  if (!supabase) {
-    throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
-  }
-
-  const { count, error } = await supabase
-    .from("profiles")
-    .select("id", { count: "exact", head: true })
-    .eq("role", "admin");
-
-  if (error) {
-    console.error("Admin count lookup error:", error);
-    throw new ApiError(500, "INTERNAL_ERROR", "Failed to verify admin role safety.");
-  }
-
-  if ((count ?? 0) <= 1) {
-    throw new ApiError(409, "ADMIN_LAST_ADMIN", "Cannot demote the final admin account.");
   }
 }

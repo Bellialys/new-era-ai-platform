@@ -22,32 +22,66 @@ type RateLimitBucket = {
   resetAt: number;
 };
 
-const buckets = new Map<string, RateLimitBucket>();
+const IN_MEMORY_RATE_LIMIT_MAX_BUCKETS = 10_000;
+
+/** Per-instance fixed-window store with bounded cardinality for Redis outages and local use. */
+export class InMemoryRateLimitStore {
+  private readonly buckets = new Map<string, RateLimitBucket>();
+
+  constructor(private readonly maxBuckets = IN_MEMORY_RATE_LIMIT_MAX_BUCKETS) {
+    if (!Number.isInteger(maxBuckets) || maxBuckets < 1) {
+      throw new Error("maxBuckets must be a positive integer");
+    }
+  }
+
+  check(key: string, maxRequests: number, windowMs: number, now = Date.now()): RateLimitResult {
+    const existingBucket = this.buckets.get(key);
+
+    if (!existingBucket || existingBucket.resetAt <= now) {
+      const resetAt = now + windowMs;
+      this.buckets.delete(key);
+      this.ensureCapacity(now);
+      this.buckets.set(key, { count: 1, resetAt });
+      return { limited: false, remaining: Math.max(maxRequests - 1, 0), resetAt };
+    }
+
+    // Refresh insertion order so eviction removes the least-recently-used bucket.
+    this.buckets.delete(key);
+    this.buckets.set(key, existingBucket);
+
+    if (existingBucket.count >= maxRequests) {
+      return { limited: true, remaining: 0, resetAt: existingBucket.resetAt };
+    }
+
+    existingBucket.count += 1;
+    return {
+      limited: false,
+      remaining: Math.max(maxRequests - existingBucket.count, 0),
+      resetAt: existingBucket.resetAt,
+    };
+  }
+
+  private ensureCapacity(now: number): void {
+    if (this.buckets.size < this.maxBuckets) return;
+
+    for (const [key, bucket] of this.buckets) {
+      if (bucket.resetAt <= now) this.buckets.delete(key);
+    }
+
+    if (this.buckets.size < this.maxBuckets) return;
+    const oldestKey = this.buckets.keys().next().value as string | undefined;
+    if (oldestKey) this.buckets.delete(oldestKey);
+  }
+}
+
+const inMemoryStore = new InMemoryRateLimitStore();
 
 export function checkRateLimitInMemory(
   key: string,
   maxRequests: number,
   windowMs: number
 ): RateLimitResult {
-  const now = Date.now();
-  const existingBucket = buckets.get(key);
-
-  if (!existingBucket || existingBucket.resetAt <= now) {
-    const resetAt = now + windowMs;
-    buckets.set(key, { count: 1, resetAt });
-    return { limited: false, remaining: Math.max(maxRequests - 1, 0), resetAt };
-  }
-
-  if (existingBucket.count >= maxRequests) {
-    return { limited: true, remaining: 0, resetAt: existingBucket.resetAt };
-  }
-
-  existingBucket.count += 1;
-  return {
-    limited: false,
-    remaining: Math.max(maxRequests - existingBucket.count, 0),
-    resetAt: existingBucket.resetAt,
-  };
+  return inMemoryStore.check(key, maxRequests, windowMs);
 }
 
 // --- Upstash Redis (REST) -------------------------------------------------

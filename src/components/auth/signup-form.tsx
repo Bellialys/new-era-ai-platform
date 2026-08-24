@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
-import { getAuthErrorMessage } from "./auth-messages";
+import { getAuthErrorMessage, isAccountExistenceError } from "./auth-messages";
+
+const SIGNUP_PUBLIC_SUCCESS_MESSAGE =
+  "Если адрес можно зарегистрировать, мы отправили ссылку для подтверждения.";
 
 export function SignupForm() {
   const [email, setEmail] = useState("");
@@ -53,15 +56,15 @@ export function SignupForm() {
       },
     });
 
-    if (error) {
-      setErrorMessage(getAuthErrorMessage(error.message));
+    if (error && !isAccountExistenceError(error.message, error.code)) {
+      setErrorMessage(getAuthErrorMessage(error.message, "signup"));
       setIsSubmitting(false);
       return;
     }
 
     setPassword("");
     setConfirmPassword("");
-    setSuccessMessage("Аккаунт создан. Проверьте email — мы отправили ссылку для подтверждения.");
+    setSuccessMessage(SIGNUP_PUBLIC_SUCCESS_MESSAGE);
     setIsSubmitting(false);
   }
 

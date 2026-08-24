@@ -4,12 +4,10 @@ import { NextRequest } from "next/server";
 const {
   requireAdminMock,
   checkAdminMutationRateLimitMock,
-  logAuditEventMock,
   getClientMock,
 } = vi.hoisted(() => ({
   requireAdminMock: vi.fn(),
   checkAdminMutationRateLimitMock: vi.fn(),
-  logAuditEventMock: vi.fn(),
   getClientMock: vi.fn(),
 }));
 
@@ -19,7 +17,6 @@ vi.mock("@/lib/server", async (importOriginal) => {
     ...actual,
     requireAdmin: requireAdminMock,
     checkAdminMutationRateLimit: checkAdminMutationRateLimitMock,
-    logAuditEvent: logAuditEventMock,
     logApiRequest: vi.fn(),
   };
 });
@@ -53,46 +50,14 @@ function limited() {
   return { limited: true, remaining: 0, resetAt: Date.now() + 30_000 };
 }
 
-function createProfilesClient({
-  profile = { role: "admin", plan: "pro" },
-  adminCount = 2,
-  beforeError = null,
-  countError = null,
-  updateError = null,
-}: {
-  profile?: { role: string; plan: string } | null;
-  adminCount?: number;
-  beforeError?: unknown;
-  countError?: unknown;
-  updateError?: unknown;
-} = {}) {
-  const beforeQuery = {
-    eq: vi.fn(function (this: typeof beforeQuery) { return this; }),
-    maybeSingle: vi.fn().mockResolvedValue({ data: profile, error: beforeError }),
-  };
-  const countQuery = {
-    eq: vi.fn().mockResolvedValue({ count: adminCount, error: countError }),
-  };
-  const updateQuery = {
-    eq: vi.fn().mockResolvedValue({ error: updateError }),
-  };
-  const table = {
-    select: vi.fn((_columns: string, options?: { count?: string; head?: boolean }) =>
-      options?.count ? countQuery : beforeQuery
-    ),
-    update: vi.fn(() => updateQuery),
-  };
-  const client = {
-    from: vi.fn(() => table),
-  };
-
-  return { client, table, beforeQuery, countQuery, updateQuery };
+function createProfilesClient(error: { code?: string; message: string } | null = null) {
+  const rpc = vi.fn().mockResolvedValue({ data: null, error });
+  return { client: { rpc }, rpc };
 }
 
 beforeEach(() => {
   requireAdminMock.mockReset();
   checkAdminMutationRateLimitMock.mockReset();
-  logAuditEventMock.mockReset();
   getClientMock.mockReset();
 
   requireAdminMock.mockResolvedValue({ userId: ACTOR_ID });
@@ -114,8 +79,8 @@ describe("PATCH /api/admin/users/[id] admin safety", () => {
     expect(getClientMock).not.toHaveBeenCalled();
   });
 
-  it("blocks self-demotion before updating the profile", async () => {
-    const mockDb = createProfilesClient({ profile: { role: "admin", plan: "pro" } });
+  it("maps the transactional self-demotion rejection", async () => {
+    const mockDb = createProfilesClient({ code: "P0001", message: "ADMIN_SELF_DEMOTION" });
     getClientMock.mockReturnValue(mockDb.client);
 
     const res = await PATCH(makeRequest({ role: "user" }), makeContext(ACTOR_ID));
@@ -123,15 +88,11 @@ describe("PATCH /api/admin/users/[id] admin safety", () => {
 
     expect(res.status).toBe(409);
     expect(body.errorCode).toBe("ADMIN_SELF_DEMOTION");
-    expect(mockDb.table.update).not.toHaveBeenCalled();
-    expect(logAuditEventMock).not.toHaveBeenCalled();
+    expect(mockDb.rpc).toHaveBeenCalledOnce();
   });
 
-  it("blocks demotion of the final admin before updating the profile", async () => {
-    const mockDb = createProfilesClient({
-      profile: { role: "admin", plan: "pro" },
-      adminCount: 1,
-    });
+  it("maps the database last-admin invariant rejection", async () => {
+    const mockDb = createProfilesClient({ code: "P0001", message: "ADMIN_LAST_ADMIN" });
     getClientMock.mockReturnValue(mockDb.client);
 
     const res = await PATCH(makeRequest({ role: "user" }), makeContext(TARGET_ID));
@@ -139,30 +100,32 @@ describe("PATCH /api/admin/users/[id] admin safety", () => {
 
     expect(res.status).toBe(409);
     expect(body.errorCode).toBe("ADMIN_LAST_ADMIN");
-    expect(mockDb.countQuery.eq).toHaveBeenCalledWith("role", "admin");
-    expect(mockDb.table.update).not.toHaveBeenCalled();
-    expect(logAuditEventMock).not.toHaveBeenCalled();
+    expect(mockDb.rpc).toHaveBeenCalledOnce();
   });
 
-  it("allows demoting another admin when at least one admin remains", async () => {
-    const mockDb = createProfilesClient({
-      profile: { role: "admin", plan: "pro" },
-      adminCount: 2,
-    });
+  it("delegates the mutation and mandatory audit insert to one RPC transaction", async () => {
+    const mockDb = createProfilesClient();
     getClientMock.mockReturnValue(mockDb.client);
 
     const res = await PATCH(makeRequest({ role: "user" }), makeContext(TARGET_ID));
 
     expect(res.status).toBe(200);
     expect(checkAdminMutationRateLimitMock).toHaveBeenCalledWith(ACTOR_ID, "users.patch");
-    expect(mockDb.table.update).toHaveBeenCalledWith({ role: "user" });
-    expect(mockDb.updateQuery.eq).toHaveBeenCalledWith("id", TARGET_ID);
-    expect(logAuditEventMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        actorId: ACTOR_ID,
-        action: "user.role_change",
-        targetId: TARGET_ID,
-      })
-    );
+    expect(mockDb.rpc).toHaveBeenCalledWith("admin_update_user_with_audit", {
+      p_actor_id: ACTOR_ID,
+      p_target_id: TARGET_ID,
+      p_updates: { role: "user" },
+    });
+  });
+
+  it("fails closed when the atomic mutation RPC fails", async () => {
+    const mockDb = createProfilesClient({ code: "23503", message: "audit insert failed" });
+    getClientMock.mockReturnValue(mockDb.client);
+
+    const res = await PATCH(makeRequest({ plan: "pro" }), makeContext());
+    const body = (await res.json()) as { errorCode?: string };
+
+    expect(res.status).toBe(500);
+    expect(body.errorCode).toBe("INTERNAL_ERROR");
   });
 });

@@ -70,7 +70,9 @@ HTTP/1.1 429 Too Many Requests
 Retry-After: 42
 ```
 
-В production rate limit глобальный (Upstash Redis). Локально — in-memory per-process.
+В production rate limit глобальный (Upstash Redis). Локальный и аварийный
+in-memory fallback работает per-process и ограничен 10 000 LRU buckets;
+истёкшие buckets удаляются перед eviction, поэтому cardinality не растёт без границы.
 
 Release-gate note: `POST /api/guest` создаёт anonymous session и должен пройти отдельный abuse/rate-limit review перед public release.
 
@@ -526,9 +528,10 @@ Rules:
   - `name` — строка, обрезается по краям; после trim должна быть непустой и не длиннее 100 символов, иначе `400 VALIDATION_ERROR`. Публичное поле `name` пишется в столбец `display_name` таблицы `models` (отдельного столбца `name` нет).
   - `access_level` — одно из `anonymous`, `registered`, `premium`, иначе `400 VALIDATION_ERROR`.
 - Если ни одного валидного поля не набралось → `400 VALIDATION_ERROR` ("No valid fields to update.").
-- Несуществующий `id` не даёт явной ошибки (update по `eq("id", id)` просто не затрагивает строк, ответ всё равно `200 success`).
-- При успехе пишется запись аудита (`logAuditEvent`, action `model.update`, payload `{ before, after }`); сбой аудита логируется, но не влияет на ответ.
-- safe errors include `FORBIDDEN`, `INVALID_JSON`, `VALIDATION_ERROR`, `INTERNAL_ERROR`.
+- Несуществующий `id` → `404 MODEL_NOT_FOUND`.
+- Mutation и audit event `model.update` выполняются одним service-role-only RPC
+  `admin_update_model_with_audit`; ошибка audit insert откатывает изменение модели.
+- safe errors include `FORBIDDEN`, `INVALID_JSON`, `VALIDATION_ERROR`, `MODEL_NOT_FOUND`, `INTERNAL_ERROR`.
 
 ## `GET /api/admin/stats`
 
@@ -619,10 +622,10 @@ Rules:
 - Оба поля опциональны, но хотя бы одно из `role` / `plan` обязано присутствовать; пустой набор → `400 VALIDATION_ERROR` ("No valid fields to update.").
 - `role` — одно из `user`, `admin`; `plan` — одно из `free`, `pro`. Иначе `400 VALIDATION_ERROR`.
 - Применяет только распознанные поля к строке `profiles` с `id = [id]`; неизвестные ключи игнорируются. Несуществующий `id` → `404 USER_NOT_FOUND`.
-- Demotion guard: admin не может понизить собственный аккаунт (`409 ADMIN_SELF_DEMOTION`) или последнего оставшегося admin (`409 ADMIN_LAST_ADMIN`).
-- Перед обновлением читает прежние `role, plan` и пишет аудит-событие `user.role_change` (если менялась роль) либо `user.plan_change` с `payload.before`/`payload.after`. Сбой аудита логируется, но не влияет на ответ.
-- Сбой клиента Supabase или ошибка update → `500 INTERNAL_ERROR`.
-- safe errors include `FORBIDDEN`, `INVALID_JSON`, `VALIDATION_ERROR`, `INTERNAL_ERROR`.
+- Demotion guard: admin не может понизить собственный аккаунт (`409 ADMIN_SELF_DEMOTION`) или последнего оставшегося admin (`409 ADMIN_LAST_ADMIN`). Last-admin invariant выполняется в PostgreSQL trigger под transaction advisory lock, поэтому конкурентные demotion не обходят проверку.
+- Profile mutation и аудит-событие `user.role_change`/`user.plan_change` выполняются одним service-role-only RPC `admin_update_user_with_audit`; ошибка audit insert откатывает изменение профиля.
+- Сбой клиента Supabase или atomic RPC → `500 INTERNAL_ERROR`.
+- safe errors include `FORBIDDEN`, `INVALID_JSON`, `VALIDATION_ERROR`, `USER_NOT_FOUND`, `ADMIN_SELF_DEMOTION`, `ADMIN_LAST_ADMIN`, `INTERNAL_ERROR`.
 
 ## `GET /api/history` (v0.8)
 
@@ -938,7 +941,7 @@ Rules:
 ```json
 {
   "status": "success",
-  "message": "Confirmation emails sent to both addresses. Check your inbox."
+  "message": "If this address is eligible, confirmation instructions will be sent."
 }
 ```
 
@@ -948,8 +951,9 @@ Rules:
 - Формат проверяется регуляркой `^[^\s@]+@[^\s@]+\.[^\s@]+$`; несоответствие → `400 VALIDATION_ERROR`.
 - Новый адрес должен отличаться от текущего (case-insensitive), иначе → `400 VALIDATION_ERROR`. Невалидный JSON → `400 INVALID_JSON`.
 - Side effect: `supabase.auth.updateUser({ email }, { emailRedirectTo })` (redirect на `${NEXT_PUBLIC_SITE_URL ?? origin}/auth/callback?next=/profile`).
-- Если адрес уже занят (сообщение содержит `already registered`) → `409 EMAIL_IN_USE`; прочие ошибки Supabase / отсутствие конфигурации → `500 INTERNAL_ERROR`.
-- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `EMAIL_IN_USE`, `INTERNAL_ERROR`.
+- Если Supabase сообщает, что адрес уже зарегистрирован, endpoint возвращает тот же `200` и тот же generic response, что и для принятого запроса; существование аккаунта не раскрывается.
+- Прочие ошибки Supabase / отсутствие конфигурации → `500 INTERNAL_ERROR`.
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `INTERNAL_ERROR`.
 
 ## `GET /api/profile/stats`
 

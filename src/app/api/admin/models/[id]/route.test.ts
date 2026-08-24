@@ -4,12 +4,10 @@ import { NextRequest } from "next/server";
 const {
   requireAdminMock,
   checkAdminMutationRateLimitMock,
-  logAuditEventMock,
   getClientMock,
 } = vi.hoisted(() => ({
   requireAdminMock: vi.fn(),
   checkAdminMutationRateLimitMock: vi.fn(),
-  logAuditEventMock: vi.fn(),
   getClientMock: vi.fn(),
 }));
 
@@ -19,7 +17,6 @@ vi.mock("@/lib/server", async (importOriginal) => {
     ...actual,
     requireAdmin: requireAdminMock,
     checkAdminMutationRateLimit: checkAdminMutationRateLimitMock,
-    logAuditEvent: logAuditEventMock,
     logApiRequest: vi.fn(),
   };
 });
@@ -53,37 +50,14 @@ function limited() {
   return { limited: true, remaining: 0, resetAt: Date.now() + 30_000 };
 }
 
-function createModelsClient({
-  before = { is_active: true, display_name: "Model", access_level: "registered" },
-  beforeError = null,
-  updateError = null,
-}: {
-  before?: { is_active: boolean; display_name: string; access_level: string } | null;
-  beforeError?: unknown;
-  updateError?: unknown;
-} = {}) {
-  const beforeQuery = {
-    eq: vi.fn(function (this: typeof beforeQuery) { return this; }),
-    single: vi.fn().mockResolvedValue({ data: before, error: beforeError }),
-  };
-  const updateQuery = {
-    eq: vi.fn().mockResolvedValue({ error: updateError }),
-  };
-  const table = {
-    select: vi.fn(() => beforeQuery),
-    update: vi.fn(() => updateQuery),
-  };
-  const client = {
-    from: vi.fn(() => table),
-  };
-
-  return { client, table, updateQuery };
+function createModelsClient(error: { code?: string; message: string } | null = null) {
+  const rpc = vi.fn().mockResolvedValue({ data: null, error });
+  return { client: { rpc }, rpc };
 }
 
 beforeEach(() => {
   requireAdminMock.mockReset();
   checkAdminMutationRateLimitMock.mockReset();
-  logAuditEventMock.mockReset();
   getClientMock.mockReset();
 
   requireAdminMock.mockResolvedValue({ userId: ACTOR_ID });
@@ -105,7 +79,7 @@ describe("PATCH /api/admin/models/[id] admin safety", () => {
     expect(getClientMock).not.toHaveBeenCalled();
   });
 
-  it("updates model metadata after the mutation rate limit passes", async () => {
+  it("delegates the model mutation and mandatory audit insert to one RPC transaction", async () => {
     const mockDb = createModelsClient();
     getClientMock.mockReturnValue(mockDb.client);
 
@@ -116,18 +90,25 @@ describe("PATCH /api/admin/models/[id] admin safety", () => {
 
     expect(res.status).toBe(200);
     expect(checkAdminMutationRateLimitMock).toHaveBeenCalledWith(ACTOR_ID, "models.patch");
-    expect(mockDb.table.update).toHaveBeenCalledWith({
-      is_active: false,
-      display_name: "New Name",
-      access_level: "premium",
+    expect(mockDb.rpc).toHaveBeenCalledWith("admin_update_model_with_audit", {
+      p_actor_id: ACTOR_ID,
+      p_target_id: MODEL_ID,
+      p_updates: {
+        is_active: false,
+        display_name: "New Name",
+        access_level: "premium",
+      },
     });
-    expect(mockDb.updateQuery.eq).toHaveBeenCalledWith("id", MODEL_ID);
-    expect(logAuditEventMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        actorId: ACTOR_ID,
-        action: "model.update",
-        targetId: MODEL_ID,
-      })
-    );
+  });
+
+  it("fails closed when the atomic model mutation RPC fails", async () => {
+    const mockDb = createModelsClient({ code: "23503", message: "audit insert failed" });
+    getClientMock.mockReturnValue(mockDb.client);
+
+    const res = await PATCH(makeRequest({ is_active: false }), makeContext());
+    const body = (await res.json()) as { errorCode?: string };
+
+    expect(res.status).toBe(500);
+    expect(body.errorCode).toBe("INTERNAL_ERROR");
   });
 });
