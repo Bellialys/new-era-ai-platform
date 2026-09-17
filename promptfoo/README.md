@@ -4,10 +4,10 @@
 
 ## Уровень 1 — прямой baseline моделей
 
-`promptfooconfig.yaml` отправляет одинаковые тесты напрямую в OpenRouter и сравнивает две бесплатные модели из fallback-каталога проекта:
+`promptfooconfig.yaml` отправляет одинаковые тесты напрямую в OpenRouter и сравнивает две актуальные бесплатные модели:
 
-- `openai/gpt-oss-120b:free`;
-- `meta-llama/llama-3.3-70b-instruct:free`.
+- `google/gemma-4-26b-a4b-it:free`;
+- `nvidia/nemotron-3-super-120b-a12b:free`.
 
 Полный baseline выполняет 3 теста для каждой модели, то есть 6 LLM-запросов.
 
@@ -44,6 +44,8 @@ Promptfoo
 5. Неизвестные model selections возвращают `403 MODEL_NOT_ALLOWED`.
 
 Только первый тест доходит до OpenRouter и обычно создаёт 2 LLM-запроса. Остальные проверки должны завершаться на backend validation/auth/model-resolution до вызова модели.
+
+Важно: platform suite намеренно использует текущий каталог приложения. Если в Supabase активна устаревшая или недоступная модель, E2E-тест должен падать и показывать `errorCode/errorMessage`, а не скрывать проблему подменой модели.
 
 ### Локальный запуск
 
