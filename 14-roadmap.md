@@ -66,7 +66,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - Leaderboard;
 - admin routes для audit/usage/model/user management;
 - Code Arena Runner через внешний Piston runner для авторизованных пользователей;
-- P0 provider recovery: локальный curated catalog из 13 text IDs проверен по OpenRouter discovery 2026-08-24; production Supabase alignment ожидает forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`;
+- P0 provider recovery: локальный curated catalog из 8 text IDs повторно проверен по OpenRouter discovery 2026-09-17; production Supabase alignment ожидает forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`;
 - AI Team Mode: `POST /api/team-run` (auth gate, rate 3/10 min, 4 роли) + страница `/team` за feature flag; current runtime persistence: `tasks` + `model_responses`;
 - Image Arena backend: `POST /api/image-compare` alpha (auth only), provider `POST /api/v1/images`, base64 raster validation и обязательный Supabase Storage upload без provider-URL fallback;
 - обязательный scheduled `models:verify`: text/Team/Judge/Image discovery ежедневно в `03:17 UTC` и вручную; secret `OPENROUTER_API_KEY` scoped только к live-step и пока ожидается, поэтому monitoring ещё не operational. Pull request CI запускает только `test:models-verify` с mock discovery без provider secret и сам по себе не подтверждает live catalog;
@@ -367,7 +367,7 @@ npm run smoke         # /api/health + /api/models + /api/compare реальны�
 
 ## v0.4.1 - OpenRouter Integration Stabilization
 
-Цель: устранить edge-cases стриминга, оптимизировать UI при генерации и предотвратить утечки ресурсов после первого production-запуска v0.4. Новая функциональность не добавляется.
+Цель: устранение edge-cases стриминга, оптимизировать UI при генерации и предотвратить утечки ресурсов после первого production-запуска v0.4. Новая функциональность не добавляется.
 
 Готово:
 
