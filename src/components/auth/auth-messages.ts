@@ -1,6 +1,9 @@
 export type AuthErrorContext = "login" | "signup" | "password-update";
 
-export { isAccountExistenceError } from "@/lib/auth-security";
+export {
+  isAccountAbsenceError,
+  isAccountExistenceError,
+} from "@/lib/auth-security";
 
 export function getAuthErrorMessage(
   message?: string,
