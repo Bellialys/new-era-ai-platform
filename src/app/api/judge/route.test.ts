@@ -152,7 +152,7 @@ describe("POST /api/judge — provider recovery routing", () => {
     const res = await POST(makeRequest(VALID_BODY));
 
     expect(res.status).toBe(200);
-    expect(JUDGE_PRIMARY_MODEL_ID).toBe("nvidia/nemotron-3-ultra-550b-a55b:free");
+    expect(JUDGE_PRIMARY_MODEL_ID).toBe("google/gemma-4-31b-it:free");
     expect(fetchOpenRouterMock).toHaveBeenCalledWith(
       expect.any(String),
       JUDGE_PRIMARY_MODEL_ID,
@@ -168,7 +168,7 @@ describe("POST /api/judge — provider recovery routing", () => {
     const res = await POST(makeRequest(VALID_BODY));
 
     expect(res.status).toBe(200);
-    expect(JUDGE_FALLBACK_MODEL_ID).toBe("nvidia/nemotron-3-super-120b-a12b:free");
+    expect(JUDGE_FALLBACK_MODEL_ID).toBe("google/gemma-4-26b-a4b-it:free");
     expect(fetchOpenRouterMock).toHaveBeenNthCalledWith(
       1,
       expect.any(String),
