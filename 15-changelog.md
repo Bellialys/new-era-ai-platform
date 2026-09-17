@@ -36,6 +36,15 @@ v2.0.0-alpha.1 - AI Team Mode
 - Migration подготовлена, но её применение к production Supabase ожидает owner/reviewer gate.
 - Scheduled/manual live-step требует repository secret `OPENROUTER_API_KEY`; добавление секрета в GitHub Actions пока ожидается. Secret не передаётся mock-тесту в Pull request CI. Schedule является operational monitoring, а не branch-protected PR gate.
 - Paid Image generation smoke не запускался; discovery и локальные contract tests не подтверждают фактическую платную генерацию/Storage upload в production.
+## SECURITY: fix(low): close auth, rendering, limiter and admin integrity gaps - 2026-08-24
+
+### Fixed
+
+- Auth callback нормализует `next` и проверяет итоговый origin; protocol-relative и backslash bypass отклоняются.
+- Login/signup/reset/email-change используют account-enumeration-safe ответы без provider error disclosure.
+- AI Markdown больше не загружает remote images автоматически; разрешены только same-origin image paths.
+- In-memory rate-limit fallback ограничен 10 000 LRU buckets с очисткой истёкших записей.
+- Добавлена pending-миграция `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql`: admin mutations и audit insert атомарны, last-admin demotion сериализован transaction advisory lock; RPC execute разрешён только `service_role`.
 
 ## SECURITY: fix(vote): enforce task ownership before blind reveal - 2026-07-05
 

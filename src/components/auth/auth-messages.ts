@@ -1,21 +1,27 @@
-export function getAuthErrorMessage(message?: string): string {
+export type AuthErrorContext = "login" | "signup" | "password-update";
+
+export {
+  isAccountAbsenceError,
+  isAccountExistenceError,
+} from "@/lib/auth-security";
+
+export function getAuthErrorMessage(
+  message?: string,
+  context: AuthErrorContext = "login"
+): string {
   const normalizedMessage = message?.toLowerCase() ?? "";
 
-  if (normalizedMessage.includes("invalid login credentials")) {
+  if (context === "login") {
     return "Invalid email or password.";
   }
 
-  if (normalizedMessage.includes("email not confirmed")) {
-    return "Please confirm your email before signing in.";
-  }
-
-  if (normalizedMessage.includes("user already registered")) {
-    return "An account with this email already exists.";
+  if (context === "signup") {
+    return "Unable to create an account. Please try again later.";
   }
 
   if (normalizedMessage.includes("password")) {
     return "Please use a stronger password.";
   }
 
-  return message ?? "Authentication failed. Please try again.";
+  return "Authentication failed. Please try again.";
 }

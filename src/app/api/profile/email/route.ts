@@ -20,6 +20,7 @@ import {
   EMAIL_CHANGE_RATE_LIMIT_WINDOW_MS,
 } from "@/lib/arena/constants";
 import { createServerClient } from "@supabase/ssr";
+import { isAccountExistenceError } from "@/lib/auth-security";
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -102,9 +103,12 @@ export async function POST(request: NextRequest) {
     );
 
     if (updateError) {
-      console.error("Email change error:", updateError.message);
-      if (updateError.message.includes("already registered")) {
-        throw new ApiError(409, "EMAIL_IN_USE", "This email is already associated with another account.");
+      if (isAccountExistenceError(updateError.message, updateError.code)) {
+        logApiRequest("POST", "/api/profile/email", 200, Date.now() - startTime);
+        return NextResponse.json({
+          status: "success",
+          message: "If this address is eligible, confirmation instructions will be sent.",
+        });
       }
       console.error("[profile/email] updateError:", updateError.code, updateError.message);
       throw new ApiError(500, "INTERNAL_ERROR", "Failed to update email. Please try again.");
@@ -113,7 +117,7 @@ export async function POST(request: NextRequest) {
     logApiRequest("POST", "/api/profile/email", 200, Date.now() - startTime);
     return NextResponse.json({
       status: "success",
-      message: "Confirmation emails sent to both addresses. Check your inbox.",
+      message: "If this address is eligible, confirmation instructions will be sent.",
     });
   } catch (error) {
     const statusCode = error instanceof ApiError ? error.statusCode : 500;

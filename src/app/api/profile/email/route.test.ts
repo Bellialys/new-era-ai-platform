@@ -173,3 +173,21 @@ describe("POST /api/profile/email - rate limiting", () => {
     expect(updateUserMock).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/profile/email - account enumeration resistance", () => {
+  it("returns the same public response when Supabase reports an existing account", async () => {
+    updateUserMock.mockResolvedValue({
+      error: { code: "email_exists", message: "User already registered" },
+    });
+
+    const res = await POST(makeRequest({ newEmail: "existing@example.com" }));
+    const body = (await res.json()) as { status?: string; message?: string; errorCode?: string };
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({
+      status: "success",
+      message: "If this address is eligible, confirmation instructions will be sent.",
+    });
+    expect(body.errorCode).toBeUndefined();
+  });
+});

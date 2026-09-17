@@ -24,6 +24,24 @@ export function sanitizeMarkdownUrl(href: string | undefined): string | undefine
   }
 }
 
+export function sanitizeMarkdownImagePath(src: string | undefined): string | undefined {
+  const value = src?.trim() ?? "";
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return undefined;
+  }
+
+  try {
+    const decoded = decodeURIComponent(value);
+    if (decoded.startsWith("//") || decoded.includes("\\")) return undefined;
+
+    const base = new URL("https://markdown-image.invalid");
+    const candidate = new URL(value, base);
+    return candidate.origin === base.origin ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const components: any = {
   h1: ({ children }: CP) => (
@@ -104,6 +122,21 @@ const components: any = {
         {children}
       </a>
     );
+  },
+
+  img: ({ src, alt }: { src?: string; alt?: string }) => {
+    const safeSrc = sanitizeMarkdownImagePath(src);
+
+    if (!safeSrc) {
+      return (
+        <span className="text-slate-400" role="img" aria-label={alt || "Blocked external image"}>
+          [Внешнее изображение заблокировано{alt ? `: ${alt}` : ""}]
+        </span>
+      );
+    }
+
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={safeSrc} alt={alt ?? ""} loading="lazy" referrerPolicy="no-referrer" />;
   },
 
   table: ({ children }: CP) => (

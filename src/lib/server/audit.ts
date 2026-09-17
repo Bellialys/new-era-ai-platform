@@ -8,7 +8,7 @@ export async function logAuditEvent(opts: {
   payload?: Record<string, unknown>;
 }): Promise<void> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return;
+  if (!supabase) throw new Error("Audit log is unavailable.");
 
   const { error } = await supabase.from("audit_log").insert({
     actor_id: opts.actorId,
@@ -19,6 +19,7 @@ export async function logAuditEvent(opts: {
   });
 
   if (error) {
-    console.error("audit_log insert failed:", error);
+    console.error("audit_log insert failed:", error.code ?? "unknown");
+    throw new Error("Audit log insert failed.");
   }
 }

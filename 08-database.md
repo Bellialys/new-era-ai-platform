@@ -314,6 +314,19 @@ Storage bucket и RLS policies должны быть проверены отде
 - policies `audit_log_service_role_select` и `audit_log_service_role_insert` ограничены ролью `service_role`;
 - чтение наружу идёт через `GET /api/admin/audit` и `requireAdmin()`.
 
+### 8.1 Atomic admin mutation RPCs
+
+Миграция `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql`
+добавляет service-role-only RPC `admin_update_user_with_audit` и
+`admin_update_model_with_audit`. Каждый RPC выполняет mutation и INSERT в
+`audit_log` в одной транзакции: ошибка аудита откатывает бизнес-изменение.
+
+Trigger `profiles_preserve_last_admin` сериализует demotion admin-ролей через
+transaction advisory lock и отклоняет операцию `ADMIN_LAST_ADMIN`, если после
+неё не останется ни одного администратора. RPC используют `SECURITY INVOKER`,
+пустой `search_path`; execute отозван у `PUBLIC`, `anon`, `authenticated` и
+выдан только `service_role`.
+
 ## 9. RPC cast_best_vote
 
 Атомарная функция для сохранения best vote. Добавлена миграцией
@@ -513,11 +526,16 @@ with check (true);
 | `20260705221427_enforce_vote_task_ownership.sql` | Усиливает `cast_best_vote`: best vote разрешён только владельцу `tasks.user_id`/`tasks.anonymous_session_id`; execute остаётся только у `service_role` |
 | `20260705223415_align_profiles_plan_pro.sql` | Закрепляет canonical `profiles.plan` как `free`/`pro` и мигрирует legacy `premium` в `pro` |
 | `20260705223814_enforce_models_access_level_rls.sql` | Выравнивает direct Data API SELECT на `models` с `access_level`: anon=`anonymous`, authenticated=`anonymous`/`registered`, `pro`/`admin`=`premium` |
-| `20260824193629_recover_openrouter_model_catalog.sql` | P0 provider recovery: деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
+| `20260917132000_recover_openrouter_model_catalog.sql` | P0 provider recovery: деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
+| `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql` | Pending: atomic admin user/model mutation + mandatory audit RPCs и concurrent-safe last-admin trigger; execute только `service_role` |
 
 Release-gate note:
 
 ```text
+20260824204614_atomic_admin_mutations_and_last_admin_guard.sql is pending.
+# apply after merge through the owner-controlled Supabase migration gate
+# verify RPC grants, atomic rollback on audit failure and two-session admin demotion race
+
 Remote Supabase migration history and local migration filenames are aligned
 through 20260624055408_add_audit_log.
 
@@ -542,7 +560,7 @@ v2.0.0-alpha.1 sync on 2026-06-28:
 # all new tables: RLS enabled, service_role only (leaderboard_snapshots also grants public SELECT)
 
 P0 provider recovery refresh on 2026-09-17:
-# local migration 20260824193629_recover_openrouter_model_catalog.sql created
+# local migration 20260917132000_recover_openrouter_model_catalog.sql created
 # migration is forward-only: historical model rows and UUID references are preserved
 # production application is pending an explicit owner/reviewer gate
 # local fallback catalog is already the curated 8-model set; live DB is not considered aligned until migration verification
@@ -578,7 +596,7 @@ P0 provider recovery refresh on 2026-09-17:
 3. `models` заполняется curated OpenRouter text model set; P0 recovery set содержит 8 provider-discovery-verified IDs.
 4. Добавлен server-side Supabase client.
 5. `/api/models` читает активные публичные модели из Supabase.
-6. Если Supabase недоступен, `/api/models` использует hardcoded fallback из тех же 8 curated text IDs; production DB выравнивается pending migration `20260824193629_recover_openrouter_model_catalog.sql`.
+6. Если Supabase недоступен, `/api/models` использует hardcoded fallback из тех же 8 curated text IDs; production DB выравнивается pending migration `20260917132000_recover_openrouter_model_catalog.sql`.
 7. Перед вызовом OpenRouter backend резолвит `selectionId` в server-only `model_key`.
 8. `/api/compare` best-effort сохраняет `tasks` и `model_responses`.
 9. `votes` подготовлена для выбора лучшего ответа и реакций.

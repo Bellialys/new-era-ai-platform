@@ -39,7 +39,7 @@ export function UpdatePasswordForm() {
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      setErrorMessage(getAuthErrorMessage(error.message));
+      setErrorMessage(getAuthErrorMessage(error.message, "password-update"));
       setIsSubmitting(false);
       return;
     }
