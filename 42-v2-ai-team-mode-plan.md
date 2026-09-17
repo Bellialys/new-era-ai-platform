@@ -93,7 +93,7 @@ Team Mode — это Judge Mode, расширенный до 4 шагов с п�
 
 ```
 task_id        → UUID сессии (из tasks.id)
-model_key      → OpenRouter model key (напр. "nvidia/nemotron-3-super-120b-a12b:free")
+model_key      → OpenRouter model key (напр. "google/gemma-4-26b-a4b-it:free")
 display_name   → Роль: "Planner" | "Researcher" | "Critic" | "Finalizer"
 response_text  → Вывод этой роли
 status         → "success" | "error"
@@ -217,11 +217,11 @@ TEAM_RUN_RATE_LIMIT_MAX: 3,
 TEAM_RUN_RATE_LIMIT_WINDOW_MS: 600_000,    // 10 мин
 TEAM_RUN_TASK_MIN_LENGTH: 10,
 TEAM_RUN_TASK_MAX_LENGTH: 4000,
-TEAM_DEFAULT_MODEL_ID: "nvidia/nemotron-3-super-120b-a12b:free",
+TEAM_DEFAULT_MODEL_ID: "google/gemma-4-26b-a4b-it:free",
 MODE_SLUG_AI_TEAM: "ai-team-mode",
 ```
 
-`TEAM_DEFAULT_MODEL_ID` обязан одновременно входить в `ALLOWED_MODELS` и live OpenRouter text discovery. Scheduled/manual `npm run models:verify` проверяет оба условия (`03:17 UTC`) и получает Actions secret `OPENROUTER_API_KEY` только на live-step. Pull request CI выполняет только mock `npm run test:models-verify` без provider secret.
+`TEAM_DEFAULT_MODEL_ID` обязан одновременно входить в `ALLOWED_MODELS` и live OpenRouter text discovery. На refresh 2026-09-17 `npm run models:verify` подтвердил текущий каталог: `8 text, 3 image`. Scheduled/manual `npm run models:verify` проверяет условия через provider discovery (`03:17 UTC`) и получает Actions secret `OPENROUTER_API_KEY` только на live-step. Pull request CI выполняет только mock `npm run test:models-verify` без provider secret.
 
 ---
 
@@ -264,7 +264,7 @@ src/app/team/team-run-form.tsx      # client form component
 ├─────────────────────────────────────────────────────┤
 │  Финальный ответ                                    │
 │  ┌─────────────────────────────────────────┐        │
-│  │ Синтезированный результат...            │        │
+│  │ Синтезированный результат...            │
 │  └─────────────────────────────────────────┘        │
 │  [Копировать]  [В историю]                          │
 └─────────────────────────────────────────────────────┘
@@ -334,55 +334,17 @@ src/app/team/team-run-form.tsx      # client form component
 ### PR22 — Стабилизация + v2.0 Release Checklist
 
 - state.json → `currentVersion: "2.0.0-alpha.1"`
-- AGENTS.md → снять `ai-team-mode` из раздела «Не делать раньше времени»
-- Release checklist: smoke, load test (3 concurrent sessions), rate limit verification
-- Обновить AGENTS.md текущую фазу и AGENTS.md версию
-
-### V200-02 — Production Env Activation
-
-- Статус 2026-07-02: `done`; все runtime checks пройдены и commitHash зафиксирован.
-- Vercel Production содержит Upstash/KV aliases, `ENABLE_TEAM_MODE=true` и `NEXT_PUBLIC_ENABLE_TEAM_MODE=true`.
-- Production redeploy готов и алиас `new-era-ai-platform.vercel.app` указывает на новую сборку.
-- `/api/health` и `/api/models` smoke пройдены.
-- `/team` показывает активный UI.
-- Unauthenticated `POST /api/team-run` блокируется auth gate, а не `503` от feature flag.
-- Authenticated Team Mode run прошёл с 4 role steps на allowlisted model.
-- Upstash-backed rate limits подтверждены для Team Mode, admin routes и `/api/guest`.
+- AGENTS.md → снять `ai-team-mode` блокер после release-gate подтверждения
+- полный regression gate: typecheck, lint, test, build, docs/state, smoke
 
 ---
 
-## 8. Риски и ограничения
+## 8. Release-hardening status
 
-| Риск | Уровень | Митигация |
-|---|---|---|
-| Latency: 4 последовательных LLM-вызова ≈ 10-20 сек | Средний | Показывать прогресс по шагам; Vercel `maxDuration=60` уже есть |
-| Vercel timeout (60s по умолчанию) | Средний | `export const maxDuration = 60` на route; выбирать быстрые модели |
-| Стоимость: 4× больше токенов чем compare | Средний | Жёсткий rate limit (3/10мин), только авторизованные пользователи |
-| Контекст растёт с каждым шагом | Низкий | Truncate prompts, ограничить output каждого шага (≤ 2000 chars) |
-| Critic/Finalizer получают hallucinated plan | Низкий | Не хуже одного LLM-вызова; для MVP приемлемо |
-| Суперпользователь обходит лимит через разные сессии | Низкий | Upstash Redis rate limit по userId (не per-request) |
-| Параллельное выполнение шагов невозможно (sequential) | n/a | MVP spec: только sequential |
+На 2026-09-17 Team Mode runtime default синхронизирован с provider-recovery catalog:
 
----
+```text
+TEAM_DEFAULT_MODEL_ID = google/gemma-4-26b-a4b-it:free
+```
 
-## 9. Security checklist для PR19
-
-- [ ] Задача пользователя считается Untrusted Input: sanitization перед вставкой в system prompt
-- [ ] System prompt фиксирован на сервере, не принимается из запроса
-- [ ] `model_key` выбирается из константы на сервере, не из тела запроса
-- [ ] API key не логируется, не включается в ответ
-- [ ] Stack trace не возвращается клиенту
-- [ ] Rate limit key = verified `userId`, не из тела запроса
-- [ ] Auth gate: `kind=user` обязателен (guest/none → 401)
-- [ ] Вывод каждой роли трунцируется перед передачей следующей (контроль длины контекста)
-- [ ] Стандартный outer try/catch: все ошибки → `createErrorResponse` → 500
-
----
-
-## 10. Связанные документы
-
-- `14-roadmap.md` — порядок этапов
-- `17-code-arena-spec.md` — Code Arena как прецедент нового режима
-- `AGENTS.md` — правила проекта (п.8: Team Mode не раньше v2.0)
-- `src/app/api/judge/route.ts` — прямой прототип sequential LLM step pattern
-- `src/lib/server/arena-persistence.ts` — `saveArenaRun()` используется без изменений
+Это значение покрыто unit tests, входит в `ALLOWED_MODELS` и было подтверждено live `models:verify`. Production Supabase model catalog остаётся отдельным release gate до применения pending migration `20260824193629_recover_openrouter_model_catalog.sql`.
