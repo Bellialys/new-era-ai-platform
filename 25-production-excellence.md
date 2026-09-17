@@ -252,6 +252,7 @@ AI-generated output нельзя напрямую вставлять в DOM, р�
 Обязательные требования:
 
 - Любой Markdown из AI-ответов на фронтенде должен проходить через безопасный Markdown pipeline и HTML sanitization.
+- Внешние Markdown images запрещены по умолчанию: автоматическая загрузка remote URL раскрывает IP/referrer и может использоваться как tracking pixel. Разрешены только same-origin paths либо отдельный privacy/SSRF-reviewed image proxy.
 
 - Если используется HTML-rendering для Markdown, он обязан проходить через DOMPurify или эквивалентный sanitizer с запрещением:
   - `<script>`;

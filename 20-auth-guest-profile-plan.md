@@ -167,6 +167,8 @@ premium
 
 /auth/callback
 # callback после OAuth/email confirmation
+# параметр next допускает только нормализованный same-origin absolute path;
+# protocol-relative, backslash и внешний origin отклоняются в "/"
 
 /auth/reset-password
 # запрос восстановления пароля
@@ -253,6 +255,10 @@ avatars/{user_id}/avatar.webp
 ## Изменение email
 
 Email менять только через Supabase Auth.
+
+Signup, login, password reset и email change не должны раскрывать, существует
+ли адрес: публичные success/error messages нейтральны, duplicate email при
+signup/email-change не получает отличимого ответа.
 
 Процесс:
 

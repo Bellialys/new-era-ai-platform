@@ -22,22 +22,24 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Resilience: logAuditEvent must never throw, even under failure conditions.
+// Fail-closed behavior: callers must observe audit failures.
 // ---------------------------------------------------------------------------
 
-describe("logAuditEvent — resilience", () => {
-  it("returns without throwing when Supabase is unavailable (no client)", async () => {
+describe("logAuditEvent — fail closed", () => {
+  it("rejects when Supabase is unavailable", async () => {
     mockedGetClient.mockReturnValue(null);
-    await expect(logAuditEvent({ actorId: ACTOR_ID, action: "test.action" })).resolves.toBeUndefined();
+    await expect(logAuditEvent({ actorId: ACTOR_ID, action: "test.action" })).rejects.toThrow(
+      "Audit log is unavailable."
+    );
   });
 
-  it("does not throw when the DB insert returns an error", async () => {
+  it("rejects when the DB insert returns an error", async () => {
     const { client } = makeAuditClient({ message: "relation does not exist" });
     mockedGetClient.mockReturnValue(client);
 
-    await expect(
-      logAuditEvent({ actorId: ACTOR_ID, action: "test.action" })
-    ).resolves.toBeUndefined();
+    await expect(logAuditEvent({ actorId: ACTOR_ID, action: "test.action" })).rejects.toThrow(
+      "Audit log insert failed."
+    );
   });
 
   it("does not throw when the insert promise rejects", async () => {
@@ -47,11 +49,6 @@ describe("logAuditEvent — resilience", () => {
     } as unknown as ReturnType<typeof getSupabaseServerClient>;
     mockedGetClient.mockReturnValue(client);
 
-    // logAuditEvent does not have a try/catch around the insert; an insert
-    // promise rejection will propagate. This test documents the current behavior:
-    // if the DB layer rejects, the error surfaces to the caller.
-    // This is an acceptable design choice as long as callers don't let it crash
-    // production routes (route handlers catch it via their own try/catch).
     await expect(
       logAuditEvent({ actorId: ACTOR_ID, action: "test.action" })
     ).rejects.toThrow("network error");
@@ -133,12 +130,13 @@ describe("logAuditEvent — payload mapping", () => {
     );
   });
 
-  it("skips the insert entirely when Supabase is unavailable (no ghost writes)", async () => {
+  it("does not attempt an insert when Supabase is unavailable", async () => {
     mockedGetClient.mockReturnValue(null);
 
-    await logAuditEvent({ actorId: ACTOR_ID, action: "admin.action" });
+    await expect(logAuditEvent({ actorId: ACTOR_ID, action: "admin.action" })).rejects.toThrow(
+      "Audit log is unavailable."
+    );
 
-    // getSupabaseServerClient was called but returned null — no insert attempted.
     expect(mockedGetClient).toHaveBeenCalledTimes(1);
   });
 });

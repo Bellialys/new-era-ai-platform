@@ -5,7 +5,6 @@ import {
   createErrorResponse,
   logApiRequest,
   requireAdmin,
-  logAuditEvent,
 } from "@/lib/server";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
 import { resolveRequestId } from "@/lib/server/utils";
@@ -89,26 +88,22 @@ export async function PATCH(
       throw new ApiError(400, "VALIDATION_ERROR", "No valid fields to update.");
     }
 
-    const { data: before } = await supabase
-      .from("models")
-      .select("is_active, display_name, access_level")
-      .eq("id", id)
-      .single();
-
-    const { error } = await supabase.from("models").update(updates).eq("id", id);
+    const { error } = await supabase.rpc("admin_update_model_with_audit", {
+      p_actor_id: actorId,
+      p_target_id: id,
+      p_updates: updates,
+    });
 
     if (error) {
-      console.error("Admin model update error:", error);
+      if (error.message === "ADMIN_AUTH_REQUIRED") {
+        throw new ApiError(403, "FORBIDDEN", "Admin access required.");
+      }
+      if (error.message === "MODEL_NOT_FOUND") {
+        throw new ApiError(404, "MODEL_NOT_FOUND", "Model was not found.");
+      }
+      console.error("Admin model mutation RPC error:", error.code ?? "unknown");
       throw new ApiError(500, "INTERNAL_ERROR", "Failed to update model.");
     }
-
-    await logAuditEvent({
-      actorId: actorId,
-      action: "model.update",
-      targetType: "model",
-      targetId: id,
-      payload: { before: before ?? null, after: updates },
-    });
 
     logApiRequest("PATCH", `/api/admin/models/${id}`, 200, Date.now() - startTime, requestId);
     return NextResponse.json({ status: "success" });
