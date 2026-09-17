@@ -30,6 +30,11 @@ import { IMAGE_MODELS } from "@/lib/arena/image-models";
 // ---------------------------------------------------------------------------
 
 const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const EXPECTED_IMAGE_MODEL_IDS = [
+  "openai/gpt-image-1-mini",
+  "google/gemini-3.1-flash-lite-image",
+  "black-forest-labs/flux.2-klein-4b",
+] as const;
 
 function makeRequest(url = "http://localhost/api/image-models"): NextRequest {
   return new NextRequest(url);
@@ -75,6 +80,8 @@ describe("GET /api/image-models — identity filtering", () => {
 
     expect(res.status).toBe(200);
     expect(body.models?.length).toBe(IMAGE_MODELS.length);
+    expect(body.models?.map((model) => model.id)).toEqual(EXPECTED_IMAGE_MODEL_IDS);
+    expect(body.models?.every((model) => model.accessLevel === "registered")).toBe(true);
   });
 
   it("returns only anonymous-accessible models for a guest", async () => {
@@ -90,6 +97,7 @@ describe("GET /api/image-models — identity filtering", () => {
     expect(res.status).toBe(200);
     const anonymous = IMAGE_MODELS.filter((m) => m.accessLevel === "anonymous");
     expect(body.models?.length).toBe(anonymous.length);
+    expect(body.models).toEqual([]);
     body.models?.forEach((m) => {
       expect(m.accessLevel).toBe("anonymous");
     });
@@ -102,6 +110,7 @@ describe("GET /api/image-models — identity filtering", () => {
     const body = await res.json() as { models?: Array<{ accessLevel: string }> };
 
     expect(res.status).toBe(200);
+    expect(body.models).toEqual([]);
     body.models?.forEach((m) => {
       expect(m.accessLevel).toBe("anonymous");
     });

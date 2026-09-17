@@ -57,8 +57,7 @@ export const ARENA_CONSTANTS = {
   IMAGE_MAX_MODELS: 3,
   IMAGE_RATE_LIMIT_MAX: 5,
   IMAGE_RATE_LIMIT_WINDOW_MS: 60_000,
-  OPENROUTER_IMAGE_API_URL: "https://openrouter.ai/api/v1/images/generations",
-  IMAGE_SIZE: "1024x1024",
+  OPENROUTER_IMAGE_API_URL: "https://openrouter.ai/api/v1/images",
 
   // Judge Mode constants (v1.3)
   JUDGE_RATE_LIMIT_WINDOW_MS: 60_000,
@@ -66,10 +65,10 @@ export const ARENA_CONSTANTS = {
   GUEST_JUDGE_RATE_LIMIT_WINDOW_MS: 60_000,
   GUEST_JUDGE_RATE_LIMIT_MAX_REQUESTS: 1,
   JUDGE_MAX_TOKENS: 800,
-  // Primary: Nemotron reasoning model (1M context, ideal for judging)
-  JUDGE_PRIMARY_MODEL_ID: "nvidia/nemotron-3-ultra-550b-a55b:free",
-  // Fallback: reliable general model
-  JUDGE_FALLBACK_MODEL_ID: "meta-llama/llama-3.3-70b-instruct:free",
+  // Primary: stable free general/reasoning model from the refreshed public catalog.
+  JUDGE_PRIMARY_MODEL_ID: "google/gemma-4-31b-it:free",
+  // Fallback: independently verified baseline model with structured output support.
+  JUDGE_FALLBACK_MODEL_ID: "google/gemma-4-26b-a4b-it:free",
   JUDGE_RESPONSE_TRUNCATE_CHARS: 1500,
 };
 
@@ -157,7 +156,6 @@ export const {
   IMAGE_RATE_LIMIT_MAX,
   IMAGE_RATE_LIMIT_WINDOW_MS,
   OPENROUTER_IMAGE_API_URL,
-  IMAGE_SIZE,
 } = ARENA_CONSTANTS;
 
 export const {

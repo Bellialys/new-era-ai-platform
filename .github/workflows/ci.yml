@@ -55,6 +55,11 @@ jobs:
       - name: Environment checker tests
         run: npm run test:env-check
 
+      - name: Model verifier tests
+        env:
+          OPENROUTER_API_KEY: ""
+        run: npm run test:models-verify
+
       - name: Build
         run: npm run build
 

@@ -28,7 +28,9 @@ export function ImageArena() {
     isSupabaseConfigured() ? null : false
   );
   const [prompt, setPrompt] = useState("");
-  const [selectedModelIds, setSelectedModelIds] = useState<string[]>(["openai/dall-e-3", "openai/dall-e-2"]);
+  const [selectedModelIds, setSelectedModelIds] = useState<string[]>(() =>
+    IMAGE_MODELS.slice(0, 2).map((model) => model.id)
+  );
   const [status, setStatus] = useState<Status>("idle");
   const [results, setResults] = useState<ImageResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

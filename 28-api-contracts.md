@@ -43,6 +43,7 @@ Frontend вызывает только backend route handlers.
 | `POST /api/judge` | 3 req / 1 guest req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/code-run` | 10 req | 60 сек | user UUID; guests are not allowed |
 | `POST /api/team-run` | 3 req | 10 min | user UUID; guests are not allowed |
+| `GET /api/image-models` | 60 req | 60 сек | IP-адрес |
 | `POST /api/image-compare` | 5 req | 60 сек | user UUID; guests are not allowed |
 | `GET /api/history` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `GET /api/history/[taskId]` | 60 req | 60 сек | user UUID или guest cookie `na_guest` |
@@ -355,6 +356,8 @@ Rules:
 - `prompt` must be at least 3 characters;
 - `responses` must contain at least 2 items with non-empty `answerText`;
 - model names are used only for UI/result mapping; judge prompt uses blind labels;
+- provider routing is fixed server-side: primary `google/gemma-4-31b-it:free`, fallback `google/gemma-4-26b-a4b-it:free`;
+- fallback выполняется только после контролируемой ошибки primary и не принимает произвольный provider model key из запроса;
 - rate limit: authenticated users 3 requests/min, guests 1 request/min;
 - verdict/reasoning является AI-generated structured output: backend должен валидировать его строгой схемой, а frontend рендерит как недоверенный текст по `25-production-excellence.md`, раздел `9.1`;
 - safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_BODY`, `INVALID_PROMPT`, `INVALID_RESPONSES`, `INSUFFICIENT_RESPONSES`, `JUDGE_PARSE_ERROR`, `INTERNAL_ERROR`.
@@ -728,7 +731,7 @@ Query-параметры (все необязательные):
 }
 ```
 
-Поле `modelId` необязательно — при отсутствии или если ID не входит в `ALLOWED_MODELS`, используется `TEAM_DEFAULT_MODEL_ID`.
+Поле `modelId` необязательно — при отсутствии или если ID не входит в `ALLOWED_MODELS`, используется `TEAM_DEFAULT_MODEL_ID = "google/gemma-4-26b-a4b-it:free"`.
 
 Минимальный ответ:
 
@@ -765,40 +768,98 @@ Rules:
 
 - requires a real Supabase authenticated user (`kind === "user"`); guest or unauthenticated → `401 AUTH_REQUIRED`;
 - `task` must be 10–4000 characters;
-- `modelId` is validated against `ALLOWED_MODELS` allowlist; unknown IDs fall back to `TEAM_DEFAULT_MODEL_ID`;
+- `modelId` is validated against `ALLOWED_MODELS` allowlist; unknown IDs fall back to `google/gemma-4-26b-a4b-it:free`;
 - rate limit: 3 requests per 10 minutes per user UUID (Upstash Redis in production, in-memory locally);
 - context window between steps is truncated to 2000 characters to prevent token overflow;
 - best-effort persistence: current runtime saves `tasks` (mode_slug = `ai-team-mode`) and role rows in `model_responses`; `team_runs`/`team_run_steps` are DB v2 future storage until the v2.1 migration task switches writes to those tables;
 - OpenRouter is called server-side only; `modelId` from frontend is a `selectionId`, never a raw provider key;
 - safe errors include `SERVICE_UNAVAILABLE`, `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INVALID_JSON`, `INTERNAL_ERROR`.
 
+## `GET /api/image-models` (v2.0, alpha)
+
+Возвращает зарегистрированный Image Arena catalog с учётом access level. Все текущие image-модели имеют `accessLevel = "registered"`, поэтому неавторизованный пользователь получает пустой массив, а авторизованный — три записи:
+
+```json
+{
+  "status": "success",
+  "models": [
+    {
+      "id": "openai/gpt-image-1-mini",
+      "name": "GPT Image 1 Mini",
+      "badge": ["image", "openai"],
+      "accessLevel": "registered"
+    },
+    {
+      "id": "google/gemini-3.1-flash-lite-image",
+      "name": "Gemini 3.1 Flash Lite Image",
+      "badge": ["image", "google"],
+      "accessLevel": "registered"
+    },
+    {
+      "id": "black-forest-labs/flux.2-klein-4b",
+      "name": "FLUX.2 Klein 4B",
+      "badge": ["image", "flux"],
+      "accessLevel": "registered"
+    }
+  ]
+}
+```
+
 ## `POST /api/image-compare` (v2.0, alpha)
 
-Запускает Image Arena: генерирует изображения через несколько image-capable моделей и загружает их в Supabase Storage, если storage upload доступен; в alpha degraded mode может вернуть provider URL.
+Запускает Image Arena: генерирует изображения через 1–3 allowlisted image-модели и возвращает только URL успешно сохранённых объектов Supabase Storage.
 
-Требует авторизованного пользователя. Гости получают `401 AUTH_REQUIRED`.
+Требует авторизованного пользователя. Гости получают `401 IMAGE_AUTH_REQUIRED`.
 
-> **Alpha endpoint.** API может измениться до стабильного v2.0 release. Не вызывать напрямую из frontend — только через backend route handler.
+> **Alpha endpoint.** API может измениться до стабильного v2.0 release. Frontend вызывает этот backend route; прямой вызов OpenRouter из браузера запрещён.
 
 Минимальный запрос:
 
 ```json
 {
-  "idea": "Футуристический город на рассвете",
-  "modelIds": ["uuid-image-model-1", "uuid-image-model-2"],
-  "modeSlug": "image-arena"
+  "prompt": "Футуристический город на рассвете",
+  "modelIds": [
+    "openai/gpt-image-1-mini",
+    "google/gemini-3.1-flash-lite-image"
+  ]
+}
+```
+
+Минимальный ответ:
+
+```json
+{
+  "taskId": "generated-uuid",
+  "results": [
+    {
+      "modelId": "openai/gpt-image-1-mini",
+      "modelName": "GPT Image 1 Mini",
+      "imageUrl": "https://storage.example/images/arena-images/generated-uuid/openai-gpt-image-1-mini.png"
+    },
+    {
+      "modelId": "google/gemini-3.1-flash-lite-image",
+      "modelName": "Gemini 3.1 Flash Lite Image",
+      "imageUrl": null,
+      "error": "Controlled per-model error"
+    }
+  ]
 }
 ```
 
 Rules:
 
-- requires a real Supabase authenticated user; guest or unauthenticated → `401 AUTH_REQUIRED`;
-- backend validates `modeSlug = image-arena` and that selected models have image output capability;
-- provider image URLs must be `https`, use an approved provider CDN host, resolve to public IP addresses, return an allowed image MIME type, and stay within the server byte limit before upload to Supabase Storage bucket `images`;
-- raw provider image URLs are never returned to the client; if Storage is unavailable, provider fetch validation fails, or upload fails, that model result returns `imageUrl: null` with a controlled `error`;
+- requires a real Supabase authenticated user; guest or unauthenticated → `401 IMAGE_AUTH_REQUIRED`;
+- `prompt` обязателен, после `trim()` не должен быть пустым и ограничен 1000 символами;
+- `modelIds` содержит 1–3 уникальные выбранные клиентом записи из registered-only `IMAGE_MODELS`; дубликат или произвольный provider key отклоняется до provider calls;
+- до provider fan-out backend инициализирует Storage client/bucket; недоступная конфигурация → `503 IMAGE_STORAGE_UNAVAILABLE` и ноль платных generation calls;
+- backend вызывает OpenRouter `POST /api/v1/images` отдельно для каждой модели с body `{ model, prompt, n: 1, aspect_ratio: "1:1" }`; дополнительные параметры не отправляются глобально, потому что capability-наборы моделей различаются;
+- provider response должен содержать `data[0].b64_json`; `media_type`, если присутствует, сверяется с сигнатурой декодированного файла;
+- разрешены только PNG, JPEG и WebP размером не более 5 MiB; SVG, неизвестный формат, некорректный base64 и MIME mismatch отклоняются до Storage upload;
+- проверенные raster bytes напрямую загружаются в Supabase Storage bucket `images`; backend не скачивает provider URL и никогда не возвращает raw provider URL или base64 клиенту;
+- если генерация или Storage upload одной модели не удались, её result содержит `imageUrl: null` и controlled `error`, а результаты остальных моделей сохраняются;
 - frontend does NOT call image providers directly — only `POST /api/image-compare`;
 - response contains image URLs/metadata, not binary image data or provider secrets;
-- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INTERNAL_ERROR`.
+- safe top-level errors include `IMAGE_AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `IMAGE_STORAGE_UNAVAILABLE`; generation и transient upload failures остаются per-model errors при HTTP `200`.
 
 ## `GET /api/profile`
 

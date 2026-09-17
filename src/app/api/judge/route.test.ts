@@ -52,6 +52,8 @@ vi.mock("@/lib/server", async (importOriginal) => {
 
 import { POST } from "./route";
 import {
+  JUDGE_FALLBACK_MODEL_ID,
+  JUDGE_PRIMARY_MODEL_ID,
   JUDGE_RATE_LIMIT_MAX_REQUESTS,
   JUDGE_RATE_LIMIT_WINDOW_MS,
 } from "@/lib/arena/constants";
@@ -138,6 +140,47 @@ describe("POST /api/judge — authentication", () => {
     const res = await POST(makeRequest(VALID_BODY));
 
     expect(res.status).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Provider recovery routing
+// ---------------------------------------------------------------------------
+
+describe("POST /api/judge — provider recovery routing", () => {
+  it("uses the approved primary model", async () => {
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+    expect(JUDGE_PRIMARY_MODEL_ID).toBe("google/gemma-4-31b-it:free");
+    expect(fetchOpenRouterMock).toHaveBeenCalledWith(
+      expect.any(String),
+      JUDGE_PRIMARY_MODEL_ID,
+      expect.objectContaining({ systemPrompt: expect.any(String) })
+    );
+  });
+
+  it("retries with the approved fallback when the primary fails", async () => {
+    fetchOpenRouterMock
+      .mockRejectedValueOnce(new Error("primary unavailable"))
+      .mockResolvedValueOnce({ text: JUDGE_JSON, latencyMs: 200 });
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+    expect(JUDGE_FALLBACK_MODEL_ID).toBe("google/gemma-4-26b-a4b-it:free");
+    expect(fetchOpenRouterMock).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      JUDGE_PRIMARY_MODEL_ID,
+      expect.objectContaining({ systemPrompt: expect.any(String) })
+    );
+    expect(fetchOpenRouterMock).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      JUDGE_FALLBACK_MODEL_ID,
+      expect.objectContaining({ systemPrompt: expect.any(String) })
+    );
   });
 });
 

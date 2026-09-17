@@ -93,7 +93,7 @@ Team Mode — это Judge Mode, расширенный до 4 шагов с п�
 
 ```
 task_id        → UUID сессии (из tasks.id)
-model_key      → OpenRouter model key (напр. "meta-llama/llama-3.3-70b-instruct:free")
+model_key      → OpenRouter model key (напр. "google/gemma-4-26b-a4b-it:free")
 display_name   → Роль: "Planner" | "Researcher" | "Critic" | "Finalizer"
 response_text  → Вывод этой роли
 status         → "success" | "error"
@@ -217,9 +217,11 @@ TEAM_RUN_RATE_LIMIT_MAX: 3,
 TEAM_RUN_RATE_LIMIT_WINDOW_MS: 600_000,    // 10 мин
 TEAM_RUN_TASK_MIN_LENGTH: 10,
 TEAM_RUN_TASK_MAX_LENGTH: 4000,
-TEAM_DEFAULT_MODEL_ID: "meta-llama/llama-3.3-70b-instruct:free",
+TEAM_DEFAULT_MODEL_ID: "google/gemma-4-26b-a4b-it:free",
 MODE_SLUG_AI_TEAM: "ai-team-mode",
 ```
+
+`TEAM_DEFAULT_MODEL_ID` обязан одновременно входить в `ALLOWED_MODELS` и live OpenRouter text discovery. На refresh 2026-09-17 `npm run models:verify` подтвердил текущий каталог: `8 text, 3 image`. Scheduled/manual `npm run models:verify` проверяет оба условия (`03:17 UTC`) и получает Actions secret `OPENROUTER_API_KEY` только на live-step. Pull request CI выполняет только mock `npm run test:models-verify` без provider secret.
 
 ---
 

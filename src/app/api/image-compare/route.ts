@@ -1,5 +1,3 @@
-import { lookup } from "node:dns/promises";
-import net from "node:net";
 import { NextRequest, NextResponse } from "next/server";
 import { IMAGE_MODELS } from "@/lib/arena/image-models";
 import {
@@ -7,7 +5,6 @@ import {
   IMAGE_MAX_MODELS,
   IMAGE_RATE_LIMIT_MAX,
   IMAGE_RATE_LIMIT_WINDOW_MS,
-  IMAGE_SIZE,
   OPENROUTER_IMAGE_API_URL,
 } from "@/lib/arena/constants";
 import {
@@ -19,11 +16,13 @@ import {
 } from "@/lib/server";
 
 export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
-const PROVIDER_IMAGE_FETCH_TIMEOUT_MS = 10_000;
-const PROVIDER_IMAGE_DNS_TIMEOUT_MS = 2_000;
-const PROVIDER_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
-const PROVIDER_IMAGE_ALLOWED_HOSTS = new Set(["cdn.openrouter.ai"]);
+const PROVIDER_IMAGE_GENERATION_TIMEOUT_MS = 45_000;
+// Reserve 15s of the 60s route budget for response validation, storage upload and serialization.
+const PROVIDER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const PROVIDER_IMAGE_MAX_BASE64_CHARS = Math.ceil(PROVIDER_IMAGE_MAX_BYTES / 3) * 4;
+const PROVIDER_IMAGE_MAX_RESPONSE_BYTES = PROVIDER_IMAGE_MAX_BASE64_CHARS + 64 * 1024;
 const PROVIDER_IMAGE_CONTENT_TYPES = new Map([
   ["image/png", "png"],
   ["image/jpeg", "jpg"],
@@ -31,191 +30,281 @@ const PROVIDER_IMAGE_CONTENT_TYPES = new Map([
 ]);
 
 interface ImageGenerationResult {
-  data?: { url?: string }[];
-  error?: { message?: string; code?: string | number };
+  data?: { b64_json?: unknown; media_type?: unknown }[];
 }
 
-function parseProviderImageUrl(value: string): URL | null {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" ? url : null;
-  } catch {
-    return null;
-  }
-}
-
-function isPrivateOrLocalAddress(address: string): boolean {
-  const family = net.isIP(address);
-  if (family === 4) {
-    const [first = 0, second = 0, third = 0] = address.split(".").map(Number);
-    return (
-      first === 0 ||
-      first === 10 ||
-      first === 127 ||
-      first >= 224 ||
-      (first === 100 && second >= 64 && second <= 127) ||
-      (first === 169 && second === 254) ||
-      (first === 172 && second >= 16 && second <= 31) ||
-      (first === 192 && second === 168) ||
-      (first === 192 && second === 0 && third === 0)
-    );
-  }
-
-  if (family === 6) {
-    const normalized = address.toLowerCase();
-    return (
-      normalized === "::1" ||
-      normalized.startsWith("fc") ||
-      normalized.startsWith("fd") ||
-      normalized.startsWith("fe80") ||
-      normalized.startsWith("::ffff:127.") ||
-      normalized.startsWith("::ffff:10.") ||
-      normalized.startsWith("::ffff:192.168.")
-    );
-  }
-
-  return true;
-}
-
-async function resolvesToPublicAddresses(hostname: string): Promise<boolean> {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  try {
-    const records = await Promise.race([
-      lookup(hostname, { all: true }),
-      new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error("DNS_LOOKUP_TIMEOUT")), PROVIDER_IMAGE_DNS_TIMEOUT_MS);
-      }),
-    ]);
-    return records.length > 0 && records.every((record) => !isPrivateOrLocalAddress(record.address));
-  } catch {
-    return false;
-  } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-  }
-}
-
-async function getSafeProviderImageUrl(value: string): Promise<URL | null> {
-  const url = parseProviderImageUrl(value);
-  if (!url || !PROVIDER_IMAGE_ALLOWED_HOSTS.has(url.hostname.toLowerCase())) {
-    return null;
-  }
-
-  return (await resolvesToPublicAddresses(url.hostname)) ? url : null;
-}
-
-function getProviderImageType(response: Response): { contentType: string; extension: string } | null {
-  const contentType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
-  if (!contentType) return null;
-
-  const extension = PROVIDER_IMAGE_CONTENT_TYPES.get(contentType);
-  return extension ? { contentType, extension } : null;
-}
-
-function exceedsProviderImageLimit(response: Response): boolean {
-  const rawLength = response.headers.get("content-length");
-  if (!rawLength) return false;
-
-  const contentLength = Number(rawLength);
-  return Number.isFinite(contentLength) && contentLength > PROVIDER_IMAGE_MAX_BYTES;
-}
-
-async function readProviderImage(response: Response): Promise<{
+interface DecodedProviderImage {
   bytes: ArrayBuffer;
   contentType: string;
   extension: string;
-} | null> {
-  const imageType = getProviderImageType(response);
-  if (!imageType || exceedsProviderImageLimit(response)) {
+}
+
+type SupabaseServerClient = NonNullable<ReturnType<typeof getSupabaseServerClient>>;
+type ImageStorageBucket = ReturnType<SupabaseServerClient["storage"]["from"]>;
+
+type BoundedJsonResult =
+  | { success: true; data: unknown }
+  | { success: false; reason: "invalid" | "too_large" };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function cancelResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Cancellation is best effort after the response has already been rejected.
+  }
+}
+
+async function readBoundedProviderJson(response: Response): Promise<BoundedJsonResult> {
+  const rawContentLength = response.headers.get("content-length");
+  if (rawContentLength) {
+    const contentLength = Number(rawContentLength);
+    if (Number.isFinite(contentLength) && contentLength > PROVIDER_IMAGE_MAX_RESPONSE_BYTES) {
+      await cancelResponseBody(response);
+      return { success: false, reason: "too_large" };
+    }
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return { success: false, reason: "invalid" };
+  }
+
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+  let receivedBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      receivedBytes += value.byteLength;
+      if (receivedBytes > PROVIDER_IMAGE_MAX_RESPONSE_BYTES) {
+        try {
+          await reader.cancel();
+        } catch {
+          // The response is already rejected; cancellation is best effort.
+        }
+        return { success: false, reason: "too_large" };
+      }
+      chunks.push(decoder.decode(value, { stream: true }));
+    }
+    chunks.push(decoder.decode());
+  } catch {
+    return { success: false, reason: "invalid" };
+  }
+
+  try {
+    return { success: true, data: JSON.parse(chunks.join("")) as unknown };
+  } catch {
+    return { success: false, reason: "invalid" };
+  }
+}
+
+function logProviderFailure(modelId: string, status: number): void {
+  console.warn("[image-compare] Provider request failed", {
+    modelId,
+    status,
+  });
+}
+
+function detectProviderImageType(bytes: Uint8Array): {
+  contentType: string;
+  extension: string;
+} | null {
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return { contentType: "image/png", extension: "png" };
+  }
+
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { contentType: "image/jpeg", extension: "jpg" };
+  }
+
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return { contentType: "image/webp", extension: "webp" };
+  }
+
+  return null;
+}
+
+function isBase64DataCharacter(code: number): boolean {
+  return (
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) ||
+    (code >= 0x30 && code <= 0x39) ||
+    code === 0x2b ||
+    code === 0x2f
+  );
+}
+
+function decodeProviderImage(value: string, declaredMediaType?: unknown): DecodedProviderImage | null {
+  if (
+    value.length === 0 ||
+    value.length > PROVIDER_IMAGE_MAX_BASE64_CHARS ||
+    value.length % 4 !== 0
+  ) {
     return null;
   }
 
-  const bytes = await response.arrayBuffer();
-  if (bytes.byteLength > PROVIDER_IMAGE_MAX_BYTES) {
+  const paddingLength = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  const dataLength = value.length - paddingLength;
+  const decodedLength = (value.length / 4) * 3 - paddingLength;
+  if (dataLength === 0 || decodedLength > PROVIDER_IMAGE_MAX_BYTES) {
     return null;
   }
 
-  return { bytes, ...imageType };
+  for (let index = 0; index < dataLength; index += 1) {
+    if (!isBase64DataCharacter(value.charCodeAt(index))) {
+      return null;
+    }
+  }
+  for (let index = dataLength; index < value.length; index += 1) {
+    if (value.charCodeAt(index) !== 0x3d) {
+      return null;
+    }
+  }
+
+  const decoded = Buffer.from(value, "base64");
+  if (
+    decoded.byteLength === 0 ||
+    decoded.byteLength > PROVIDER_IMAGE_MAX_BYTES ||
+    decoded.toString("base64") !== value
+  ) {
+    return null;
+  }
+
+  const bytes = Uint8Array.from(decoded);
+  const detectedType = detectProviderImageType(bytes);
+  if (!detectedType) {
+    return null;
+  }
+
+  if (declaredMediaType !== undefined) {
+    if (typeof declaredMediaType !== "string") {
+      return null;
+    }
+    const normalizedMediaType = declaredMediaType.trim().toLowerCase();
+    const declaredExtension = PROVIDER_IMAGE_CONTENT_TYPES.get(normalizedMediaType);
+    if (!declaredExtension || normalizedMediaType !== detectedType.contentType) {
+      return null;
+    }
+  }
+
+  return { bytes: bytes.buffer, ...detectedType };
 }
 
 async function generateImage(
   modelId: string,
   prompt: string
-): Promise<{ url: string } | { error: string }> {
-  const apiKey = getApiKey();
+): Promise<{ image: DecodedProviderImage } | { error: string }> {
+  let apiKey: string;
+  try {
+    apiKey = getApiKey();
+  } catch {
+    console.warn("[image-compare] Provider configuration unavailable", { modelId });
+    return { error: "Image generation is not configured" };
+  }
 
-  const res = await fetch(OPENROUTER_IMAGE_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-      "X-Title": "New Era AI Platform",
-    },
-    body: JSON.stringify({ model: modelId, prompt, n: 1, size: IMAGE_SIZE, response_format: "url" }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(OPENROUTER_IMAGE_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+        "X-Title": "New Era AI Platform",
+      },
+      body: JSON.stringify({ model: modelId, prompt, n: 1, aspect_ratio: "1:1" }),
+      signal: AbortSignal.timeout(PROVIDER_IMAGE_GENERATION_TIMEOUT_MS),
+    });
+  } catch {
+    logProviderFailure(modelId, 0);
+    return { error: "Image provider request failed" };
+  }
 
   if (!res.ok) {
-    let msg = `OpenRouter image API returned ${res.status}`;
-    try {
-      const data = (await res.json()) as ImageGenerationResult;
-      if (data.error?.message) msg = String(data.error.message);
-    } catch { /* ignore */ }
-    return { error: msg };
+    await cancelResponseBody(res);
+    logProviderFailure(modelId, res.status);
+    return { error: "Image provider request failed" };
   }
 
-  const data = (await res.json()) as ImageGenerationResult;
-  const url = data.data?.[0]?.url;
-  if (!url) {
-    return { error: "No image URL returned by provider" };
+  const providerJson = await readBoundedProviderJson(res);
+  if (!providerJson.success || !isRecord(providerJson.data)) {
+    console.warn("[image-compare] Provider returned an invalid response", {
+      modelId,
+      reason: providerJson.success ? "invalid_shape" : providerJson.reason,
+    });
+    return { error: "Image provider returned an invalid response" };
   }
-  if (!(await getSafeProviderImageUrl(url))) {
-    return { error: "Provider returned an unsupported image URL" };
+
+  const data = providerJson.data as ImageGenerationResult;
+  const providerImage = data.data?.[0];
+  if (!providerImage || typeof providerImage.b64_json !== "string") {
+    return { error: "No image data returned by provider" };
   }
-  return { url };
+
+  const decodedImage = decodeProviderImage(providerImage.b64_json, providerImage.media_type);
+  if (!decodedImage) {
+    return { error: "Provider image data failed validation" };
+  }
+
+  return { image: decodedImage };
 }
 
 async function uploadToStorage(
+  bucket: ImageStorageBucket,
   taskId: string,
   modelId: string,
-  imageUrl: string
+  image: DecodedProviderImage
 ): Promise<{ url: string } | { error: string }> {
-  const supabase = getSupabaseServerClient();
-  if (!supabase) {
-    return { error: "Image storage is not configured" };
-  }
-
-  const safeImageUrl = await getSafeProviderImageUrl(imageUrl);
-  if (!safeImageUrl) {
-    return { error: "Provider returned an unsupported image URL" };
-  }
-
-  let image: { bytes: ArrayBuffer; contentType: string; extension: string };
+  const safeModelId = modelId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const path = `arena-images/${taskId}/${safeModelId}.${image.extension}`;
   try {
-    const imgRes = await fetch(safeImageUrl.toString(), {
-      signal: AbortSignal.timeout(PROVIDER_IMAGE_FETCH_TIMEOUT_MS),
+    const { error } = await bucket.upload(path, image.bytes, {
+      contentType: image.contentType,
+      upsert: true,
     });
-    if (!imgRes.ok) return { error: "Provider image could not be fetched" };
-    const downloadedImage = await readProviderImage(imgRes);
-    if (!downloadedImage) return { error: "Provider image failed validation" };
-    image = downloadedImage;
+
+    if (error) {
+      console.warn("[image-compare] Storage upload failed", { modelId });
+      return { error: "Image storage upload failed" };
+    }
+
+    const publicUrl = bucket.getPublicUrl(path).data?.publicUrl;
+    if (typeof publicUrl !== "string" || publicUrl.length === 0) {
+      console.warn("[image-compare] Storage public URL unavailable", { modelId });
+      return { error: "Image storage is unavailable" };
+    }
+    return { url: publicUrl };
   } catch {
-    return { error: "Provider image could not be fetched" };
+    console.warn("[image-compare] Storage operation failed", { modelId });
+    return { error: "Image storage is unavailable" };
   }
-
-  const path = `arena-images/${taskId}/${modelId.replace(/\//g, "-")}.${image.extension}`;
-  const { error } = await supabase.storage
-    .from("images")
-    .upload(path, image.bytes, { contentType: image.contentType, upsert: true });
-
-  if (error) {
-    console.warn("[image-compare] Storage upload failed:", error.message);
-    return { error: "Image storage upload failed" };
-  }
-
-  const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl };
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -249,7 +338,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "INVALID_JSON", message: "Invalid request body" }, { status: 400 });
   }
 
-  const { prompt, modelIds } = body as { prompt?: unknown; modelIds?: unknown };
+  if (!isRecord(body)) {
+    logApiRequest("POST", "/api/image-compare", 400, Date.now() - startTime, requestId);
+    return NextResponse.json(
+      { error: "VALIDATION_ERROR", message: "Request body must be an object" },
+      { status: 400 }
+    );
+  }
+
+  const { prompt, modelIds } = body;
 
   if (typeof prompt !== "string" || prompt.trim().length === 0) {
     logApiRequest("POST", "/api/image-compare", 400, Date.now() - startTime, requestId);
@@ -283,8 +380,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const cleanPrompt = prompt.trim();
   const selectedModelIds = modelIds as string[];
+  if (new Set(selectedModelIds).size !== selectedModelIds.length) {
+    logApiRequest("POST", "/api/image-compare", 400, Date.now() - startTime, requestId);
+    return NextResponse.json(
+      { error: "VALIDATION_ERROR", message: "Model IDs must be unique" },
+      { status: 400 }
+    );
+  }
+
+  let imageStorageBucket: ImageStorageBucket;
+  try {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
+      logApiRequest("POST", "/api/image-compare", 503, Date.now() - startTime, requestId);
+      return NextResponse.json(
+        { error: "IMAGE_STORAGE_UNAVAILABLE", message: "Image storage is not configured" },
+        { status: 503 }
+      );
+    }
+    imageStorageBucket = supabase.storage.from("images");
+  } catch {
+    console.warn("[image-compare] Storage initialization failed");
+    logApiRequest("POST", "/api/image-compare", 503, Date.now() - startTime, requestId);
+    return NextResponse.json(
+      { error: "IMAGE_STORAGE_UNAVAILABLE", message: "Image storage is unavailable" },
+      { status: 503 }
+    );
+  }
+
+  const cleanPrompt = prompt.trim();
   const taskId = crypto.randomUUID();
 
   const results = await Promise.all(
@@ -292,16 +417,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const model = IMAGE_MODELS.find((m) => m.id === modelId);
       const modelName = model?.name ?? modelId;
 
-      const generated = await generateImage(modelId, cleanPrompt);
-      if ("error" in generated) {
-        return { modelId, modelName, imageUrl: null, error: generated.error };
-      }
+      try {
+        const generated = await generateImage(modelId, cleanPrompt);
+        if ("error" in generated) {
+          return { modelId, modelName, imageUrl: null, error: generated.error };
+        }
 
-      const uploaded = await uploadToStorage(taskId, modelId, generated.url);
-      if ("error" in uploaded) {
-        return { modelId, modelName, imageUrl: null, error: uploaded.error };
+        const uploaded = await uploadToStorage(imageStorageBucket, taskId, modelId, generated.image);
+        if ("error" in uploaded) {
+          return { modelId, modelName, imageUrl: null, error: uploaded.error };
+        }
+        return { modelId, modelName, imageUrl: uploaded.url, error: undefined };
+      } catch {
+        console.warn("[image-compare] Model pipeline failed", { modelId });
+        return { modelId, modelName, imageUrl: null, error: "Image generation failed" };
       }
-      return { modelId, modelName, imageUrl: uploaded.url, error: undefined };
     })
   );
 

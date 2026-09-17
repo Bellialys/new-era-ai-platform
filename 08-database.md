@@ -526,6 +526,7 @@ with check (true);
 | `20260705221427_enforce_vote_task_ownership.sql` | Усиливает `cast_best_vote`: best vote разрешён только владельцу `tasks.user_id`/`tasks.anonymous_session_id`; execute остаётся только у `service_role` |
 | `20260705223415_align_profiles_plan_pro.sql` | Закрепляет canonical `profiles.plan` как `free`/`pro` и мигрирует legacy `premium` в `pro` |
 | `20260705223814_enforce_models_access_level_rls.sql` | Выравнивает direct Data API SELECT на `models` с `access_level`: anon=`anonymous`, authenticated=`anonymous`/`registered`, `pro`/`admin`=`premium` |
+| `20260917132000_recover_openrouter_model_catalog.sql` | P0 provider recovery: деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
 | `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql` | Pending: atomic admin user/model mutation + mandatory audit RPCs и concurrent-safe last-admin trigger; execute только `service_role` |
 
 Release-gate note:
@@ -557,6 +558,12 @@ v2.0.0-alpha.1 sync on 2026-06-28:
 # file name aligned to match production Supabase migration history timestamp
 # 8 new tables: usage_events, team_runs, team_run_steps, code_runs, leaderboard_snapshots, artifacts, model_price_history, cleanup_log
 # all new tables: RLS enabled, service_role only (leaderboard_snapshots also grants public SELECT)
+
+P0 provider recovery refresh on 2026-09-17:
+# local migration 20260917132000_recover_openrouter_model_catalog.sql created
+# migration is forward-only: historical model rows and UUID references are preserved
+# production application is pending an explicit owner/reviewer gate
+# local fallback catalog is already the curated 8-model set; live DB is not considered aligned until migration verification
 ```
 
 Удалённые устаревшие локальные миграции:
@@ -586,10 +593,10 @@ v2.0.0-alpha.1 sync on 2026-06-28:
 
 1. Созданы таблицы `models`, `tasks`, `model_responses`, `profiles`, `votes`.
 2. Включён RLS на основных публичных таблицах.
-3. `models` заполняется curated OpenRouter model set.
+3. `models` заполняется curated OpenRouter text model set; P0 recovery set содержит 8 provider-discovery-verified IDs.
 4. Добавлен server-side Supabase client.
 5. `/api/models` читает активные публичные модели из Supabase.
-6. Если Supabase недоступен, `/api/models` использует hardcoded fallback (16 моделей — другой список, чем в Supabase-каталоге, это намеренно).
+6. Если Supabase недоступен, `/api/models` использует hardcoded fallback из тех же 8 curated text IDs; production DB выравнивается pending migration `20260917132000_recover_openrouter_model_catalog.sql`.
 7. Перед вызовом OpenRouter backend резолвит `selectionId` в server-only `model_key`.
 8. `/api/compare` best-effort сохраняет `tasks` и `model_responses`.
 9. `votes` подготовлена для выбора лучшего ответа и реакций.
@@ -602,7 +609,7 @@ v2.0.0-alpha.1 sync on 2026-06-28:
 16. Основная Prompt Arena сохраняет Winner vote через `POST /api/vote`, если `/api/compare` вернул сохранённый `taskId`.
 17. Model catalog governance metadata подготовлены через `raw_metadata` без изменения `model_key`.
 18. Добавлен generated column `status` в `models` (`active`/`inactive` в зависимости от `is_active`).
-19. Деактивированы недоступные бесплатные модели: `z-ai/glm-4.5-air:free`, `moonshotai/kimi-k2.6:free`.
+19. Recovery migration сохраняет исторические OpenRouter rows, но деактивирует и скрывает все записи вне текущего curated set; удаления history rows нет.
 20. Создан атомарный RPC `cast_best_vote`; release-gate hardening перевёл его на `SECURITY INVOKER` с execute только для `service_role`.
 21. Добавлены target-миграции `anonymous_sessions`, `models.access_level`, расширенный `profiles` и `avatars` storage.
 22. Code Arena Lite использует `tasks.mode_slug = 'code-arena'`.
@@ -612,7 +619,7 @@ v2.0.0-alpha.1 sync on 2026-06-28:
 
 ## Будущие сущности Image Arena / Visual Arena
 
-Image Arena backend (`/api/image-compare`) реализован в v2.0.0-alpha.1 как alpha, auth-only. Публичный UI Image Arena, стабильная Storage-интеграция и dedicated persistence — за рамками текущего scope. Текущий alpha backend может вернуть provider URL, если Storage upload/fetch недоступен. Нельзя добавлять Image Arena в публичный релиз без отдельного safety/storage review.
+Image Arena backend (`/api/image-compare`) реализован в v2.0.0-alpha.1 как alpha, auth-only. Dedicated persistence и полный safety/storage review остаются за рамками текущего scope. Backend вызывает OpenRouter `POST /api/v1/images`, принимает `data[].b64_json`, разрешает только PNG/JPEG/WebP до 5 MiB и загружает проверенные bytes напрямую в Supabase Storage. Отсутствующий Storage client даёт fail-fast `503 IMAGE_STORAGE_UNAVAILABLE` до платных provider calls; transient upload failure остаётся controlled per-model error с `imageUrl: null`. Raw provider URL/base64 никогда не возвращаются клиенту.
 
 После стабильной Prompt Arena можно добавить отдельные сущности:
 
@@ -627,7 +634,7 @@ artifacts
 Минимальная будущая структура `image_generations`:
 
 | Поле | Тип | Назначение |
-|---|---|
+|---|---|---|
 | `id` | uuid | ID генерации |
 | `task_id` | uuid | Связь с задачей Image Arena |
 | `model_id` | uuid | Модель, которая создала изображение |

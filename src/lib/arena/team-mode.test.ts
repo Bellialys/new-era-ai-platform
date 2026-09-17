@@ -323,6 +323,10 @@ describe("team-mode security invariants", () => {
 // ---------------------------------------------------------------------------
 
 describe("TEAM_DEFAULT_MODEL_ID — allowlist consistency", () => {
+  it("uses the refreshed stable provider-recovery default", () => {
+    expect(TEAM_DEFAULT_MODEL_ID).toBe("google/gemma-4-26b-a4b-it:free");
+  });
+
   it("TEAM_DEFAULT_MODEL_ID is present in ALLOWED_MODELS", () => {
     const ids = ALLOWED_MODELS.map((m) => m.id);
     expect(ids).toContain(TEAM_DEFAULT_MODEL_ID);
