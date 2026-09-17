@@ -14,11 +14,11 @@ prompts:
     {{input}}
 
 providers:
-  - id: openrouter:openai/gpt-oss-120b:free
+  - id: openrouter:google/gemma-4-26b-a4b-it:free
     config:
       temperature: 0.2
       max_tokens: 500
-  - id: openrouter:meta-llama/llama-3.3-70b-instruct:free
+  - id: openrouter:nvidia/nemotron-3-super-120b-a12b:free
     config:
       temperature: 0.2
       max_tokens: 500
