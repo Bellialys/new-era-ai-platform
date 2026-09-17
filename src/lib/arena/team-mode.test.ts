@@ -323,8 +323,8 @@ describe("team-mode security invariants", () => {
 // ---------------------------------------------------------------------------
 
 describe("TEAM_DEFAULT_MODEL_ID — allowlist consistency", () => {
-  it("uses the approved provider-recovery default", () => {
-    expect(TEAM_DEFAULT_MODEL_ID).toBe("nvidia/nemotron-3-super-120b-a12b:free");
+  it("uses the refreshed stable provider-recovery default", () => {
+    expect(TEAM_DEFAULT_MODEL_ID).toBe("google/gemma-4-26b-a4b-it:free");
   });
 
   it("TEAM_DEFAULT_MODEL_ID is present in ALLOWED_MODELS", () => {
