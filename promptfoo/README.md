@@ -1,49 +1,121 @@
-# Promptfoo baseline evals
+# Promptfoo evals
 
-Этот каталог добавляет первый изолированный слой автоматической оценки LLM для New Era AI Platform.
+Этот каталог содержит два уровня автоматической проверки New Era AI Platform через Promptfoo 0.123.0.
 
-## Что проверяется
+## Уровень 1 — прямой baseline моделей
 
-- одна и та же задача отправляется нескольким моделям через OpenRouter;
-- проверяются базовые требования к содержанию и формату ответа;
-- результаты можно сравнивать в CLI и в локальном Promptfoo viewer;
-- production API, Supabase и пользовательские данные на этом этапе не изменяются.
-
-Текущий baseline использует две бесплатные модели из fallback-каталога проекта:
+`promptfooconfig.yaml` отправляет одинаковые тесты напрямую в OpenRouter и сравнивает две бесплатные модели из fallback-каталога проекта:
 
 - `openai/gpt-oss-120b:free`;
 - `meta-llama/llama-3.3-70b-instruct:free`.
 
-Конфигурация выполняет 3 теста для каждой модели, то есть 6 LLM-запросов за полный запуск.
-
-## Требования
-
-Проект уже использует Node.js 24, что совместимо с Promptfoo 0.123.0.
-
-`OPENROUTER_API_KEY` должен находиться только в локальном `.env.local`. Ключ не хранится в `promptfooconfig.yaml` и не должен попадать в Git.
-
-## Запуск
+Полный baseline выполняет 3 теста для каждой модели, то есть 6 LLM-запросов.
 
 ```powershell
-# Запустить baseline eval через Promptfoo 0.123.0 и загрузить OPENROUTER_API_KEY из .env.local
+# OPENROUTER_API_KEY берётся из локального .env.local
 npm run eval:promptfoo
+```
 
-# Открыть локальный viewer с историей результатов
+## Уровень 2 — полный путь New Era AI Platform
+
+`platform-eval.yaml` использует `providers/new-era-compare-provider.mjs` и обращается уже не к OpenRouter напрямую, а к реальному backend проекта.
+
+Путь успешного E2E-теста:
+
+```text
+Promptfoo
+  -> POST /api/guest
+  -> GET /api/models
+  -> POST /api/compare
+  -> server-side model resolution
+  -> OpenRouter adapter
+  -> persistence best-effort
+  -> API response assertions
+```
+
+Провайдер не хранит и не передаёт `OPENROUTER_API_KEY`. Ключ нужен только локальному Next.js серверу, который сам загружает `.env.local`.
+
+### Что проверяет platform suite
+
+1. Успешный guest flow: создаётся guest-session, читается текущий model catalog, выбираются первые 2 доступные модели и выполняется настоящий `/api/compare`.
+2. Prompt короче минимальной длины возвращает `400 VALIDATION_ERROR`.
+3. Неизвестный `modeSlug` возвращает `400 INVALID_MODE`.
+4. Запрос без user/guest session возвращает `401 AUTH_REQUIRED`.
+5. Неизвестные model selections возвращают `403 MODEL_NOT_ALLOWED`.
+
+Только первый тест доходит до OpenRouter и обычно создаёт 2 LLM-запроса. Остальные проверки должны завершаться на backend validation/auth/model-resolution до вызова модели.
+
+### Локальный запуск
+
+В первом терминале:
+
+```powershell
+# Запустить New Era AI Platform. Next.js сам загрузит .env.local.
+npm run dev
+```
+
+Во втором терминале:
+
+```powershell
+# Проверить настоящий локальный backend через Promptfoo.
+npm run eval:promptfoo:platform
+
+# Открыть локальный viewer с историей результатов.
 npm run eval:promptfoo:view
 ```
 
-Promptfoo запускается через зафиксированную версию `npx --yes promptfoo@0.123.0`. На этом этапе пакет не добавляется в runtime или client bundle и не меняет `package-lock.json`.
+По умолчанию platform suite работает только с `http://127.0.0.1:3000`.
+
+Если dev-server работает на другом локальном адресе:
+
+```powershell
+$env:PROMPTFOO_TARGET_URL="http://127.0.0.1:3001"
+npm run eval:promptfoo:platform
+```
+
+Remote targets намеренно заблокированы по умолчанию, чтобы случайно не создать guest-сессии, записи БД или реальные AI-запросы в production. Для осознанного remote-теста нужно одновременно задать target и явный флаг:
+
+```powershell
+$env:PROMPTFOO_TARGET_URL="https://example.com"
+$env:PROMPTFOO_ALLOW_REMOTE_TARGET="1"
+npm run eval:promptfoo:platform
+```
+
+Использовать remote mode только для специально выбранного deployment.
+
+## Rate limiting
+
+Platform suite проходит через существующий rate limiter `/api/guest`, `/api/models` и `/api/compare`, но намеренно не пытается исчерпать лимит множеством запросов. Boundary/load-тест на `429 RATE_LIMIT` нужно делать отдельным изолированным этапом, чтобы не создавать лишнюю нагрузку и не расходовать AI-квоту.
 
 ## Хранение и приватность
 
-`sharing: false` отключает публикацию результатов через Promptfoo sharing.
+`sharing: false` отключает публикацию eval-результатов через Promptfoo sharing.
 
-По умолчанию Promptfoo хранит локальную историю и cache в пользовательском каталоге `~/.promptfoo` (`%USERPROFILE%\.promptfoo` в Windows), а не в репозитории проекта.
+Promptfoo хранит локальную историю/cache в пользовательском каталоге `~/.promptfoo` (`%USERPROFILE%\.promptfoo` в Windows), а не в репозитории проекта.
 
-Не добавлять API-ключи, `.env.local`, экспортированные результаты с чувствительными данными или Promptfoo database/cache в Git.
+Не добавлять в Git:
 
-## Следующий этап
+- `.env.local`;
+- API-ключи и токены;
+- guest-cookie;
+- экспортированные eval-результаты с чувствительными данными;
+- Promptfoo database/cache.
 
-После стабильного baseline можно отдельно подключить Promptfoo к реальному локальному `/api/compare` через HTTP/custom provider. Это позволит тестировать уже не только модели напрямую, но и полный путь New Era AI Platform: auth, model catalog, backend OpenRouter adapter, validation, persistence и rate limiting.
+Remote provider metadata не содержит guest-cookie или OpenRouter key.
 
-CI/CD и red-team проверки добавлять отдельным этапом после локального подтверждения baseline, чтобы не смешивать базовую интеграцию с GitHub Secrets и security scanning.
+## Почему Promptfoo не добавлен в dependencies
+
+Promptfoo запускается через зафиксированную команду `npx --yes promptfoo@0.123.0`. Поэтому он не попадает в production/runtime/client bundle и не изменяет `package-lock.json`.
+
+Проект использует Node.js 24, а Promptfoo 0.123.0 требует Node.js `>=22.22.0`.
+
+## Следующие этапы
+
+После локального подтверждения обоих eval-слоёв можно отдельно добавить:
+
+- regression datasets для Prompt Arena и Code Arena;
+- Judge Mode как model-graded assertion;
+- red-team security suite;
+- изолированный rate-limit boundary test;
+- GitHub Actions eval gate с отдельным secret policy;
+- сохранение агрегированных eval-метрик в отдельное хранилище/Leaderboard без утечки prompts и секретов.
