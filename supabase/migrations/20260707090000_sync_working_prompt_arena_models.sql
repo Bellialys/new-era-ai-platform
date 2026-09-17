@@ -37,12 +37,12 @@ where provider = 'openrouter'
 
 with curated(
   model_key,
- display_name,
- description,
- role_tags,
- sort_order
+  display_name,
+  description,
+  role_tags,
+  sort_order
 ) as (
- values
+  values
     ('openai/gpt-oss-20b:free','GPT-OSS 20B','Бесплатная компактная открытая модель OpenAI 20B для быстрых общих ответов.',array['general','fast']::text[],10),
     ('nvidia/nemotron-3-nano-30b-a3b:free','Nemotron 3 Nano 30B','Бесплатная компактная reasoning-модель NVIDIA 30B для устойчивого дефолтного сравнения.',array['reasoning']::text[],20),
     ('poolside/laguna-xs-2.1:free','Laguna XS 2.1','Бесплатная code-oriented модель Poolside для быстрых Prompt Arena сравнений с coding-уклоном.',array['coding','fast']::text[],30),
