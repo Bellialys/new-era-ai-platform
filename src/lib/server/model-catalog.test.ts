@@ -16,27 +16,27 @@ vi.mock("./supabase", () => ({
 const mockedGetSupabaseServerClient = vi.mocked(getSupabaseServerClient);
 
 const EXPECTED_FALLBACK_CODE_MODEL_IDS = [
+  "cohere/north-mini-code:free",
   "poolside/laguna-s-2.1:free",
   "poolside/laguna-xs-2.1:free",
-  "cohere/north-mini-code:free",
 ] as const;
 
 const dbRows = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    model_key: "z-ai/glm-5.2:free",
-    display_name: "GLM 5.2",
+    model_key: "google/gemma-4-26b-a4b-it:free",
+    display_name: "Gemma 4 26B A4B",
     description: "DB model",
-    role_tags: ["general", "fast"],
+    role_tags: ["general", "default"],
     price_label: "free",
     access_level: "anonymous",
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
-    model_key: "thinkingmachines/inkling:free",
-    display_name: "Inkling",
+    model_key: "google/gemma-4-31b-it:free",
+    display_name: "Gemma 4 31B",
     description: null,
-    role_tags: ["balanced"],
+    role_tags: ["general", "reasoning"],
     price_label: "free",
     access_level: "anonymous",
   },
@@ -138,7 +138,7 @@ describe("model catalog (DB mode)", () => {
       id: dbRows[0].id,
       name: dbRows[0].display_name,
       provider: "openrouter",
-      badge: "Free Fast",
+      badge: "Free",
       description: dbRows[0].description,
     });
     expect(models[0].id).not.toBe(dbRows[0].model_key);
