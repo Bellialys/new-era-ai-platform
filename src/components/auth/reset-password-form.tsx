@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { isAccountAbsenceError } from "@/lib/auth-security";
 import { getSupabaseClient } from "@/lib/supabase";
 
 export function ResetPasswordForm() {
@@ -31,14 +32,24 @@ export function ResetPasswordForm() {
 
     setIsSubmitting(true);
 
-    await supabase.auth.resetPasswordForEmail(cleanEmail, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
-    });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
+      });
 
-    setSuccessMessage(
-      "Если аккаунт существует, мы отправили ссылку для сброса пароля."
-    );
-    setIsSubmitting(false);
+      if (error && !isAccountAbsenceError(error.message, error.code)) {
+        setErrorMessage("Не удалось отправить ссылку для сброса пароля. Попробуйте позже.");
+        return;
+      }
+
+      setSuccessMessage(
+        "Если аккаунт существует, мы отправили ссылку для сброса пароля."
+      );
+    } catch {
+      setErrorMessage("Не удалось отправить ссылку для сброса пароля. Попробуйте позже.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
