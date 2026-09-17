@@ -18,7 +18,8 @@ import {
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-const PROVIDER_IMAGE_GENERATION_TIMEOUT_MS = 55_000;
+const PROVIDER_IMAGE_GENERATION_TIMEOUT_MS = 45_000;
+// Reserve 15s of the 60s route budget for response validation, storage upload and serialization.
 const PROVIDER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const PROVIDER_IMAGE_MAX_BASE64_CHARS = Math.ceil(PROVIDER_IMAGE_MAX_BYTES / 3) * 4;
 const PROVIDER_IMAGE_MAX_RESPONSE_BYTES = PROVIDER_IMAGE_MAX_BASE64_CHARS + 64 * 1024;
