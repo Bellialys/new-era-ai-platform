@@ -513,7 +513,7 @@ with check (true);
 | `20260705221427_enforce_vote_task_ownership.sql` | Усиливает `cast_best_vote`: best vote разрешён только владельцу `tasks.user_id`/`tasks.anonymous_session_id`; execute остаётся только у `service_role` |
 | `20260705223415_align_profiles_plan_pro.sql` | Закрепляет canonical `profiles.plan` как `free`/`pro` и мигрирует legacy `premium` в `pro` |
 | `20260705223814_enforce_models_access_level_rls.sql` | Выравнивает direct Data API SELECT на `models` с `access_level`: anon=`anonymous`, authenticated=`anonymous`/`registered`, `pro`/`admin`=`premium` |
-| `20260824193629_recover_openrouter_model_catalog.sql` | P0 provider recovery: деактивирует без удаления OpenRouter rows вне curated 13-model text set и upsert-ит проверенные discovery metadata по `model_key` |
+| `20260824193629_recover_openrouter_model_catalog.sql` | P0 provider recovery: деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
 
 Release-gate note:
 
@@ -541,11 +541,11 @@ v2.0.0-alpha.1 sync on 2026-06-28:
 # 8 new tables: usage_events, team_runs, team_run_steps, code_runs, leaderboard_snapshots, artifacts, model_price_history, cleanup_log
 # all new tables: RLS enabled, service_role only (leaderboard_snapshots also grants public SELECT)
 
-P0 provider recovery on 2026-08-24:
+P0 provider recovery refresh on 2026-09-17:
 # local migration 20260824193629_recover_openrouter_model_catalog.sql created
 # migration is forward-only: historical model rows and UUID references are preserved
 # production application is pending an explicit owner/reviewer gate
-# local fallback catalog is already the curated 13-model set; live DB is not considered aligned until migration verification
+# local fallback catalog is already the curated 8-model set; live DB is not considered aligned until migration verification
 ```
 
 Удалённые устаревшие локальные миграции:
@@ -575,10 +575,10 @@ P0 provider recovery on 2026-08-24:
 
 1. Созданы таблицы `models`, `tasks`, `model_responses`, `profiles`, `votes`.
 2. Включён RLS на основных публичных таблицах.
-3. `models` заполняется curated OpenRouter text model set; P0 recovery set содержит 13 provider-discovery-verified IDs.
+3. `models` заполняется curated OpenRouter text model set; P0 recovery set содержит 8 provider-discovery-verified IDs.
 4. Добавлен server-side Supabase client.
 5. `/api/models` читает активные публичные модели из Supabase.
-6. Если Supabase недоступен, `/api/models` использует hardcoded fallback из тех же 13 curated text IDs; production DB выравнивается pending migration `20260824193629_recover_openrouter_model_catalog.sql`.
+6. Если Supabase недоступен, `/api/models` использует hardcoded fallback из тех же 8 curated text IDs; production DB выравнивается pending migration `20260824193629_recover_openrouter_model_catalog.sql`.
 7. Перед вызовом OpenRouter backend резолвит `selectionId` в server-only `model_key`.
 8. `/api/compare` best-effort сохраняет `tasks` и `model_responses`.
 9. `votes` подготовлена для выбора лучшего ответа и реакций.
@@ -616,7 +616,7 @@ artifacts
 Минимальная будущая структура `image_generations`:
 
 | Поле | Тип | Назначение |
-|---|---|
+|---|---|---|
 | `id` | uuid | ID генерации |
 | `task_id` | uuid | Связь с задачей Image Arena |
 | `model_id` | uuid | Модель, которая создала изображение |
