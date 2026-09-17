@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getAuthErrorMessage, isAccountExistenceError } from "./auth-messages";
+import {
+  getAuthErrorMessage,
+  isAccountAbsenceError,
+  isAccountExistenceError,
+} from "./auth-messages";
 
 describe("auth message privacy", () => {
   it.each(["Invalid login credentials", "Email not confirmed", "User not found"])(
@@ -26,6 +30,18 @@ describe("auth message privacy", () => {
     "recognizes a stable account-existence provider code: %s",
     (code) => {
       expect(isAccountExistenceError("redacted", code)).toBe(true);
+    }
+  );
+
+  it("recognizes user_not_found as reset enumeration-sensitive", () => {
+    expect(isAccountAbsenceError("redacted", "user_not_found")).toBe(true);
+    expect(isAccountAbsenceError("User not found")).toBe(true);
+  });
+
+  it.each(["over_email_send_rate_limit", "over_request_rate_limit", "unexpected_failure"])(
+    "does not hide operational reset error code as account absence: %s",
+    (code) => {
+      expect(isAccountAbsenceError("redacted", code)).toBe(false);
     }
   );
 });
