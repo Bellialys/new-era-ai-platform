@@ -1,0 +1,112 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: New Era AI Platform - end-to-end /api/compare regression
+
+sharing: false
+
+prompts:
+  - "{{input}}"
+
+providers:
+  - id: file://providers/new-era-compare-provider.mjs
+    label: new-era-guest
+    config:
+      providerId: new-era-platform-guest
+      authMode: guest
+      modelCount: 2
+      timeoutMs: 70000
+
+  - id: file://providers/new-era-compare-provider.mjs
+    label: new-era-noauth
+    config:
+      providerId: new-era-platform-noauth
+      authMode: none
+      modelCount: 2
+      timeoutMs: 70000
+
+commandLineOptions:
+  maxConcurrency: 1
+  cache: false
+
+defaultTest:
+  options:
+    disableVarExpansion: true
+
+tests:
+  - description: "E2E: guest -> model catalog -> compare -> OpenRouter"
+    providers:
+      - new-era-guest
+    vars:
+      input: "На русском языке одним предложением объясни, зачем нужен HTTP status code 404."
+    assert:
+      - type: javascript
+        value: "output?.httpStatus === 200"
+      - type: javascript
+        value: "output?.body?.status === 'success'"
+      - type: javascript
+        value: "Array.isArray(output?.selectedModelIds) && output.selectedModelIds.length === 2"
+      - type: javascript
+        value: |
+          Array.isArray(output?.body?.responses) &&
+          output.body.responses.length === 2 &&
+          output.body.responses.every((item) =>
+            typeof item?.modelId === 'string' &&
+            typeof item?.modelName === 'string' &&
+            (item?.status === 'success' || item?.status === 'error')
+          )
+      - type: javascript
+        value: "output?.modelSuccessCount >= 1"
+
+  - description: "Validation: reject too-short prompt"
+    providers:
+      - new-era-guest
+    vars:
+      input: "x"
+      modelIds:
+        - "test-model-a"
+        - "test-model-b"
+    assert:
+      - type: javascript
+        value: "output?.httpStatus === 400"
+      - type: javascript
+        value: "output?.body?.errorCode === 'VALIDATION_ERROR'"
+
+  - description: "Validation: reject unsupported mode"
+    providers:
+      - new-era-guest
+    vars:
+      input: "Проверка неправильного modeSlug."
+      modeSlug: "not-a-real-mode"
+      modelIds:
+        - "test-model-a"
+        - "test-model-b"
+    assert:
+      - type: javascript
+        value: "output?.httpStatus === 400"
+      - type: javascript
+        value: "output?.body?.errorCode === 'INVALID_MODE'"
+
+  - description: "Auth: reject caller without user or guest session"
+    providers:
+      - new-era-noauth
+    vars:
+      input: "Проверка обязательной авторизации для Prompt Arena."
+    assert:
+      - type: javascript
+        value: "output?.httpStatus === 401"
+      - type: javascript
+        value: "output?.body?.errorCode === 'AUTH_REQUIRED'"
+
+  - description: "Model catalog: reject unknown selections"
+    providers:
+      - new-era-guest
+    vars:
+      input: "Проверка серверной валидации выбранных моделей."
+      modelIds:
+        - "00000000-0000-4000-8000-000000000001"
+        - "00000000-0000-4000-8000-000000000002"
+    assert:
+      - type: javascript
+        value: "output?.httpStatus === 403"
+      - type: javascript
+        value: "output?.body?.errorCode === 'MODEL_NOT_ALLOWED'"
