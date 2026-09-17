@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: New Era AI Platform - baseline OpenRouter model evaluation
+
+sharing: false
+
+prompts:
+  - |
+    Ты — AI-модель в New Era AI Platform.
+    Выполни запрос пользователя точно и по существу.
+    Не выдумывай факты. Соблюдай формат, если он указан в запросе.
+
+    Запрос:
+    {{input}}
+
+providers:
+  - id: openrouter:openai/gpt-oss-120b:free
+    config:
+      temperature: 0.2
+      max_tokens: 500
+  - id: openrouter:meta-llama/llama-3.3-70b-instruct:free
+    config:
+      temperature: 0.2
+      max_tokens: 500
+
+commandLineOptions:
+  maxConcurrency: 1
+  cache: true
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: "typeof output === 'string' && output.trim().length >= 10"
+
+tests:
+  - description: "RU: различить HTTP 401 и 403"
+    vars:
+      input: "На русском языке кратко объясни разницу между HTTP 401 и 403. Укажи оба кода."
+    assert:
+      - type: contains-all
+        value:
+          - "401"
+          - "403"
+      - type: javascript
+        value: '/[А-Яа-яЁё]/.test(output)'
+      - type: javascript
+        value: "output.length <= 1600"
+
+  - description: "Code: исправить функцию сложения"
+    vars:
+      input: |
+        Исправь функцию JavaScript и верни только исправленный код:
+        function add(a, b) {
+          return a - b;
+        }
+    assert:
+      - type: javascript
+        value: '/return\s+a\s*\+\s*b\s*;?/.test(output)'
+      - type: not-contains
+        value: "return a - b"
+
+  - description: "Format: строгий JSON"
+    vars:
+      input: 'Верни только валидный JSON без Markdown: {"result":4,"language":"ru"}'
+    assert:
+      - type: is-json
+      - type: javascript
+        value: |
+          try {
+            const value = typeof output === 'string' ? JSON.parse(output) : output;
+            return value?.result === 4 && value?.language === 'ru';
+          } catch {
+            return false;
+          }
