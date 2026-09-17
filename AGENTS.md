@@ -106,6 +106,37 @@ v2.0 - AI Team Mode
 - Для docs-only задач всё равно выполнять self-review, `state:check`, `docs:check`, staged diff review и проверку отсутствия секретов.
 - Решения уровня production-grade должны опираться на evidence: код, state, roadmap, проверки, официальные docs или признанные стандарты (OWASP, NIST, W3C, Google SRE, OpenAPI, Supabase/Vercel/Next.js docs).
 
+## Code intelligence graph для AI-агентов
+
+Репозиторий использует локальный `code-review-graph` (CRG). Для структурных и
+многофайловых вопросов сначала используй MCP-инструменты CRG:
+`get_architecture_overview_tool`, `query_graph_tool`,
+`get_impact_radius_tool`, `get_review_context_tool`,
+`detect_changes_tool` и `list_graph_stats_tool`. Это относится к навигации по
+архитектуре, callers/callees, зависимостям, blast radius и поиску связанных
+тестов. После структурной карты читай только релевантные исходные файлы.
+
+Правила использования:
+
+1. Для очевидной локальной однофайловой задачи допустим direct-file-first:
+   чтение файла дешевле graph query.
+2. Перед изменением нескольких связанных модулей выполни impact analysis.
+3. CRG не заменяет TypeScript compiler, ESLint, тесты или ручное чтение
+   изменяемого кода.
+4. Call edges для TypeScript/Next.js нельзя считать абсолютно точными.
+   Динамические imports, route handlers, Supabase callbacks, строковые
+   `fetch("/api/...")` и framework conventions подтверждай исходным кодом.
+5. Вывод о связанных тестах подтверждай тестовыми файлами: transitive
+   `TESTED_BY` может быть шире реального scope.
+6. После структурных изменений обновляй граф командой `npm run graph:update`;
+   перед анализом проверяй его через `npm run graph:doctor`.
+7. Если MCP недоступен, используй локальные wrapper-команды из
+   `docs/tooling/code-review-graph.md`, затем продолжай обычную навигацию по
+   коду без блокировки задачи.
+8. Не запускай `embed` и не передавай исходный код cloud embedding provider
+   без прямого разрешения владельца проекта. Базовый граф работает без
+   embeddings.
+
 ---
 
 ## Проверка перед commit

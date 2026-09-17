@@ -1,0 +1,26 @@
+# code-review-graph already excludes Git-ignored build outputs, dependency
+# directories, lock files, source maps, databases, and minified assets.
+
+# Historical material can contain obsolete scripts and architecture descriptions
+# that would otherwise create misleading structural relationships.
+archive/**
+docs/audits/**
+docs/roadmap-drafts/**
+
+# Generated Next.js type declaration; the source routes and project TypeScript
+# configuration remain indexed.
+next-env.d.ts
+
+# Static/binary assets do not contribute callable structure. Keeping these
+# patterns makes the policy explicit if support for more asset types is added.
+public/**
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.webp
+**/*.ico
+**/*.pdf
+**/*.zip
+**/*.gz
+**/*.7z
