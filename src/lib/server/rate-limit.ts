@@ -23,6 +23,7 @@ type RateLimitBucket = {
 };
 
 const IN_MEMORY_RATE_LIMIT_MAX_BUCKETS = 10_000;
+const IN_MEMORY_EXPIRY_SWEEP_LIMIT = 32;
 
 /** Per-instance fixed-window store with bounded cardinality for Redis outages and local use. */
 export class InMemoryRateLimitStore {
@@ -64,7 +65,14 @@ export class InMemoryRateLimitStore {
   private ensureCapacity(now: number): void {
     if (this.buckets.size < this.maxBuckets) return;
 
+    // Cleanup is deliberately bounded: during a Redis outage, high-cardinality
+    // traffic must not turn every new key into an O(maxBuckets) full-map scan.
+    // Map iteration follows LRU order, so checking a small prefix removes old
+    // expired buckets cheaply before falling back to one O(1) LRU eviction.
+    let scanned = 0;
     for (const [key, bucket] of this.buckets) {
+      if (scanned >= IN_MEMORY_EXPIRY_SWEEP_LIMIT) break;
+      scanned += 1;
       if (bucket.resetAt <= now) this.buckets.delete(key);
     }
 
