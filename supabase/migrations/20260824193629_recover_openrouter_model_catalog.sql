@@ -1,11 +1,16 @@
--- P0 provider recovery: align public.models with the curated OpenRouter text
--- catalog verified against the provider discovery endpoint on 2026-08-24.
+-- P0 provider recovery: align public.models with the curated public OpenRouter
+-- text catalog re-verified on 2026-09-17.
 --
 -- Forward-only strategy:
 --   1. Preserve historical rows and UUID references by deactivating, not
---      deleting, OpenRouter models outside the curated set.
+--      deleting, obsolete public text models.
 --   2. Upsert the curated set by model_key so existing UUIDs remain stable.
---   3. Keep operational capability metadata with the catalog row.
+--   3. Preserve image-generation rows managed by the Image Arena catalog.
+--   4. Keep current capability and provider-data-policy metadata with each row.
+--
+-- This migration was confirmed absent from production migration history before
+-- the 2026-09-17 refresh, so updating this pending file does not rewrite an
+-- already-applied production migration.
 
 begin;
 
@@ -16,25 +21,23 @@ set
   raw_metadata = raw_metadata || jsonb_build_object(
     'is_active', false,
     'status', 'inactive',
-    'verification_status', 'not_in_provider_recovery_catalog',
-    'openrouter_verified_at', '2026-08-24T00:00:00Z',
+    'verification_status', 'not_in_2026_09_public_text_catalog',
+    'openrouter_verified_at', '2026-09-17T00:00:00Z',
     'verification_source', 'https://openrouter.ai/api/v1/models?output_modalities=text'
   ),
   updated_at = now()
 where provider = 'openrouter'
+  -- Image-generation entries have a separate catalog and must not be disabled
+  -- by a text-provider recovery migration.
+  and coalesce(raw_metadata ->> 'supports_image_generation', 'false') <> 'true'
   and model_key not in (
-    'z-ai/glm-5.2:free',
-    'thinkingmachines/inkling:free',
-    'thinkingmachines/inkling-small:free',
-    'nvidia/nemotron-3.5-lightning:free',
-    'nvidia/nemotron-3-ultra-550b-a55b:free',
-    'nvidia/nemotron-3-super-120b-a12b:free',
-    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-    'google/gemma-4-31b-it:free',
     'google/gemma-4-26b-a4b-it:free',
+    'google/gemma-4-31b-it:free',
+    'nvidia/nemotron-3.5-lightning:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'cohere/north-mini-code:free',
     'poolside/laguna-s-2.1:free',
     'poolside/laguna-xs-2.1:free',
-    'cohere/north-mini-code:free',
     'liquid/lfm-2.5-2.6b:free'
   );
 
@@ -47,151 +50,114 @@ with curated_models (
   context_length,
   max_output_tokens,
   supports_code,
-  supports_image_input
+  supports_image_input,
+  data_policy,
+  recommended_surface
 ) as (
   values
     (
-      'z-ai/glm-5.2:free',
-      'GLM 5.2',
-      'Бесплатная reasoning-модель Z.AI для длинных agentic-задач и разработки ПО.',
-      array['general', 'reasoning', 'agentic']::text[],
+      'google/gemma-4-26b-a4b-it:free',
+      'Gemma 4 26B A4B',
+      'Бесплатная мультимодальная MoE-модель Google Gemma 4 для общих задач и структурированных ответов.',
+      array['general', 'reasoning', 'multimodal', 'default']::text[],
       10,
-      256000,
-      256000,
-      false,
-      false
-    ),
-    (
-      'thinkingmachines/inkling:free',
-      'Inkling',
-      'Бесплатная мультимодальная reasoning-модель Thinking Machines для coding и tool-use сценариев.',
-      array['general', 'reasoning', 'agentic', 'multimodal']::text[],
-      20,
       262144,
-      262144,
+      32768,
       false,
-      true
-    ),
-    (
-      'thinkingmachines/inkling-small:free',
-      'Inkling Small',
-      'Бесплатная компактная мультимодальная модель Thinking Machines для быстрых reasoning-задач.',
-      array['general', 'reasoning', 'fast', 'multimodal']::text[],
-      30,
-      262144,
-      262144,
-      false,
-      true
-    ),
-    (
-      'nvidia/nemotron-3.5-lightning:free',
-      'Nemotron 3.5 Lightning',
-      'Бесплатная высокопроизводительная agentic-модель NVIDIA с контекстом 1M.',
-      array['general', 'reasoning', 'agentic', 'fast', 'long-context']::text[],
-      40,
-      1000000,
-      65536,
-      false,
-      false
-    ),
-    (
-      'nvidia/nemotron-3-ultra-550b-a55b:free',
-      'Nemotron 3 Ultra',
-      'Бесплатная frontier-reasoning и orchestration-модель NVIDIA с контекстом 1M.',
-      array['reasoning', 'agentic', 'long-context']::text[],
-      50,
-      1000000,
-      65536,
-      false,
-      false
-    ),
-    (
-      'nvidia/nemotron-3-super-120b-a12b:free',
-      'Nemotron 3 Super',
-      'Бесплатная reasoning-модель NVIDIA для сложных multi-agent и coding-сценариев.',
-      array['reasoning', 'agentic']::text[],
-      60,
-      262144,
-      262144,
-      false,
-      false
-    ),
-    (
-      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-      'Nemotron 3 Nano Omni',
-      'Бесплатная мультимодальная reasoning-модель NVIDIA для perception и agentic-сценариев.',
-      array['reasoning', 'agentic', 'multimodal']::text[],
-      70,
-      256000,
-      65536,
-      false,
-      true
+      true,
+      'provider_policy_applies',
+      'prompt_arena,team_mode,judge'
     ),
     (
       'google/gemma-4-31b-it:free',
       'Gemma 4 31B',
-      'Бесплатная мультимодальная instruct-модель Google Gemma 4 для общих задач.',
-      array['general', 'reasoning', 'open-source', 'multimodal']::text[],
-      80,
+      'Бесплатная мультимодальная Gemma 4 31B для reasoning, документов и общих задач.',
+      array['general', 'reasoning', 'multimodal']::text[],
+      20,
       262144,
       32768,
       false,
-      true
+      true,
+      'provider_policy_applies',
+      'prompt_arena,judge'
     ),
     (
-      'google/gemma-4-26b-a4b-it:free',
-      'Gemma 4 26B A4B',
-      'Бесплатная мультимодальная MoE instruct-модель Google Gemma 4.',
-      array['general', 'reasoning', 'open-source', 'fast', 'multimodal']::text[],
-      90,
-      262144,
-      32768,
+      'nvidia/nemotron-3.5-lightning:free',
+      'Nemotron 3.5 Lightning',
+      'Бесплатная быстрая NVIDIA-модель с большим контекстом для agentic и general-сценариев.',
+      array['general', 'reasoning', 'agentic', 'fast', 'long-context']::text[],
+      30,
+      1000000,
+      65536,
       false,
-      true
+      false,
+      'nvidia_free_non_sensitive_provider_logging',
+      'prompt_arena'
+    ),
+    (
+      'nvidia/nemotron-3-super-120b-a12b:free',
+      'Nemotron 3 Super',
+      'Бесплатная reasoning-модель NVIDIA; free endpoint может быть нестабилен и не используется как default.',
+      array['reasoning', 'agentic', 'experimental']::text[],
+      40,
+      262144,
+      262144,
+      false,
+      false,
+      'nvidia_free_non_sensitive_provider_logging',
+      'prompt_arena_experimental'
+    ),
+    (
+      'cohere/north-mini-code:free',
+      'North Mini Code',
+      'Бесплатная Cohere-модель для генерации кода, terminal-задач и agentic software engineering.',
+      array['coding', 'agentic', 'fast']::text[],
+      50,
+      256000,
+      64000,
+      true,
+      false,
+      'cohere_terms_apply',
+      'code_arena'
     ),
     (
       'poolside/laguna-s-2.1:free',
       'Laguna S 2.1',
       'Бесплатная coding-agent модель Poolside для сложных задач программирования.',
       array['coding', 'agentic']::text[],
-      100,
+      60,
       262144,
       32768,
       true,
-      false
+      false,
+      'poolside_free_inputs_outputs_may_train',
+      'code_arena'
     ),
     (
       'poolside/laguna-xs-2.1:free',
       'Laguna XS 2.1',
-      'Бесплатная компактная coding-agent модель Poolside для быстрых задач программирования.',
+      'Бесплатная компактная coding-agent модель Poolside для быстрых сравнений кода.',
       array['coding', 'agentic', 'fast']::text[],
-      110,
+      70,
       262144,
       32768,
       true,
-      false
-    ),
-    (
-      'cohere/north-mini-code:free',
-      'North Mini Code',
-      'Бесплатная компактная agentic coding-модель Cohere.',
-      array['coding', 'agentic', 'fast']::text[],
-      120,
-      256000,
-      64000,
-      true,
-      false
+      false,
+      'poolside_free_inputs_outputs_may_train',
+      'code_arena'
     ),
     (
       'liquid/lfm-2.5-2.6b:free',
       'LFM 2.5 2.6B',
-      'Бесплатная компактная reasoning-модель LiquidAI для extraction, RAG и agent workflows.',
-      array['general', 'reasoning', 'fast']::text[],
-      130,
+      'Бесплатная компактная LiquidAI-модель для extraction, RAG и быстрых agent workflows.',
+      array['general', 'reasoning', 'fast', 'rag', 'extraction']::text[],
+      80,
       65536,
       8192,
       false,
-      false
+      false,
+      'liquid_free_inputs_outputs_may_be_retained_and_train',
+      'prompt_arena_fast_rag'
     )
 )
 insert into public.models as existing (
@@ -227,7 +193,7 @@ select
   0,
   curated_models.sort_order,
   jsonb_build_object(
-    'catalog_governance_version', 'v2.0.0-alpha.1-provider-recovery',
+    'catalog_governance_version', 'v2.0.0-alpha.1-provider-recovery-2026-09-17',
     'provider', 'openrouter',
     'display_name', curated_models.display_name,
     'price_label', 'free',
@@ -240,9 +206,11 @@ select
     'supports_code', curated_models.supports_code,
     'supports_image_input', curated_models.supports_image_input,
     'supports_image_generation', false,
-    'verification_status', 'verified',
-    'openrouter_verified_at', '2026-08-24T00:00:00Z',
-    'verification_source', 'https://openrouter.ai/api/v1/models?output_modalities=text'
+    'verification_status', 'catalog_verified',
+    'openrouter_verified_at', '2026-09-17T00:00:00Z',
+    'verification_source', 'https://openrouter.ai/api/v1/models?output_modalities=text',
+    'data_policy', curated_models.data_policy,
+    'recommended_surface', curated_models.recommended_surface
   )
 from curated_models
 on conflict (model_key) do update set
