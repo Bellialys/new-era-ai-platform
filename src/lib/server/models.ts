@@ -15,39 +15,33 @@ export type LocalArenaModel = ArenaModel & {
   supportsCode: boolean;
 };
 
-// Curated set of free OpenRouter text/chat model keys mirrored by the latest
-// forward-only catalog migration. Run `npm run models:verify` before public
-// deploy or whenever this fallback list changes.
+// Curated public free OpenRouter text/chat catalog refreshed on 2026-09-17.
+// Models with research-only/special terms, poor current availability, or a
+// multimodal-specialist role are intentionally kept out of the anonymous
+// fallback catalog even if their provider slug still exists.
 // Order matters: the UI preselects the first models.
 export const ALLOWED_MODELS: LocalArenaModel[] = [
-  // --- General-purpose (default selection) ---
+  // --- General-purpose defaults ---
   {
-    id: "z-ai/glm-5.2:free",
-    name: "GLM 5.2",
+    id: "google/gemma-4-26b-a4b-it:free",
+    name: "Gemma 4 26B A4B",
+    role: "Основная general-модель",
+    provider: "openrouter",
+    supportsCode: false,
+    badge: "Free",
+    description: "Бесплатная мультимодальная MoE-модель Google Gemma 4 для общих задач и структурированных ответов.",
+  },
+  {
+    id: "google/gemma-4-31b-it:free",
+    name: "Gemma 4 31B",
     role: "Сильная general-модель",
     provider: "openrouter",
     supportsCode: false,
     badge: "Free",
-    description: "Бесплатная универсальная модель Z.AI для сложных инструкций и общих задач.",
+    description: "Бесплатная мультимодальная Gemma 4 31B для reasoning, документов и общих задач.",
   },
-  {
-    id: "thinkingmachines/inkling:free",
-    name: "Inkling",
-    role: "Сильная reasoning-модель",
-    provider: "openrouter",
-    supportsCode: false,
-    badge: "Free Reasoning",
-    description: "Бесплатная модель Thinking Machines для рассуждений и многошаговых задач.",
-  },
-  {
-    id: "thinkingmachines/inkling-small:free",
-    name: "Inkling Small",
-    role: "Быстрое рассуждение",
-    provider: "openrouter",
-    supportsCode: false,
-    badge: "Free Fast",
-    description: "Бесплатная компактная модель Thinking Machines для быстрых рассуждений.",
-  },
+
+  // --- Fast / reasoning ---
   {
     id: "nvidia/nemotron-3.5-lightning:free",
     name: "Nemotron 3.5 Lightning",
@@ -55,92 +49,55 @@ export const ALLOWED_MODELS: LocalArenaModel[] = [
     provider: "openrouter",
     supportsCode: false,
     badge: "Free Fast",
-    description: "Бесплатная быстрая модель NVIDIA для agentic-сценариев и общих задач.",
-  },
-
-  // --- Reasoning ---
-  {
-    id: "nvidia/nemotron-3-ultra-550b-a55b:free",
-    name: "Nemotron 3 Ultra",
-    role: "Глубокое рассуждение",
-    provider: "openrouter",
-    supportsCode: false,
-    badge: "Free Reasoning",
-    description: "Бесплатная reasoning-модель NVIDIA 550B с контекстом 1M.",
+    description: "Бесплатная быстрая NVIDIA-модель с большим контекстом для agentic и general-сценариев.",
   },
   {
     id: "nvidia/nemotron-3-super-120b-a12b:free",
     name: "Nemotron 3 Super",
-    role: "Рассуждение",
+    role: "Reasoning / experimental",
     provider: "openrouter",
     supportsCode: false,
     badge: "Free Reasoning",
-    description: "Бесплатная reasoning-модель NVIDIA 120B с контекстом 262K.",
+    description: "Бесплатная reasoning-модель NVIDIA; доступность free endpoint может быть нестабильной, поэтому она не используется как default.",
   },
-  {
-    id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    name: "Nemotron 3 Nano Omni",
-    role: "Компактное рассуждение",
-    provider: "openrouter",
-    supportsCode: false,
-    badge: "Free Reasoning",
-    description: "Бесплатная компактная omni reasoning-модель NVIDIA 30B.",
-  },
-  {
-    id: "google/gemma-4-31b-it:free",
-    name: "Gemma 4 31B",
-    role: "Открытая general-модель",
-    provider: "openrouter",
-    supportsCode: false,
-    badge: "Free",
-    description: "Бесплатная модель Google Gemma 4 для общих ответов, контекст 262K.",
-  },
-  {
-    id: "google/gemma-4-26b-a4b-it:free",
-    name: "Gemma 4 26B A4B",
-    role: "Открытая general-модель (MoE)",
-    provider: "openrouter",
-    supportsCode: false,
-    badge: "Free",
-    description: "Бесплатная MoE-модель Google Gemma 4 — быстрее за счёт активных 4B параметров.",
-  },
+
   // --- Coding ---
   {
-    id: "poolside/laguna-s-2.1:free",
-    name: "Laguna S 2.1",
-    role: "Coding / code-oriented",
+    id: "cohere/north-mini-code:free",
+    name: "North Mini Code",
+    role: "Coding / agentic",
     provider: "openrouter",
     supportsCode: true,
     badge: "Free Coding",
-    description: "Бесплатная code-oriented модель Poolside для сложных задач программирования.",
+    description: "Бесплатная Cohere-модель для генерации кода, terminal-задач и agentic software engineering.",
+  },
+  {
+    id: "poolside/laguna-s-2.1:free",
+    name: "Laguna S 2.1",
+    role: "Coding / strong",
+    provider: "openrouter",
+    supportsCode: true,
+    badge: "Free Coding",
+    description: "Бесплатная coding-agent модель Poolside для сложных задач программирования.",
   },
   {
     id: "poolside/laguna-xs-2.1:free",
     name: "Laguna XS 2.1",
-    role: "Coding / code-oriented",
+    role: "Coding / fast",
     provider: "openrouter",
     supportsCode: true,
     badge: "Free Coding",
-    description: "Бесплатная компактная code-oriented модель Poolside для быстрых coding-сравнений.",
-  },
-  {
-    id: "cohere/north-mini-code:free",
-    name: "North Mini Code",
-    role: "Coding / code-oriented",
-    provider: "openrouter",
-    supportsCode: true,
-    badge: "Free Coding",
-    description: "Бесплатная компактная модель Cohere, оптимизированная для программирования.",
+    description: "Бесплатная компактная coding-agent модель Poolside для быстрых сравнений кода.",
   },
 
-  // --- Compact ---
+  // --- Compact / extraction ---
   {
     id: "liquid/lfm-2.5-2.6b:free",
     name: "LFM 2.5 2.6B",
-    role: "Сверхбыстрая лёгкая модель",
+    role: "Fast / extraction / RAG",
     provider: "openrouter",
     supportsCode: false,
     badge: "Free Fast",
-    description: "Бесплатная компактная модель LiquidAI 2.6B для быстрых ответов.",
+    description: "Бесплатная компактная LiquidAI-модель для extraction, RAG и быстрых agent workflows.",
   },
 ];
