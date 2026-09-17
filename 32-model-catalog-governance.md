@@ -76,23 +76,20 @@ Endpoint должен возвращать только модели, досту
 - `supports_code`;
 - `supports_image_input`;
 - `supports_image_generation`;
-- `verification_status`.
+- `verification_status`;
+- `data_policy`;
+- `recommended_surface`.
 
-P0 recovery catalog проверен по OpenRouter discovery 2026-08-24. Canonical text set:
+P0 recovery catalog повторно проверен по OpenRouter discovery 2026-09-17. Canonical public text set:
 
 ```text
-z-ai/glm-5.2:free
-thinkingmachines/inkling:free
-thinkingmachines/inkling-small:free
-nvidia/nemotron-3.5-lightning:free
-nvidia/nemotron-3-ultra-550b-a55b:free
-nvidia/nemotron-3-super-120b-a12b:free
-nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
-google/gemma-4-31b-it:free
 google/gemma-4-26b-a4b-it:free
+google/gemma-4-31b-it:free
+nvidia/nemotron-3.5-lightning:free
+nvidia/nemotron-3-super-120b-a12b:free
+cohere/north-mini-code:free
 poolside/laguna-s-2.1:free
 poolside/laguna-xs-2.1:free
-cohere/north-mini-code:free
 liquid/lfm-2.5-2.6b:free
 ```
 
@@ -108,9 +105,9 @@ black-forest-labs/flux.2-klein-4b
 
 Runtime defaults также входят в verification scope:
 
-- Team default: `nvidia/nemotron-3-super-120b-a12b:free`;
-- Judge primary: `nvidia/nemotron-3-ultra-550b-a55b:free`;
-- Judge fallback: `nvidia/nemotron-3-super-120b-a12b:free`.
+- Team default: `google/gemma-4-26b-a4b-it:free`;
+- Judge primary: `google/gemma-4-31b-it:free`;
+- Judge fallback: `google/gemma-4-26b-a4b-it:free`.
 
 Локальный fallback text catalog обновлён сразу. Production `public.models` должен быть выровнен forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`; до применения migration через owner/reviewer gate live DB catalog нельзя считать синхронизированным.
 
@@ -159,9 +156,9 @@ Runtime defaults также входят в verification scope:
 
 Примеры:
 
-- `z-ai/glm-5.2:free`
+- `google/gemma-4-26b-a4b-it:free`
 - `google/gemma-4-31b-it:free`
-- `nvidia/nemotron-3-ultra-550b-a55b:free`
+- `cohere/north-mini-code:free`
 - `openai/gpt-image-1-mini`
 
 Правила:
