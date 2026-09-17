@@ -65,10 +65,10 @@ export const ARENA_CONSTANTS = {
   GUEST_JUDGE_RATE_LIMIT_WINDOW_MS: 60_000,
   GUEST_JUDGE_RATE_LIMIT_MAX_REQUESTS: 1,
   JUDGE_MAX_TOKENS: 800,
-  // Primary: Nemotron reasoning model (1M context, ideal for judging)
-  JUDGE_PRIMARY_MODEL_ID: "nvidia/nemotron-3-ultra-550b-a55b:free",
-  // Fallback: reliable general model
-  JUDGE_FALLBACK_MODEL_ID: "nvidia/nemotron-3-super-120b-a12b:free",
+  // Primary: stable free general/reasoning model from the refreshed public catalog.
+  JUDGE_PRIMARY_MODEL_ID: "google/gemma-4-31b-it:free",
+  // Fallback: independently verified baseline model with structured output support.
+  JUDGE_FALLBACK_MODEL_ID: "google/gemma-4-26b-a4b-it:free",
   JUDGE_RESPONSE_TRUNCATE_CHARS: 1500,
 };
 
