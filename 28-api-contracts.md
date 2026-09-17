@@ -354,7 +354,7 @@ Rules:
 - `prompt` must be at least 3 characters;
 - `responses` must contain at least 2 items with non-empty `answerText`;
 - model names are used only for UI/result mapping; judge prompt uses blind labels;
-- provider routing is fixed server-side: primary `nvidia/nemotron-3-ultra-550b-a55b:free`, fallback `nvidia/nemotron-3-super-120b-a12b:free`;
+- provider routing is fixed server-side: primary `google/gemma-4-31b-it:free`, fallback `google/gemma-4-26b-a4b-it:free`;
 - fallback выполняется только после контролируемой ошибки primary и не принимает произвольный provider model key из запроса;
 - rate limit: authenticated users 3 requests/min, guests 1 request/min;
 - verdict/reasoning является AI-generated structured output: backend должен валидировать его строгой схемой, а frontend рендерит как недоверенный текст по `25-production-excellence.md`, раздел `9.1`;
@@ -728,7 +728,7 @@ Query-параметры (все необязательные):
 }
 ```
 
-Поле `modelId` необязательно — при отсутствии или если ID не входит в `ALLOWED_MODELS`, используется `TEAM_DEFAULT_MODEL_ID = "nvidia/nemotron-3-super-120b-a12b:free"`.
+Поле `modelId` необязательно — при отсутствии или если ID не входит в `ALLOWED_MODELS`, используется `TEAM_DEFAULT_MODEL_ID = "google/gemma-4-26b-a4b-it:free"`.
 
 Минимальный ответ:
 
@@ -765,7 +765,7 @@ Rules:
 
 - requires a real Supabase authenticated user (`kind === "user"`); guest or unauthenticated → `401 AUTH_REQUIRED`;
 - `task` must be 10–4000 characters;
-- `modelId` is validated against `ALLOWED_MODELS` allowlist; unknown IDs fall back to `nvidia/nemotron-3-super-120b-a12b:free`;
+- `modelId` is validated against `ALLOWED_MODELS` allowlist; unknown IDs fall back to `google/gemma-4-26b-a4b-it:free`;
 - rate limit: 3 requests per 10 minutes per user UUID (Upstash Redis in production, in-memory locally);
 - context window between steps is truncated to 2000 characters to prevent token overflow;
 - best-effort persistence: current runtime saves `tasks` (mode_slug = `ai-team-mode`) and role rows in `model_responses`; `team_runs`/`team_run_steps` are DB v2 future storage until the v2.1 migration task switches writes to those tables;
