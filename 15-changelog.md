@@ -16,6 +16,28 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3 architecture re-audit - 2026-09-27
+
+### Changed
+
+- Повторно сверены `49-openrouter-funding-byok-plan.md`, текущий runtime и официальные OpenRouter contracts; tier/feature matrix признана изменчивой, поэтому live account capability probe закреплён как SSOT перед provisioning.
+- Зафиксированы implementation gates: общий provider gateway должен переносить `usage.cost`/provider request metadata, Image Arena должна пройти через ту же funding boundary, а существующий task-count quota не считается денежным budget.
+- Production Redis fail-open -> in-memory поведение признано недопустимым как единственная app-level защита будущего platform-funded paid traffic; финальная outage policy остаётся owner decision.
+- Уточнён key lifecycle: explicit `workspace_id`, безопасный provider key hash/identifier для PATCH/DELETE/reconciliation, rejection management/provisioning credentials в BYOK flow.
+- Добавлен датированный audit snapshot `docs/audits/openrouter-stage3-plan-audit-2026-09-27.md`.
+
+### Not implemented
+
+- Runtime OpenRouter routing не изменён.
+- Production database schema не изменена.
+- Vercel/Supabase/OpenRouter secrets не изменены.
+- Реальные user keys не создавались.
+- BYOK и paid traffic не включались.
+
+### Next gate
+
+- Следующий разрешённый этап — Stage 3.1 External Readiness; реализация schema/crypto/gateway начинается только после live capability evidence и owner decisions по KMS, money budgets, Redis outage policy и key cardinality.
+
 ## Stage 3 architecture plan - OpenRouter Funding / BYOK - 2026-09-27
 
 ### Added
