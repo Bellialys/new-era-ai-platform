@@ -532,7 +532,7 @@ Codex не имеет права:
 - image/media pricing сохраняется в raw form, потому что billing unit может быть image, megapixel, token и т.д.;
 - actual завершённого запроса предпочитает provider `usage.cost`;
 - estimate и actual — разные поля/семантика;
-- New Era markup, если когда-либо появится, хранится отдельно от OpenRouter provider cost;
+- New Era markup, если когда-либо появится, хранится отдельно от OpenRouter provider cost;\n- Account-level OpenRouter credit/BYOK fees не смешиваются с model inference price;
 - stale snapshot должен быть явно помечен stale и не выдаваться как гарантированно текущая цена.
 
 Новая модель не считается cost-ready, пока pricing source не подтверждён или модель явно маркирована как price-unknown.

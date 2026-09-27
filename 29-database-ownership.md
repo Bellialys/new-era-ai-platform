@@ -956,7 +956,7 @@ Ownership: только authenticated `user_id`.
 
 - guest ownership запрещён;
 - `user_id` обязателен;
-- `origin = platform_managed | user_byok`;
+- `origin = platform_managed | user_provided`;
 - encrypted secret material не доступен напрямую browser roles;
 - direct grants для `anon`/`authenticated` не выдаются;
 - server/service layer является единственным reader/decryptor;

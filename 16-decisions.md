@@ -926,9 +926,9 @@ Accepted
 
 ## Решение
 
-New Era поддерживает два источника funding: `platform` и `user_byok`.
+New Era поддерживает два источника funding: `platform` и `user_openrouter`.
 
-`platform` использует platform-managed OpenRouter inference credential; `user_byok` использует OpenRouter API key, принадлежащий пользователю. Оба проходят через единый server-side gateway и model governance.
+`platform` использует platform-managed OpenRouter inference credential; `user_openrouter` использует OpenRouter API key, принадлежащий пользователю. OpenRouter upstream flag `usage.is_byok` является отдельной семантикой и не заменяет funding source. Оба проходят через единый server-side gateway и model governance.
 
 New Era users не отображаются 1:1 в OpenRouter organization members.
 

@@ -106,7 +106,7 @@ New Era users **не становятся OpenRouter organization members**. Org
                                     v
                          +----------------------+
                          | Funding Resolver     |
-                         | platform | user_byok |
+                         | platform | user_openrouter |
                          +----------+-----------+
                                     |
                   +-----------------+-----------------+
@@ -154,10 +154,21 @@ New Era users **не становятся OpenRouter organization members**. Org
 - пользователь видит только safe fingerprint/label/status;
 - plaintext не возвращается после сохранения;
 - запрос использует именно BYOK credential;
-- usage: `billing_source = user_byok`;
+- usage: `billing_source = user_openrouter`;
 - BYOK не расходует platform inference key;
 - New Era всё равно применяет anti-abuse/concurrency limits;
 - OpenRouter account balance/limits пользователя остаются provider-side authority.
+
+### Terminology: New Era BYOK vs OpenRouter BYOK
+
+UI-термин **BYOK** в New Era означает: пользователь принёс свой OpenRouter API key. Внутренний funding enum называется `user_openrouter`.
+
+OpenRouter поле `usage.is_byok` означает другое: OpenRouter сам использовал upstream provider key, подключённый внутри OpenRouter аккаунта. Поэтому его сохраняем отдельно как `provider_is_byok` и никогда не используем вместо `billing_source`.
+
+Возможны оба варианта:
+
+- `billing_source=user_openrouter`, `provider_is_byok=false` — пользователь платит OpenRouter credits своего аккаунта;
+- `billing_source=user_openrouter`, `provider_is_byok=true` — его OpenRouter account использовал upstream BYOK provider key.
 
 ### 4.3 Guests
 
@@ -182,6 +193,10 @@ New Era хранит snapshot для истории, но stale snapshot не о
 ### Estimate
 
 До запроса UI может показывать только estimate с явной пометкой approximate.
+
+### Account-level fees are separate
+
+OpenRouter model inference rate и account-level fees — разные понятия. Credit-purchase/platform fees или BYOK plan fees не должны скрыто прибавляться к model price. Если New Era когда-либо показывает такие fees, они отображаются отдельной строкой с собственным источником.
 
 ### Future New Era billing
 
@@ -243,8 +258,7 @@ ADR-004 уже принял envelope encryption / DEK-per-user-or-connection к�
 
 Persistent provider secrets следуют ADR-004:
 
-- ciphertext в Supabase;
-- key material/DEK управляется KMS;
+- ciphertext в Supabase;\n- plaintext DEK никогда не хранится в БД;\n- KMS/эквивалент управляет KEK и шифрованием DEK (например GenerateDataKey/envelope pattern);
 - database dump сам по себе не раскрывает secret;
 - crypto-shredding уничтожает возможность расшифровки;
 - Vercel к KMS по возможности аутентифицируется short-lived OIDC credentials.
@@ -265,7 +279,7 @@ Plaintext key существует только в TLS request и server memory 
 id uuid PK
 user_id uuid NOT NULL
 provider text = 'openrouter'
-origin text = 'platform_managed' | 'user_byok'
+origin text = 'platform_managed' | 'user_provided'
 status text = 'pending' | 'active' | 'revoking' | 'revoked' | 'error'
 provider_key_hash text nullable
 safe_fingerprint text nullable
@@ -295,7 +309,7 @@ Rules:
 
 ```text
 user_id uuid PK
-funding_source text = 'platform' | 'user_byok'
+funding_source text = 'platform' | 'user_openrouter'
 preferred_credential_id uuid nullable
 updated_at timestamptz
 ```
@@ -311,7 +325,7 @@ billing_source
 credential_id
 provider_request_id
 provider_usage jsonb
-is_byok boolean
+provider_is_byok boolean
 cost_source
 currency
 request_kind
@@ -383,7 +397,7 @@ Disconnect and crypto-shred our stored BYOK copy.
 
 ### `PATCH /api/profile/ai-funding`
 
-Switch `platform | user_byok`; BYOK requires active validated credential.
+Switch `platform | user_openrouter`; BYOK requires active validated credential.
 
 Platform provisioning remains an internal service operation, not a public «create OpenRouter key» endpoint.
 
@@ -404,8 +418,7 @@ Every inference should capture when available:
 - prompt/completion/total tokens;
 - latency;
 - actual `usage.cost`;
-- `is_byok`;
-- billing source;
+- `provider_is_byok` (OpenRouter upstream-BYOK flag, not our funding source);\n- billing source;
 - provider request id;
 - safe error code.
 
@@ -472,7 +485,7 @@ CREDENTIAL_DECRYPTION_FAILED
 ### Stage 3.3 — Pricing + actual usage
 
 - add `usage.cost` handling;
-- record actual cost + `is_byok`;
+- record actual cost + OpenRouter `usage.is_byok` as `provider_is_byok`;
 - price sync into `model_price_history`;
 - safe price/status API;
 - no paid-model expansion.

@@ -1326,7 +1326,7 @@ UI сравнения
 ```text
 Arena route
   -> resolve authenticated identity
-  -> resolve funding source (platform | user_byok)
+  -> resolve funding source (platform | user_openrouter)
   -> resolve/decrypt allowed credential
   -> validate governed model
   -> OpenRouter request

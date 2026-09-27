@@ -20,7 +20,7 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ### Added
 
-- `49-openrouter-funding-byok-plan.md`: hybrid `platform | user_byok` funding architecture, lazy one-key-per-authenticated-user platform provisioning, Management API/Guardrail boundaries, OpenRouter price parity and actual `usage.cost` semantics.
+- `49-openrouter-funding-byok-plan.md`: hybrid `platform | user_openrouter` funding architecture (UI: BYOK), lazy one-key-per-authenticated-user platform provisioning, Management API/Guardrail boundaries, OpenRouter price parity and actual `usage.cost` semantics.
 - Provider credential security aligned with ADR-004 envelope encryption/KMS; Supabase Vault documented as an alternative requiring a separate ADR rather than a silent architecture switch.
 - Planned DB ownership/retention for `provider_credentials`, `ai_funding_preferences`, `usage_events` attribution and `model_price_history` raw pricing.
 - v2.1/v2.2 drafts now explicitly defer conflicting cost/budget semantics to document 49.
