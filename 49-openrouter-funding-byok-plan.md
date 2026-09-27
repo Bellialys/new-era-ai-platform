@@ -2,9 +2,10 @@
 
 ## Статус
 
-**Architecture plan / implementation not started**
+**Architecture plan merged / Stage 3.0 re-audit complete / runtime implementation not started**
 
 Дата ревью внешних контрактов: **2026-09-27**.
+Дата повторного code/architecture audit: **2026-09-27** (`main` baseline `a5b9fc6b4471635b1ed5a4923a8eef58247d88f6`).
 
 Этот документ фиксирует архитектуру следующего этапа после закрытых Stage 1 и Stage 2.
 Он не создаёт ключи, не меняет production database schema и не включает платные модели.
@@ -37,7 +38,7 @@
 
 ### Management API
 
-OpenRouter Management API позволяет создавать и обновлять API keys.
+OpenRouter Management API позволяет создавать, читать, обновлять и удалять API keys.
 
 Для key-level spend control доступны:
 
@@ -46,7 +47,11 @@ OpenRouter Management API позволяет создавать и обновл�
 - `disabled`;
 - `include_byok_in_limit`.
 
-Management API key используется для административных операций и не должен использоваться как inference key.
+Для platform-managed key создание должно явно передавать целевой `workspace_id`, а не полагаться на неявный workspace context. Create response возвращает plaintext key только в момент создания; дальнейший lifecycle должен опираться на безопасный provider key hash/identifier, который используется для GET/PATCH/DELETE.
+
+Документированная семантика reset: daily — в 00:00 UTC, weekly — недельный интервал Monday-Sunday, monthly — календарный месяц.
+
+Management API key используется только для administrative CRUD и не должен использоваться как inference key. `disabled=true` рассматривается как обратимая пауза, а финальный revoke/delete — как отдельная операция удаления remote key.
 
 ### Current-key metadata
 
@@ -61,8 +66,11 @@ Management API key используется для административн�
 - `limit_reset`;
 - `is_free_tier`;
 - `is_management_key`;
+- `is_provisioning_key`;
 - `expires_at`;
 - BYOK usage fields.
+
+New Era BYOK validation должна отклонять management/provisioning credentials как пользовательские inference credentials.
 
 Поле `rate_limit` документировано OpenRouter как deprecated и не становится нашим SSOT.
 
@@ -78,6 +86,8 @@ Image API endpoint discovery возвращает отдельную pricing str
 
 Для завершённого inference фактическая стоимость должна браться из `usage.cost`, когда OpenRouter её возвращает.
 
+Provider request должен явно запрашивать usage accounting там, где OpenRouter это требует/поддерживает (для text/stream paths — `usage: { include: true }`). Gateway обязан сохранить distinction между provider-reported actual cost и локальным estimate.
+
 Если `usage.cost` отсутствует:
 
 - нельзя записывать рассчитанную цену как «фактическую»;
@@ -86,11 +96,20 @@ Image API endpoint discovery возвращает отдельную pricing str
 
 ### Plans and controls
 
-На 2026-09-27 официальные материалы OpenRouter используют текущие tier names `Free | Pay-as-you-go | Enterprise`, но страницы описывают availability Management API / spend controls не полностью одинаково. Fresh spend-control documentation указывает, что per-key limits и Guardrails работают на Free/PAYG, а aggregate Workspace Budgets требуют Enterprise; pricing matrix отдельно перечисляет Management API/Budgets как plan features.
+На 2026-09-27 публичные материалы OpenRouter расходятся по названиям tiers и feature matrix. Текущая pricing page показывает `Free | Standard | Business | Enterprise` и отдельную матрицу Management API / Budgets & Spend Controls; более ранний материал о spend controls использует другую tier terminology и описывает availability иначе.
 
-Поэтому код **не должен** определять capability по строке plan name. Stage 3.1 обязан проверить возможности именно нашего OpenRouter account: создание Management key, CRUD `/api/v1/keys`, Guardrail assignment и наличие Workspace Budget. Если нужной capability нет — соответствующий rollout stage остаётся disabled.
+Вывод повторного аудита: **название тарифа нельзя использовать как capability detector**. Единственный безопасный rollout gate — live capability probe именно нашего OpenRouter account/workspace.
 
-Автоматическое создание per-user platform keys является blocked prerequisite до такой live account verification.
+Stage 3.1 обязан проверить:
+
+- наличие Management API key capability;
+- доступность CRUD `/api/v1/keys`;
+- список/идентификатор production workspace;
+- Guardrail CRUD/assignment semantics;
+- Workspace Budget availability и реальные account constraints;
+- допустимую key cardinality и provisioning expectations.
+
+Если capability не подтверждена live — соответствующий rollout stage остаётся disabled. Автоматическое создание per-user platform keys заблокировано до этой проверки.
 
 ### Guardrails / Workspaces
 
@@ -138,6 +157,21 @@ New Era users **не становятся OpenRouter organization members**. Org
 ```
 
 Все Prompt/Code/Judge/Team/Image маршруты позже должны использовать единый gateway вместо прямого чтения `OPENROUTER_API_KEY`.
+
+### 3.1 Current runtime baseline — подтверждено повторным аудитом
+
+На `main` baseline `a5b9fc6b4471635b1ed5a4923a8eef58247d88f6`:
+
+- `src/lib/server/openrouter.ts` использует один shared `OPENROUTER_API_KEY` для text/stream inference;
+- `ModelUsage` содержит только token counts и не переносит `usage.cost`, provider request id или actual returned model в общий результат;
+- text/stream requests пока не запрашивают `usage: { include: true }`;
+- Prompt/Code/Judge/Team зависят от shared OpenRouter helper;
+- Image Arena вызывает OpenRouter Image API напрямую из route handler и тем самым обходит будущий unified credential/funding gateway;
+- таблица `usage_events` уже существует в production DB v2, но текущий Arena persistence не пишет в неё фактическую provider cost telemetry;
+- `usage-limits.ts` считает количество `tasks` за UTC-день. Это product/request quota, а не monetary budget и не race-safe reservation;
+- `rate-limit.ts` при отсутствии Redis или transient Upstash failure деградирует до per-instance in-memory limiter. Для будущего platform-funded paid traffic этот fallback нельзя считать hard cost-control boundary.
+
+Следствие: до BYOK/per-user-key cutover сначала нужен единый server-side provider gateway с explicit credential context, usage/cost capture и безопасным error contract. Image Arena должна пройти через тот же funding resolver/gateway до включения денежных лимитов как общей гарантии.
 
 ## 4. Funding modes
 
@@ -246,7 +280,11 @@ Hard monetary stop для каждого platform user должен находи
 
 Локальная БД используется для UX, analytics и reconciliation, но не является единственной защитой денег.
 
-Upstash остаётся отдельным anti-abuse механизмом. Production in-memory fallback не считается достаточной защитой cost-bearing routes.
+Существующий daily task-count limit остаётся отдельной product quota. Его запрещено переименовывать или использовать как денежный budget/pre-authorization.
+
+Для fan-out режимов (Prompt Arena, Multi Model Battle, AI Team Mode и похожих) один user action может создать несколько независимых provider calls. Денежная политика должна считать каждый provider call отдельно; один «запрос пользователя» не равен одной provider charge.
+
+Upstash остаётся отдельным anti-abuse механизмом. Production in-memory fallback не считается достаточной защитой cost-bearing routes. До включения platform-funded paid traffic должна быть утверждена explicit Redis outage policy; рекомендуемый безопасный default для platform-funded spend — fail closed на новые cost-bearing calls при потере distributed limiter, при сохранении provider-side per-key hard limit как последнего денежного предохранителя.
 
 ## 7. Credential security
 
@@ -399,11 +437,11 @@ Provisioning не должен держать длинную PostgreSQL transact
 
 1. atomic local claim создаёт одну `pending` credential row через UNIQUE/UPSERT/RPC;
 2. конкурентные запросы видят существующий `pending|active` row и не создают новый remote key;
-3. backend создаёт OpenRouter key, используя opaque local credential id как безопасную correlation label;
-4. returned secret немедленно шифруется;
+3. backend создаёт OpenRouter key, явно указывая target `workspace_id` и используя opaque local credential id как безопасную correlation label;
+4. returned plaintext secret немедленно шифруется; provider key hash/identifier сохраняется отдельно как non-secret remote lifecycle identifier;
 5. тот же pending row атомарно переводится в `active`;
-6. если remote create успешен, а local activation не удалась, backend немедленно пытается remote revoke;
-7. если revoke тоже не удался, safe remote identifier/status фиксируется как `orphaned` для reconciliation; secret в reconciliation metadata не хранится.
+6. если remote create успешен, а local activation не удалась, backend немедленно пытается DELETE/revoke remote key по provider hash/identifier;
+7. если revoke тоже не удался, safe remote identifier/status фиксируется как `orphaned` для reconciliation; plaintext secret в reconciliation metadata не хранится.
 
 Нельзя считать external Management API call и PostgreSQL update одной ACID-транзакцией. Компенсирующая revoke/reconciliation логика обязательна.
 
@@ -515,15 +553,16 @@ CREDENTIAL_DECRYPTION_FAILED
 
 ### Stage 3.1 — External readiness
 
-- probe actual OpenRouter account capabilities: Management API key + `/api/v1/keys`, Guardrails, Workspace Budget availability;
-- create separate Management API key only after capability confirmation;
-- confirm production Workspace;
+- probe actual OpenRouter account capabilities instead of inferring them from tier names: Management API key, CRUD `/api/v1/keys`, workspaces, Guardrails and Workspace Budget availability;
+- verify production `workspace_id` explicitly before any automated key create;
+- verify key lifecycle semantics with a disposable low-limit canary only after owner budget approval; no mass provisioning in readiness stage;
+- create/rotate a separate Management API key only after capability confirmation and store it only in approved secret storage;
 - define default/key Guardrail policy;
-- if available, define aggregate Workspace Budget; otherwise document the non-Enterprise global-risk fallback;
-- confirm production Upstash;
+- if aggregate Workspace Budget is available, define it; otherwise document the account-wide risk fallback without pretending Guardrail is a shared pool;
+- confirm production Upstash and select Redis outage behavior for cost-bearing routes;
 - choose KMS provider compatible with ADR-004;
 - configure Vercel OIDC to KMS/cloud role where possible;
-- define initial platform per-user money policy.
+- define initial platform per-user money policy and maximum concurrent provider fan-out.
 
 ### Stage 3.2 — Data + crypto foundation
 
@@ -535,8 +574,13 @@ CREDENTIAL_DECRYPTION_FAILED
 
 ### Stage 3.3 — Pricing + actual usage
 
-- add `usage.cost` handling;
+- refactor provider calls behind the unified gateway before funding cutover;
+- gateway accepts server-resolved credential context/opaque credential id; raw credential ownership is never client-controlled;
+- request provider usage accounting explicitly where required (`usage: { include: true }`);
+- add `usage.cost`, provider request id and actual returned model handling;
 - record actual cost + OpenRouter `usage.is_byok` as `provider_is_byok`;
+- route Image Arena through the same funding/usage capture boundary;
+- begin runtime writes to `usage_events` with telemetry failure isolated from successful inference;
 - price sync into `model_price_history`;
 - safe price/status API;
 - no paid-model expansion.
@@ -564,8 +608,9 @@ CREDENTIAL_DECRYPTION_FAILED
 ### Stage 3.6 — Distributed limits and cost protection
 
 - production Upstash required for cost-bearing routes;
-- explicit Redis outage policy;
+- explicit Redis outage policy; platform-funded paid traffic must not silently fall back to per-instance memory as its only app-level protection;
 - provider budget preflight UX;
+- concurrency/fan-out controls must be evaluated per provider call, not only per top-level user action;
 - verify per-key limit + Guardrail semantics; verify aggregate Workspace Budget only when the account exposes that feature.
 
 ### Stage 3.7 — Expanded paid catalog
@@ -725,11 +770,15 @@ Those future systems must reuse credential/KMS principles where applicable but r
 Implementation begins only when:
 
 - this plan is merged to `main`;
+- Stage 3.0 repeat audit findings are resolved in documentation;
 - docs/state checks are green;
-- current OpenRouter Management/Guardrail API is reconfirmed;
+- current OpenRouter Management/Guardrail/Workspace capabilities are reconfirmed against the actual account;
 - no secrets are added to repository;
 - KMS choice is documented;
+- Redis outage policy and initial money budget policy are owner-approved;
 - first PR does not enable paid traffic.
+
+**Current gate:** Stage 3.0 documentation/re-audit is complete; Stage 3.1 External Readiness is the next allowed step. Runtime implementation, DB migration, real key provisioning and BYOK traffic remain disabled until the Stage 3.1 evidence/owner decisions are complete.
 
 Recommended first implementation PR:
 
