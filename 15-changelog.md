@@ -16,6 +16,29 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.2 AWS KMS adapter - 2026-09-28
+
+### Implemented
+
+- Added pinned `@aws-sdk/client-kms 3.1141.0` and `@vercel/oidc-aws-credentials-provider 3.3.9`.
+- Added AWS KMS data-key provider for `GenerateDataKey(AES_256)` and `Decrypt`.
+- Adapter uses Vercel OIDC short-lived AWS credentials and explicitly rejects static AWS access-key environment variables for this credential path.
+- Encryption context is bound to opaque `credential_id`, `provider` and `origin`.
+- Runtime contract is aligned to `AWS_REGION`, `AWS_ROLE_ARN` and documented `AI_CREDENTIAL_KMS_KEY_ID`.
+- Review hardening now wipes the original AWS SDK plaintext DEK buffer immediately after copying; the crypto layer separately wipes its working copy.
+
+### Verified
+
+- Security audit, typecheck, lint, full tests, env/model verifier tests, build, docs/state checks and smoke passed.
+- Both PR review findings were fixed and resolved before merge.
+- Post-merge production deployment is READY and `/api/health` returns 200.
+
+### Remaining external infrastructure gate
+
+- No AWS account resource was created by this code change.
+- Before persistent user OpenRouter keys can be enabled, AWS must contain the Vercel OIDC provider, a production-scoped least-privilege IAM role and a symmetric KMS key.
+- Vercel must then receive `AWS_REGION`, `AWS_ROLE_ARN` and `AI_CREDENTIAL_KMS_KEY_ID`; static AWS access keys are not part of the design.
+
 ## Stage 3.2 production credential migration - 2026-09-28
 
 ### Applied
