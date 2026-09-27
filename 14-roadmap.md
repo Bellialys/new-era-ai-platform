@@ -81,9 +81,10 @@ v2.0.0-alpha.1 - AI Team Mode
 # P0 model catalog migration применена и DB/local catalog синхронизированы ✅
 # Этапы 1–2 security/provider recovery закрыты и перепроверены 2026-09-27 ✅
 # Stage 3.0 OpenRouter funding/BYOK architecture + repeat audit closed 2026-09-27 ✅ (PR #68, main 6ad6ea34)
-# Stage 3.1 External Readiness — IN PROGRESS: production deploy/health ✅; AWS KMS + Vercel OIDC ✅; paid Redis fail-closed + conservative catalog/fan-out ✅; live Vercel OpenRouter probe confirms Free account, valid inference key, workspace association and no Management/Guardrail access ✅
-# Stage 3.1 safe budget defaults: platform paid allowance $0; future lifecycle canary limit $0.01/day with zero inference ✅
-# Stage 3.1 remaining blockers: OpenRouter upgrade/capability enabling Management API, server-side Management key, Management/Guardrail canary, GitHub Actions OPENROUTER_API_KEY secret restoration, key-cardinality evidence before mass rollout; no real user provisioning or paid traffic before these gates
+# Stage 3.1 Free OAuth Readiness — COMPLETE ✅: current account Free/valid; official OAuth PKCE S256 contract confirmed; user-controlled API keys selected as primary Free-first path
+# Platform funding remains $0; Management API/Guardrails/per-user platform keys deferred to future paid Stage 3.5 and no longer block the Free-user track
+# Stage 3.2 is next: credential schema + crypto abstraction; no plaintext provider-key persistence
+# Separate operational issue remains: GitHub Actions OPENROUTER_API_KEY secret must be restored for scheduled live models:verify
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
 # scheduled live models:verify считается operational после первого подтверждённого live run
 ```
