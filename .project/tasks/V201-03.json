@@ -1,0 +1,42 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-03",
+  "title": "Credential Envelope Crypto Foundation",
+  "status": "in_progress",
+  "priority": "critical",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-03.json",
+    "src/lib/server/credential-crypto.ts",
+    "src/lib/server/credential-crypto.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "crypto:review",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-27T15:28:11Z",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-27T15:28:11Z",
+      "note": "Created after provider credential schema/types PR was merged."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-27T15:28:11Z",
+      "note": "Implement AES-256-GCM envelope codec behind an injected data-key provider. No AWS SDK, secrets, routes or database writes."
+    }
+  ],
+  "notes": "Crypto primitive layer only. Real AWS KMS adapter and environment configuration remain separate gated work."
+}
