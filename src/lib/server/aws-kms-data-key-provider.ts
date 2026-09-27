@@ -24,7 +24,7 @@ export interface KmsClientLike {
 export interface AwsKmsEnvironment {
   AWS_REGION?: string;
   AWS_ROLE_ARN?: string;
-  AWS_KMS_KEY_ID?: string;
+  AI_CREDENTIAL_KMS_KEY_ID?: string;
   AWS_ACCESS_KEY_ID?: string;
   AWS_SECRET_ACCESS_KEY?: string;
   AWS_SESSION_TOKEN?: string;
@@ -81,6 +81,25 @@ function copyRequiredBytes(
   return new Uint8Array(value);
 }
 
+function copyAndWipeSensitiveBytes(
+  value: Uint8Array | undefined,
+  label: string,
+  expectedLength: number
+): Uint8Array {
+  if (!value || value.byteLength === 0) {
+    throw new Error(`AWS KMS did not return ${label}.`);
+  }
+
+  try {
+    if (value.byteLength !== expectedLength) {
+      throw new Error(`AWS KMS returned an invalid ${label} length.`);
+    }
+    return new Uint8Array(value);
+  } finally {
+    value.fill(0);
+  }
+}
+
 export class AwsKmsDataKeyProvider implements CredentialDataKeyProvider {
   constructor(
     private readonly client: KmsClientLike,
@@ -102,7 +121,7 @@ export class AwsKmsDataKeyProvider implements CredentialDataKeyProvider {
       })
     )) as GenerateDataKeyCommandOutput;
 
-    const plaintextKey = copyRequiredBytes(
+    const plaintextKey = copyAndWipeSensitiveBytes(
       output.Plaintext,
       "plaintext data key",
       AES_256_KEY_BYTES
@@ -150,7 +169,7 @@ export function createAwsKmsDataKeyProviderFromEnv(
   env: AwsKmsEnvironment = {
     AWS_REGION: process.env.AWS_REGION,
     AWS_ROLE_ARN: process.env.AWS_ROLE_ARN,
-    AWS_KMS_KEY_ID: process.env.AWS_KMS_KEY_ID,
+    AI_CREDENTIAL_KMS_KEY_ID: process.env.AI_CREDENTIAL_KMS_KEY_ID,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
     AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
@@ -160,7 +179,10 @@ export function createAwsKmsDataKeyProviderFromEnv(
 
   const region = requireNonEmpty(env.AWS_REGION, "AWS_REGION");
   const roleArn = requireNonEmpty(env.AWS_ROLE_ARN, "AWS_ROLE_ARN");
-  const keyId = requireNonEmpty(env.AWS_KMS_KEY_ID, "AWS_KMS_KEY_ID");
+  const keyId = requireNonEmpty(
+    env.AI_CREDENTIAL_KMS_KEY_ID,
+    "AI_CREDENTIAL_KMS_KEY_ID"
+  );
 
   const client = new KMSClient({
     region,
