@@ -945,3 +945,34 @@ votes.task_id -> tasks.id
 tasks is the ownership root for Arena activity.
 # все ответы, голоса и история должны проверяться через задачу
 ```
+
+## Stage 3 planned ownership: provider credentials
+
+Полный дизайн: `49-openrouter-funding-byok-plan.md`.
+
+### `provider_credentials` [planned]
+
+Ownership: только authenticated `user_id`.
+
+- guest ownership запрещён;
+- `user_id` обязателен;
+- `origin = platform_managed | user_byok`;
+- encrypted secret material не доступен напрямую browser roles;
+- direct grants для `anon`/`authenticated` не выдаются;
+- server/service layer является единственным reader/decryptor;
+- safe UI metadata отдаётся отдельным backend contract;
+- user A никогда не может выбрать credential user B даже при знании UUID.
+
+### `ai_funding_preferences` [planned]
+
+Ownership: `user_id`.
+
+Хранит только safe non-secret state: выбранный funding source и ссылку на разрешённый credential. Любая ссылка на credential дополнительно проверяется по owner на backend.
+
+### `usage_events` extension [planned]
+
+`credential_id` не меняет ownership usage row: owner остаётся `user_id` или существующий guest identity. Для BYOK/platform attribution добавляются только safe metadata; secret/key material запрещён.
+
+### Delete lifecycle
+
+Удаление аккаунта с platform-managed credential должно сначала попытаться disable/revoke remote provider key, затем crypto-shred local secret. Если remote operation недоступна, создаётся reconciliation state; нельзя считать простое `ON DELETE CASCADE` достаточной очисткой внешнего ресурса.

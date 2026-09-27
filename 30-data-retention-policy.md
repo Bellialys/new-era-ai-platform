@@ -107,3 +107,37 @@ Deletion jobs для этих таблиц планируются в v2.1. До 
 
 - `27-environments.md` - разделение Local / Preview / Staging / Production.
 - `29-database-ownership.md` - владение данными и каскадные удаления.
+
+## Stage 3 provider credential retention
+
+Детальный lifecycle: `49-openrouter-funding-byok-plan.md` и ADR-004.
+
+### Plaintext provider keys
+
+Retention: **0 persistent storage**.
+
+Plaintext может существовать только в TLS request/server memory на время validation, encryption или inference.
+
+### Persistent BYOK ciphertext
+
+Хранится только пока пользователь явно держит OpenRouter connection активным.
+
+При disconnect/account deletion:
+
+- уничтожить encrypted secret/DEK согласно ADR-004;
+- сохранить только safe fingerprint/status/audit metadata, если это требуется operational policy;
+- raw key никогда не переносится в audit/history.
+
+### Platform-managed credential
+
+При отключении platform access или удалении аккаунта:
+
+1. best-effort remote disable/revoke через OpenRouter Management API;
+2. локальный credential переводится в revocation lifecycle;
+3. encrypted secret crypto-shred;
+4. safe remote key hash/status может временно храниться для orphan reconciliation.
+
+### Usage and pricing
+
+`usage_events` сохраняет provider usage/cost metadata по общему retention policy.
+`model_price_history` может хранить исторические pricing snapshots дольше user data, потому что не содержит provider secrets или пользовательский prompt.
