@@ -32,8 +32,8 @@
     "diff:check",
     "audit"
   ],
-  "lastUpdated": "2026-09-28T00:42:36+03:00",
-  "commitHash": "55e954620bb70e53042fb36f3254d6008bd1a70c",
+  "lastUpdated": "2026-09-28T00:47:00+03:00",
+  "commitHash": "e6f8db1d62545ff15686f6712b5dcc5520eaa458",
   "transitions": [
     {
       "from": null,
@@ -58,7 +58,19 @@
       "to": "done",
       "at": "2026-09-28T00:42:36+03:00",
       "note": "AWS KMS adapter code completed without live AWS calls, infrastructure mutation, environment changes, credential persistence or route activation."
+    },
+    {
+      "from": "done",
+      "to": "verify",
+      "at": "2026-09-28T00:46:40+03:00",
+      "note": "PR review identified the documented KMS env-name mismatch and duplicate plaintext DEK buffer. Both were corrected; review threads were replied to and resolved."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T00:47:00+03:00",
+      "note": "Post-review CI passed fully. Adapter now uses AI_CREDENTIAL_KMS_KEY_ID and immediately wipes the original AWS SDK plaintext DEK buffer after copying."
     }
   ],
-  "notes": "Completed unit-tested KMS GenerateDataKey(AES_256)/Decrypt adapter using @vercel/oidc-aws-credentials-provider. Static AWS access-key envs are explicitly rejected for this credential path. Live AWS KMS/IAM/OIDC infrastructure remains external."
+  "notes": "Completed unit-tested KMS GenerateDataKey(AES_256)/Decrypt adapter using @vercel/oidc-aws-credentials-provider. Static AWS access-key envs are explicitly rejected. Review fixes aligned AI_CREDENTIAL_KMS_KEY_ID with project docs and zero the SDK-owned plaintext DEK. Live AWS KMS/IAM/OIDC infrastructure remains external."
 }
