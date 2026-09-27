@@ -16,6 +16,29 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.2 production credential migration - 2026-09-28
+
+### Applied
+
+- Production Supabase project `Bellialys's Project` received the additive provider-credential migration.
+- Added empty `provider_credentials` and `ai_funding_preferences` tables.
+- No existing table, column or user data was removed or modified.
+- `provider_credentials` stores only ciphertext/wrapped-DEK/KMS metadata; no plaintext API-key column exists.
+- RLS is enabled on both tables.
+- Direct `anon` and `authenticated` grants are absent; policies are service-role only.
+- Unique live-credential, encryption-envelope and funding-source constraints are present.
+- Post-migration security advisors added no new schema security warning.
+
+### Migration history reconciliation
+
+- Supabase MCP recorded the applied migration as version `20260927212853`.
+- The repository migration filename was aligned from the earlier unapplied local CLI timestamp to `20260927212853_stage3_provider_credentials.sql` without changing SQL contents, eliminating local/remote version drift.
+
+### Remaining Stage 3.2 gate
+
+- Real AWS KMS data-key adapter and Vercel OIDC/IAM configuration are still required before provider credentials may be persisted or used.
+- OAuth user-key persistence remains disabled until that KMS boundary is operational.
+
 ## Stage 3.1 Free OAuth architecture - 2026-09-27
 
 ### Changed
