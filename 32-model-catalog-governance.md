@@ -109,7 +109,7 @@ Runtime defaults также входят в verification scope:
 - Judge primary: `google/gemma-4-31b-it:free`;
 - Judge fallback: `google/gemma-4-26b-a4b-it:free`.
 
-Локальный fallback text catalog обновлён сразу. Production `public.models` должен быть выровнен forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`; до применения migration через owner/reviewer gate live DB catalog нельзя считать синхронизированным.
+Локальный fallback text catalog и production `public.models` выровнены применённой forward-only migration `20260927065448_recover_openrouter_model_catalog.sql`; post-migration verification 2026-09-27 подтвердил 8 active/public curated OpenRouter text models и отсутствие неожиданного active/public drift.
 
 ---
 
