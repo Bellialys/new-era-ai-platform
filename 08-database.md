@@ -16,7 +16,7 @@ v2.0.0-alpha.1
 # cast_best_vote — атомарный RPC для best vote
 # tasks.judge_verdict хранит JSON-вердикт POST /api/judge
 # public.audit_log хранит admin/governance audit events и не открыт anon/authenticated напрямую
-# pending release migration: 20260703221900_tasks_is_blind.sql must be applied before TASK-3 code merge
+# tasks.is_blind migration is applied in production as 20260704025200_tasks_is_blind.sql
 # Migration history aligned through 20260705223814_enforce_models_access_level_rls
 ```
 
@@ -521,23 +521,28 @@ with check (true);
 | `20260624034630_add_judge_verdict_to_tasks.sql` | Добавляет `tasks.judge_verdict jsonb null` для результата `POST /api/judge` |
 | `20260624055408_add_audit_log.sql` | Создаёт `public.audit_log`, индексы, service_role grants и RLS policies без прямого доступа anon/authenticated |
 | `20260703182026_vote_gate_task_running.sql` | Усиливает `cast_best_vote`: блокирует best vote, пока `tasks.status = 'running'` |
-| `20260703221900_tasks_is_blind.sql` | Добавляет `tasks.is_blind boolean not null default false` для server-side Blind Arena SSE |
+| `20260704025200_tasks_is_blind.sql` | Добавляет `tasks.is_blind boolean not null default false` для server-side Blind Arena SSE; применена в production |
 | `20260704041841_security_hardening_profiles_grants.sql` | P0: колоночный `UPDATE` grant на `profiles` (только `first_name`, `last_name`, `display_name`, `avatar_url`); P1: revoke legacy `TRUNCATE`/`REFERENCES`/`TRIGGER` с `anon`/`authenticated` на публичных Arena-таблицах; hardening: явный `WITH CHECK` для Storage avatar UPDATE policy |
 | `20260705221427_enforce_vote_task_ownership.sql` | Усиливает `cast_best_vote`: best vote разрешён только владельцу `tasks.user_id`/`tasks.anonymous_session_id`; execute остаётся только у `service_role` |
 | `20260705223415_align_profiles_plan_pro.sql` | Закрепляет canonical `profiles.plan` как `free`/`pro` и мигрирует legacy `premium` в `pro` |
 | `20260705223814_enforce_models_access_level_rls.sql` | Выравнивает direct Data API SELECT на `models` с `access_level`: anon=`anonymous`, authenticated=`anonymous`/`registered`, `pro`/`admin`=`premium` |
-| `20260917132000_recover_openrouter_model_catalog.sql` | P0 provider recovery: деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
-| `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql` | Pending: atomic admin user/model mutation + mandatory audit RPCs и concurrent-safe last-admin trigger; execute только `service_role` |
+| `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql` | Применена в production: atomic admin user/model mutation + mandatory audit RPCs и concurrent-safe last-admin trigger; execute только `service_role` |
+| `20260824213000_serialize_admin_role_updates.sql` | Применена в production: сериализует admin role updates и усиливает last-admin invariant |
+| `20260917132000_recover_openrouter_model_catalog.sql` | Pending до deployment PR #61: P0 provider recovery деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
 
 Release-gate note:
 
 ```text
-20260824204614_atomic_admin_mutations_and_last_admin_guard.sql is pending.
-# apply after merge through the owner-controlled Supabase migration gate
-# verify RPC grants, atomic rollback on audit failure and two-session admin demotion race
+20260824204614_atomic_admin_mutations_and_last_admin_guard.sql is applied.
+20260824213000_serialize_admin_role_updates.sql is applied.
+# admin RPC grants and last-admin serialization were verified before PR #62 merge
 
 Remote Supabase migration history and local migration filenames are aligned
-through 20260624055408_add_audit_log.
+through 20260824213000_serialize_admin_role_updates.
+
+20260917132000_recover_openrouter_model_catalog.sql remains pending.
+# apply only after PR #61 code is merged and the production deployment is READY
+# then verify /api/models, /api/code-models, Team/Judge and provider discovery
 
 Remote post-migration verification on 2026-06-18:
 # models.status is generated always as (...), mismatch count = 0
