@@ -25,7 +25,7 @@
 - фактическая стоимость запроса берётся из provider `usage.cost`, когда поле доступно;
 - New Era не добавляет скрытую наценку;
 - platform-owned ключ пользователя имеет отдельный hard spending limit;
-- общий Workspace/Guardrail ограничивает риск всей платформы;
+- per-user key limit жёстко ограничивает расход конкретного platform credential; Guardrail добавляет model/provider/privacy/budget policy; aggregate Workspace Budget используется только если фактически доступен нашему account/tier;
 - BYOK расход не списывается с platform inference key;
 - browser никогда не получает обратно сохранённый secret;
 - guest users не получают отдельные OpenRouter keys;
@@ -86,13 +86,19 @@ Image API endpoint discovery возвращает отдельную pricing str
 
 ### Plans and controls
 
-На текущей pricing page Management API и Budgets & Spend Controls доступны начиная со Standard.
+На 2026-09-27 официальные материалы OpenRouter используют текущие tier names `Free | Pay-as-you-go | Enterprise`, но страницы описывают availability Management API / spend controls не полностью одинаково. Fresh spend-control documentation указывает, что per-key limits и Guardrails работают на Free/PAYG, а aggregate Workspace Budgets требуют Enterprise; pricing matrix отдельно перечисляет Management API/Budgets как plan features.
 
-Автоматическое создание per-user platform keys является blocked prerequisite, пока владелец OpenRouter account не подтвердит подходящий plan и Management API key.
+Поэтому код **не должен** определять capability по строке plan name. Stage 3.1 обязан проверить возможности именно нашего OpenRouter account: создание Management key, CRUD `/api/v1/keys`, Guardrail assignment и наличие Workspace Budget. Если нужной capability нет — соответствующий rollout stage остаётся disabled.
+
+Автоматическое создание per-user platform keys является blocked prerequisite до такой live account verification.
 
 ### Guardrails / Workspaces
 
 Guardrail может задавать spending limit, reset interval, model/provider allowlists, ZDR/privacy restrictions и дополнительные security controls.
+
+Критическая семантика: Guardrail budget, назначенный нескольким keys/members, **не является общим shared pool**. OpenRouter проверяет budget независимо для каждого assigned key/member. Workspace default guardrail задаёт baseline policy, но его budget нельзя считать aggregate cap всей платформы.
+
+Настоящий aggregate Workspace Budget ограничивает суммарный spend workspace и в текущей документации указан как Enterprise feature.
 
 New Era users **не становятся OpenRouter organization members**. Organization membership — административная модель OpenRouter, а не наша пользовательская таблица.
 
@@ -142,7 +148,7 @@ New Era users **не становятся OpenRouter organization members**. Org
 - максимум один active platform-managed key на пользователя в MVP;
 - key secret не показывается пользователю;
 - limit задаётся New Era policy;
-- общий workspace/default guardrail ограничивает blast radius;
+- per-key limit ограничивает расход конкретного user key; default/key Guardrail ограничивает модели/providers/privacy и может добавить отдельный per-key budget;
 - usage: `billing_source = platform`.
 
 Отдельный key **не означает**, что provider/account-wide limits автоматически умножаются на число пользователей.
@@ -227,13 +233,16 @@ ADR-002 остаётся правилом для будущего реально
 | Слой | Что защищает | Источник истины |
 |---|---|---|
 | Provider/account limit | upstream availability | OpenRouter/provider |
-| Platform key budget | деньги New Era на user | OpenRouter key `limit` |
-| Workspace guardrail | общий blast radius | OpenRouter Guardrail |
+| Platform key budget | деньги New Era на конкретный user key | OpenRouter key `limit` |
+| Guardrail policy/budget | policy + дополнительный budget на key/member | OpenRouter Guardrail |
+| Workspace aggregate budget | общий hard cap workspace, если feature доступна | OpenRouter Workspace Budget |
 | App rate limit | spam/concurrency/Vercel load | New Era + Upstash |
 
 Один лимит не заменяет другой.
 
-Hard monetary stop для platform mode должен находиться у OpenRouter: per-user key limit + workspace/default guardrail.
+Hard monetary stop для каждого platform user должен находиться у OpenRouter per-key `limit`. Guardrail добавляет ещё один provider-side policy/budget слой, но не считается общим pooled budget.
+
+Если наш tier поддерживает aggregate Workspace Budget, он становится дополнительным hard cap всей platform-funded среды. Если нет, документация/UI не должны изображать Guardrail как глобальный cap; общий риск тогда ограничивается per-key caps, количеством provisioned keys, account credit/top-up policy и отдельным New Era operational circuit breaker.
 
 Локальная БД используется для UX, analytics и reconciliation, но не является единственной защитой денег.
 
@@ -506,10 +515,11 @@ CREDENTIAL_DECRYPTION_FAILED
 
 ### Stage 3.1 — External readiness
 
-- confirm OpenRouter plan supports Management API/Budgets;
-- create separate Management API key;
+- probe actual OpenRouter account capabilities: Management API key + `/api/v1/keys`, Guardrails, Workspace Budget availability;
+- create separate Management API key only after capability confirmation;
 - confirm production Workspace;
-- define default Guardrail;
+- define default/key Guardrail policy;
+- if available, define aggregate Workspace Budget; otherwise document the non-Enterprise global-risk fallback;
 - confirm production Upstash;
 - choose KMS provider compatible with ADR-004;
 - configure Vercel OIDC to KMS/cloud role where possible;
@@ -556,7 +566,7 @@ CREDENTIAL_DECRYPTION_FAILED
 - production Upstash required for cost-bearing routes;
 - explicit Redis outage policy;
 - provider budget preflight UX;
-- global guardrail verification.
+- verify per-key limit + Guardrail semantics; verify aggregate Workspace Budget only when the account exposes that feature.
 
 ### Stage 3.7 — Expanded paid catalog
 
@@ -674,7 +684,7 @@ Price sync incident:
 
 ## 21. Owner decisions required before implementation traffic
 
-1. Confirm OpenRouter account plan/readiness.
+1. Confirm actual OpenRouter account capabilities (Management API, per-key limits, Guardrails, optional aggregate Workspace Budget) rather than inferring them from a plan label.
 2. Choose initial platform per-user money budget values.
 3. Choose KMS provider.
 4. Decide whether a session-only BYOK option is needed in addition to persistent BYOK.

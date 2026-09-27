@@ -1059,7 +1059,7 @@ OWASP ASVS, OWASP LLM Top 10, NIST SSDF, SLSA, ISO 27001/SOC 2 readiness, Google
 
 Порядок:
 
-1. OpenRouter plan/Management API/Workspace/Guardrail + Upstash + KMS readiness;
+1. live capability probe OpenRouter account (Management API/per-key limits/Guardrails/optional Workspace Budget) + Upstash + KMS readiness;
 2. data + crypto foundation без переключения inference traffic;
 3. OpenRouter price sync + actual `usage.cost` attribution;
 4. auth-only BYOK beta;

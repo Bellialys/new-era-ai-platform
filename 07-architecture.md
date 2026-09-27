@@ -1338,4 +1338,4 @@ Arena route
 
 Для `user_openrouter` пользователь подключает свой OpenRouter API key. Ключ остаётся server-side secret; frontend после сохранения видит только safe status/fingerprint.
 
-Provider pricing, monetary budget и anti-abuse rate limit — независимые слои. OpenRouter price catalog является published-price SSOT, `usage.cost` — preferred actual-cost SSOT, OpenRouter key limit/Guardrail — hard monetary enforcement, Upstash — distributed abuse/load protection.
+Provider pricing, monetary budget и anti-abuse rate limit — независимые слои. OpenRouter price catalog является published-price SSOT, `usage.cost` — preferred actual-cost SSOT, per-key `limit` — hard cap конкретного platform credential, Guardrail — дополнительная policy/per-key budget защита, а aggregate Workspace Budget является отдельной capability и используется только если доступна account/tier. Upstash отвечает за distributed abuse/load protection.
