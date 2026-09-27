@@ -943,8 +943,8 @@ New Era users не отображаются 1:1 в OpenRouter organization membe
 ## Статус
 
 ```text
-Accepted
-# implementation pending OpenRouter Management API readiness
+Accepted for future platform-funded track
+# deferred while New Era remains on OpenRouter Free
 ```
 
 ## Решение
@@ -1051,8 +1051,8 @@ Accepted
 
 - platform mode остаётся на curated free-model set;
 - paid platform models не включаются;
-- BYOK beta использует тот же governed catalog, а не произвольный model id;
-- session-only BYOK откладывается, первым реализуется persistent encrypted BYOK;
+- user OpenRouter beta использует тот же governed catalog, а не произвольный model id;
+- primary user connection UX = OAuth PKCE; persistent encrypted credential storage реализуется после crypto foundation;
 - текущие fan-out ceilings являются максимумами rollout baseline:
   - Prompt Arena: до 5 provider calls parallel;
   - Code Arena: до 3 parallel;
@@ -1064,3 +1064,51 @@ Accepted
 ## Причина
 
 Это позволяет построить credential/usage foundation без скрытого повышения стоимости, key-sprawl и abuse surface до подтверждения реальных account-level controls OpenRouter.
+
+
+---
+
+# DEC-021 - Free-first OpenRouter OAuth PKCE
+
+## Статус
+
+```text
+Accepted
+# 2026-09-27; replaces Management API as the blocker for the free-user track
+```
+
+## Решение
+
+Пока New Era остаётся на OpenRouter Free, основной пользовательский funding path — **собственный OpenRouter account пользователя через OAuth PKCE S256**.
+
+Flow:
+
+1. authenticated New Era user нажимает `Connect OpenRouter`;
+2. New Era генерирует random `code_verifier` и independent random `state`;
+3. пользователь идёт на OpenRouter `/auth` с S256 `code_challenge`, callback URL и `state`;
+4. callback проверяет `state` и short-lived verifier;
+5. authorization `code` обменивается server-side через `POST /api/v1/auth/keys`;
+6. returned API key считается **user-controlled credential** его OpenRouter account;
+7. inference с этим credential использует provider quota/balance этого пользователя, а не shared quota New Era;
+8. key не сохраняется в plaintext; persistent mode включается только после Stage 3.2 encryption boundary.
+
+OpenRouter Management API **не требуется** для этого Free-first path.
+
+## Security
+
+- PKCE method: только S256;
+- authorization code single-use и short-lived;
+- `state` обязателен для callback correlation/CSRF;
+- `code_verifier`, authorization code и returned API key не логируются;
+- callback URL не содержит API key;
+- key не помещается в localStorage;
+- до encrypted persistence нет plain PostgreSQL fallback;
+- model allowlist, rate limits и fan-out policy New Era применяются независимо от provider account пользователя.
+
+## Platform-funded track
+
+Management API, Guardrails, per-user platform keys и положительный New Era spending budget остаются отдельным будущим этапом. Они требуют перехода OpenRouter account на capability level, где эти функции доступны.
+
+## Причина
+
+Free-first OAuth позволяет каждому пользователю использовать собственную OpenRouter quota без попытки искусственно делить или умножать лимит одного New Era Free account и без финансового риска для New Era.
