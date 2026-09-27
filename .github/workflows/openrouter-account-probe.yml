@@ -1,0 +1,33 @@
+name: OpenRouter account capability probe
+
+on:
+  push:
+    branches:
+      - ops/stage3-openrouter-account-probe
+    paths:
+      - ".github/workflows/openrouter-account-probe.yml"
+      - "scripts/probe-openrouter-account.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe current OpenRouter key metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Probe sanitized current-key metadata
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: node scripts/probe-openrouter-account.mjs
