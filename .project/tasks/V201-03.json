@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-03",
   "title": "Credential Envelope Crypto Foundation",
-  "status": "in_progress",
+  "status": "done",
   "priority": "critical",
   "files": [
     ".project/state.json",
@@ -21,9 +21,19 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-27T15:28:11Z",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "crypto:review",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-27T15:31:57Z",
+  "commitHash": "e0828ff738bd8e736326372ee5aefd835ce607c2",
   "transitions": [
     {
       "from": null,
@@ -36,7 +46,19 @@
       "to": "in_progress",
       "at": "2026-09-27T15:28:11Z",
       "note": "Implement AES-256-GCM envelope codec behind an injected data-key provider. No AWS SDK, secrets, routes or database writes."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-27T15:31:57Z",
+      "note": "CI passed audit, typecheck, lint, tests, env/model verifier tests, build, state/docs and smoke. Crypto review confirmed AES-256-GCM, AAD binding and DEK zeroization."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-27T15:31:57Z",
+      "note": "Credential envelope crypto foundation completed without KMS SDK, secrets, route activation or database writes."
     }
   ],
-  "notes": "Crypto primitive layer only. Real AWS KMS adapter and environment configuration remain separate gated work."
+  "notes": "Completed provider-independent AES-256-GCM envelope codec with injected data-key provider, AAD context binding, failure-safe errors and DEK zeroization. Real AWS KMS adapter remains gated."
 }
