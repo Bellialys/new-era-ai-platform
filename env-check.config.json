@@ -63,6 +63,18 @@
       "example": "http://localhost:3000"
     },
     {
+      "name": "NEXT_PUBLIC_ENABLE_TEAM_MODE",
+      "required": false,
+      "category": "config",
+      "groups": ["basic", "full"],
+      "validation": {
+        "type": "regex",
+        "pattern": "^(true|false)$",
+        "message": "must be true or false"
+      },
+      "example": "false"
+    },
+    {
       "name": "SUPABASE_DB_URL",
       "aliases": ["DATABASE_URL"],
       "required": true,

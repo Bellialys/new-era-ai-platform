@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:env-check": "node --test scripts/check-env.test.mjs",
+    "test:models-verify": "node --test scripts/verify-models.test.mjs",
     "eval:promptfoo": "npx --yes promptfoo@0.123.0 eval -c promptfoo/promptfooconfig.yaml --env-file .env.local",
     "eval:promptfoo:platform": "npx --yes promptfoo@0.123.0 eval -c promptfoo/platform-eval.yaml",
     "eval:promptfoo:view": "npx --yes promptfoo@0.123.0 view",

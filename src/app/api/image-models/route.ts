@@ -11,6 +11,8 @@ import {
   MODELS_RATE_LIMIT_WINDOW_MS,
 } from "@/lib/arena/constants";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 

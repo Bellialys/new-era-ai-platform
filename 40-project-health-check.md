@@ -62,8 +62,15 @@ npm run models:verify
 npm run smoke
 ```
 
-`models:verify` обращается к OpenRouter `GET /api/v1/models` и проверяет, что
-локальные model ids из `src/lib/server/models.ts` существуют в live catalog.
+`models:verify` обращается к OpenRouter `GET /api/v1/models?output_modalities=text`
+и `GET /api/v1/images/models` и
+проверяет четыре runtime-группы: fallback text catalog, Team default, Judge
+primary/fallback и registered-only Image catalog. Для text catalog проверяются
+минимальный count, уникальные непустые IDs и output modality `text`; Judge primary
+и fallback обязаны различаться. Для Image catalog проверяются output modality
+`image` и provider parameters `aspect_ratio`/`n`. Catalog drift
+завершает команду с exit code `1`, malformed source или provider/runtime failure
+— с exit code `2`.
 `smoke` проверяет `/api/health` и `/api/models` на запущенном приложении.
 
 Для `health:production` нужно задать `SMOKE_BASE_URL` или
@@ -73,6 +80,29 @@ npm run smoke
 `VERCEL_AUTOMATION_BYPASS_SECRET`. `smoke` передаст его только как
 `x-vercel-protection-bypass` header и не выведет значение в лог.
 
+### Scheduled `models:verify`
+
+`.github/workflows/models-verify.yml` является обязательным operational
+monitoring для provider drift:
+
+- ежедневно в `03:17 UTC`;
+- ручной запуск через `workflow_dispatch`;
+- `permissions: contents: read`;
+- fail closed, без `continue-on-error`;
+- передаёт repository secret `OPENROUTER_API_KEY` только live verification step.
+
+Workflow последовательно выполняет `npm run test:models-verify` и
+`npm run models:verify -- --json`.
+
+Pull request CI выполняет только `npm run test:models-verify` с mock discovery;
+provider secret ему не передаётся. Поэтому PR test подтверждает parser/policy
+контракт, но не текущую доступность моделей у OpenRouter.
+
+Secret в GitHub Actions пока ожидается, поэтому до его добавления расписание
+нельзя считать operational. Scheduled workflow не является branch-protected PR
+gate и не заменяет production smoke или owner-approved paid Image generation
+smoke.
+
 ## Env Requirements
 
 Можно запускать без live provider-доступа:
@@ -81,6 +111,7 @@ npm run smoke
 - `typecheck`
 - `lint`
 - `test`
+- `test:models-verify`
 - `test:env-check`
 - `docs:check`
 - `state:check`
@@ -93,7 +124,9 @@ npm run smoke
 
 Требуют OpenRouter:
 
-- `models:verify` - нужен `OPENROUTER_API_KEY`.
+- `models:verify` - нужен `OPENROUTER_API_KEY`; scheduled/manual workflow
+  получает его из GitHub Actions repository secret только на live-step.
+- `test:models-verify` - использует mock discovery и не требует provider secret.
 
 Требуют запущенное приложение или deployment:
 

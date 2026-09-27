@@ -92,11 +92,11 @@ Release-gate note: `POST /api/guest` создаёт anonymous session и сей�
   "models": [
     {
       "id": "uuid-from-models-table",
-      "name": "GPT-OSS 120B",
-      "role": "General-модель",
+      "name": "Gemma 4 26B A4B",
+      "role": "General / reasoning / multimodal",
       "provider": "openrouter",
       "badge": "Free",
-      "description": "Бесплатная открытая модель OpenAI на 120B — сильный универсальный baseline."
+      "description": "Бесплатная мультимодальная Gemma 4 для общих задач и структурированных ответов."
     }
   ]
 }
