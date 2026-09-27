@@ -1,0 +1,76 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-06",
+  "title": "AWS KMS Data-Key Adapter",
+  "status": "done",
+  "priority": "critical",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-06.json",
+    "src/lib/server/aws-kms-data-key-provider.ts",
+    "src/lib/server/aws-kms-data-key-provider.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:unit",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:unit",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T00:47:00+03:00",
+  "commitHash": "e6f8db1d62545ff15686f6712b5dcc5520eaa458",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T00:39:00+03:00",
+      "note": "Created from current main after KMS dependencies were merged."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T00:39:00+03:00",
+      "note": "Implement GenerateDataKey/Decrypt adapter using Vercel OIDC credentials only; no static AWS credentials, no live KMS call."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T00:42:20+03:00",
+      "note": "After one TypeScript weak-type fix, CI passed audit, typecheck, lint, full tests, env/model verifier tests, build, state/docs checks and smoke. Unit tests verify KMS commands and OIDC-only configuration guards."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T00:42:36+03:00",
+      "note": "AWS KMS adapter code completed without live AWS calls, infrastructure mutation, environment changes, credential persistence or route activation."
+    },
+    {
+      "from": "done",
+      "to": "verify",
+      "at": "2026-09-28T00:46:40+03:00",
+      "note": "PR review identified the documented KMS env-name mismatch and duplicate plaintext DEK buffer. Both were corrected; review threads were replied to and resolved."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T00:47:00+03:00",
+      "note": "Post-review CI passed fully. Adapter now uses AI_CREDENTIAL_KMS_KEY_ID and immediately wipes the original AWS SDK plaintext DEK buffer after copying."
+    }
+  ],
+  "notes": "Completed unit-tested KMS GenerateDataKey(AES_256)/Decrypt adapter using @vercel/oidc-aws-credentials-provider. Static AWS access-key envs are explicitly rejected. Review fixes aligned AI_CREDENTIAL_KMS_KEY_ID with project docs and zero the SDK-owned plaintext DEK. Live AWS KMS/IAM/OIDC infrastructure remains external."
+}
