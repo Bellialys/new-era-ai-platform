@@ -16,6 +16,32 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.1 External Readiness - 2026-09-27
+
+### Verified
+
+- Stage 3.0 повторно проверен после PR #68: pull-request CI, push CI и Vercel check green; squash merge `6ad6ea34b38f35ec38a481b1be83a712c190d391`.
+- Production deployment merge commit перешёл в `READY`; public `/api/health` возвращает `200 {"status":"ok"}`.
+- OpenRouter key-management contract повторно сверён: Management credential требуется для API-key CRUD; create возвращает plaintext key один раз и safe key hash/metadata; key-level USD limit/reset/workspace metadata подтверждены документацией.
+- OpenRouter account feature availability не считается статичной по tier label; live account probe остаётся обязательным gate.
+
+### Decisions
+
+- AWS KMS выбран как target credential-encryption provider; Vercel OIDC — target authentication path без static AWS access keys.
+- ADR-004 исправлен: shared KMS KEK + wrapped DEK в immutable backup не выдаётся за настоящий crypto-shredding. Stage 3 гарантирует encryption at rest + live deletion/revocation; отдельная backup crypto-shredding architecture остаётся будущим design.
+- Platform-funded paid traffic при outage required distributed limiter должен fail closed; OpenRouter per-key limit остаётся independent hard monetary boundary.
+- Paid platform catalog остаётся disabled до live control verification и numeric budget approval.
+- BYOK beta остаётся curated; session-only BYOK deferred.
+- Current fan-out ceilings зафиксированы как rollout maxima до отдельного cost/security review.
+
+### Still blocked / unverified
+
+- Реальные capability нашего OpenRouter account: Management API CRUD, production workspace id, Guardrail assignment и aggregate Workspace Budget.
+- Допустимый масштаб key cardinality/provisioning для one-key-per-user rollout.
+- Numeric per-user budget и tiny canary lifecycle-test budget.
+- Management key не создавался/не запрашивался в чате и не добавлялся в repo/env этой docs-only работой.
+- Production DB schema, runtime provider routing и paid traffic не менялись.
+
 ## Stage 3 architecture re-audit - 2026-09-27
 
 ### Changed
