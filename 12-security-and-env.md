@@ -682,6 +682,12 @@ OPENROUTER_WORKSPACE_ID=
 OPENROUTER_DEFAULT_GUARDRAIL_ID=
 # server-side configuration identifier
 
+AWS_REGION=
+# AWS region для KMS client
+
+AWS_ROLE_ARN=
+# IAM role, которую Vercel Function принимает через short-lived OIDC
+
 AI_CREDENTIAL_KMS_KEY_ID=
 # ссылка на KMS key; не сам DEK и не plaintext provider secret
 ```
@@ -710,7 +716,15 @@ OpenRouter key пользователя:
 
 ### KMS authentication
 
-Предпочтителен short-lived workload identity/OIDC от Vercel к выбранному cloud KMS. Долгоживущие AWS/GCP/Azure access secrets добавляются только если OIDC технически невозможен и после отдельного security review.
+Stage 3.2 adapter реализован для **AWS KMS + Vercel OIDC**:
+
+- `@vercel/oidc-aws-credentials-provider` получает short-lived AWS credentials через `AssumeRoleWithWebIdentity`;
+- KMS adapter использует только `AWS_REGION`, `AWS_ROLE_ARN` и `AI_CREDENTIAL_KMS_KEY_ID`;
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` и `AWS_SESSION_TOKEN` для credential-KMS path явно отклоняются кодом;
+- `GenerateDataKey(AES_256)` и `Decrypt` используют одинаковый non-PII encryption context: `credential_id/provider/origin`;
+- plaintext DEK, возвращённый AWS SDK, копируется для crypto operation и исходный SDK buffer немедленно зануляется; рабочая копия также зануляется crypto layer после использования.
+
+До создания реального AWS OIDC provider/IAM role/KMS key и настройки этих трёх server-side env values persistent OpenRouter credentials остаются disabled.
 
 ### Supabase Vault
 
