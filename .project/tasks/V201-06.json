@@ -1,0 +1,42 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-06",
+  "title": "AWS KMS Data-Key Adapter",
+  "status": "in_progress",
+  "priority": "critical",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-06.json",
+    "src/lib/server/aws-kms-data-key-provider.ts",
+    "src/lib/server/aws-kms-data-key-provider.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:unit",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T00:39:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T00:39:00+03:00",
+      "note": "Created from current main after KMS dependencies were merged."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T00:39:00+03:00",
+      "note": "Implement GenerateDataKey/Decrypt adapter using Vercel OIDC credentials only; no static AWS credentials, no live KMS call."
+    }
+  ],
+  "notes": "Unit-tested adapter only. AWS OIDC provider, IAM role, KMS key and Vercel environment values remain external infrastructure gates."
+}
