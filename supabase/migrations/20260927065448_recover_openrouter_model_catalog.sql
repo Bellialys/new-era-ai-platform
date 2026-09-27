@@ -230,6 +230,5 @@ on conflict (model_key) do update set
   raw_metadata = existing.raw_metadata || excluded.raw_metadata,
   updated_at = now();
 
-
 -- Rollback is intentionally not included: historical catalog rows are
 -- preserved, and any correction must be delivered as a new forward migration.

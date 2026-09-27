@@ -34,8 +34,23 @@ v2.0.0-alpha.1 - AI Team Mode
 ### Release gates
 
 - Migration применена после production deployment PR #61; post-migration проверка подтвердила 8 active/public curated OpenRouter text models и сохранение historical rows.
-- Scheduled/manual live-step требует repository secret `OPENROUTER_API_KEY`; добавление секрета в GitHub Actions пока ожидается. Secret не передаётся mock-тесту в Pull request CI. Schedule является operational monitoring, а не branch-protected PR gate.
-- Paid Image generation smoke не запускался; discovery и локальные contract tests не подтверждают фактическую платную генерацию/Storage upload в production.
+- Scheduled/manual live-step использует repository secret `OPENROUTER_API_KEY` только внутри live verification step. Текущий connector не позволяет читать repository secrets, поэтому наличие секрета не утверждается; operational monitoring считается подтверждённым только после успешного scheduled/manual live run. Secret не передаётся mock-тесту в Pull request CI.
+- Paid Image generation smoke не запускался без явного budget approval. Это отдельный acceptance gate для продвижения Image Arena выше auth-only alpha; provider-recovery Этап 2 при этом закрыт по code/DB/catalog/contracts/storage configuration.
+## SECURITY: Stage 1 boundary hardening - 2026-09-27
+
+### Fixed
+
+- PR #64 слит в `main`: well-formed `na_guest` UUID больше не считается доверенной identity сам по себе; production дополнительно проверяет запись в `anonymous_sessions` и fail-closed при невозможности проверки.
+- `/admin` выполняет `requireAdmin()` внутри server page до любого service-role чтения; regression test фиксирует порядок authorization-before-query.
+- JSON-mutating API routes используют общий `isJsonObject()`: валидные JSON scalar/array/null больше не приводят к field-access 500 и возвращают controlled `400 INVALID_BODY`.
+- Общий JSON boundary regression включает `compare`, `stream-compare`, `code-compare`, `code-run`, `image-compare`, `team-run`, `vote`, `profile`, `judge` и admin PATCH routes.
+
+### Verification
+
+- Текущий production `/admin` без авторизации выполняет redirect и не содержит dashboard counts/data в HTML/RSC.
+- `anonymous_sessions` защищена RLS; прямые table privileges из проверяемых app-ролей есть только у `service_role`.
+- CI после merge: typecheck, lint, tests, env-check, model-verifier tests, build, docs/state sync и smoke — PASS.
+
 ## SECURITY: fix(low): close auth, rendering, limiter and admin integrity gaps - 2026-08-24
 
 ### Fixed
@@ -44,7 +59,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - Login/signup/reset/email-change используют account-enumeration-safe ответы без provider error disclosure.
 - AI Markdown больше не загружает remote images автоматически; разрешены только same-origin image paths.
 - In-memory rate-limit fallback ограничен 10 000 LRU buckets с очисткой истёкших записей.
-- Добавлена pending-миграция `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql`: admin mutations и audit insert атомарны, last-admin demotion сериализован transaction advisory lock; RPC execute разрешён только `service_role`.
+- На момент этого изменения была добавлена pending-миграция `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql`; к 2026-09-27 она уже применена в production вместе с `20260824213000_serialize_admin_role_updates.sql`. Admin mutations и audit insert атомарны, last-admin demotion сериализован, RPC execute разрешён только `service_role`.
 
 ## SECURITY: fix(vote): enforce task ownership before blind reveal - 2026-07-05
 

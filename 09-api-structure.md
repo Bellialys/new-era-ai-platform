@@ -247,7 +247,7 @@ votes.vote_type = best | like | dislike
 
 > **Идентичность берётся из cookie, не из тела запроса.**
 > Авторизованные пользователи идентифицируются через Supabase-сессию (`sb-*` cookie).
-> Гости — через httpOnly cookie `na_guest` (выдаётся автоматически сервером при первом запросе).
+> Гости — через httpOnly cookie `na_guest`, созданную/обновлённую только явным `POST /api/guest`; backend дополнительно проверяет UUID по `anonymous_sessions` перед использованием identity.
 > Поле `anonymousSessionId` в теле **игнорируется** сервером — передавать его не нужно.
 
 Правила:

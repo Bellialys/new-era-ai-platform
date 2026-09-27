@@ -66,22 +66,23 @@ v2.0.0-alpha.1 - AI Team Mode
 - Leaderboard;
 - admin routes для audit/usage/model/user management;
 - Code Arena Runner через внешний Piston runner для авторизованных пользователей;
-- P0 provider recovery: локальный curated catalog из 8 text IDs повторно проверен по OpenRouter discovery 2026-09-17; production Supabase alignment ожидает forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`;
+- P0 provider recovery: curated catalog из 8 text IDs выровнен между local fallback и production Supabase; migration `20260927065448_recover_openrouter_model_catalog.sql` применена и проверена 2026-09-27;
 - AI Team Mode: `POST /api/team-run` (auth gate, rate 3/10 min, 4 роли) + страница `/team` за feature flag; current runtime persistence: `tasks` + `model_responses`;
 - Image Arena backend: `POST /api/image-compare` alpha (auth only), provider `POST /api/v1/images`, base64 raster validation и обязательный Supabase Storage upload без provider-URL fallback;
-- обязательный scheduled `models:verify`: text/Team/Judge/Image discovery ежедневно в `03:17 UTC` и вручную; secret `OPENROUTER_API_KEY` scoped только к live-step и пока ожидается, поэтому monitoring ещё не operational. Pull request CI запускает только `test:models-verify` с mock discovery без provider secret и сам по себе не подтверждает live catalog;
-- DB v2 Foundation: 8 таблиц аналитики и истории (`usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`); миграция создана, не применена; runtime writes to `usage_events` and `team_runs`/`team_run_steps` are planned for v2.1.
+- scheduled `models:verify`: text/Team/Judge/Image discovery ежедневно в `03:17 UTC` и вручную; workflow присутствует в `main`, а secret `OPENROUTER_API_KEY` передаётся только live-step. Наличие/значение repository secret нельзя подтвердить через текущий read-only GitHub connector; operational monitoring считается подтверждённым только после успешного scheduled/manual live run. Pull request CI запускает mock `test:models-verify` без provider secret;
+- DB v2 Foundation: 8 таблиц аналитики и истории (`usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`) уже присутствуют в production; runtime writes to `usage_events` and `team_runs`/`team_run_steps` are planned for v2.1.
 
 Текущий release-gate для v2.0:
 
 ```text
 v2.0.0-alpha.1 - AI Team Mode
 # AI Team Mode в alpha за feature flag NEXT_PUBLIC_ENABLE_TEAM_MODE ✅
-# DB v2 Foundation файл создан; применить в Supabase Dashboard перед stable
-# Upstash Redis требует настройки в Vercel перед stable release
-# P0 model catalog migration и Actions OPENROUTER_API_KEY ожидают owner configuration
-# paid Image generation/Storage smoke не запускался
-# Перевод в stable только после full smoke-test на production окружении
+# DB v2 Foundation применена в production ✅
+# P0 model catalog migration применена и DB/local catalog синхронизированы ✅
+# Этапы 1–2 security/provider recovery закрыты и перепроверены 2026-09-27 ✅
+# Upstash Redis и единый usage budget остаются отдельным Этапом 3 перед stable release
+# paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
+# scheduled live models:verify считается operational после первого подтверждённого live run
 ```
 
 Детальные планы текущих направлений вынесены в файлы:

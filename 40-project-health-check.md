@@ -98,10 +98,11 @@ Pull request CI выполняет только `npm run test:models-verify` с 
 provider secret ему не передаётся. Поэтому PR test подтверждает parser/policy
 контракт, но не текущую доступность моделей у OpenRouter.
 
-Secret в GitHub Actions пока ожидается, поэтому до его добавления расписание
-нельзя считать operational. Scheduled workflow не является branch-protected PR
-gate и не заменяет production smoke или owner-approved paid Image generation
-smoke.
+Текущий read-only GitHub connector не позволяет проверить наличие или значение
+repository secret `OPENROUTER_API_KEY`. Поэтому scheduled monitoring считается
+operational только после наблюдаемого успешного scheduled/manual live run.
+Scheduled workflow не является branch-protected PR gate и не заменяет production
+smoke или owner-approved paid Image generation smoke.
 
 ## Env Requirements
 
