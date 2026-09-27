@@ -559,10 +559,10 @@ v1.7.0-alpha.1 sync on 2026-06-24:
 # anon/authenticated do not have direct audit_log SELECT
 
 v2.0.0-alpha.1 sync on 2026-06-28:
-# local migration 20260628031516_database_v2_foundation.sql created (not yet applied to production)
-# file name aligned to match production Supabase migration history timestamp
-# 8 new tables: usage_events, team_runs, team_run_steps, code_runs, leaderboard_snapshots, artifacts, model_price_history, cleanup_log
-# all new tables: RLS enabled, service_role only (leaderboard_snapshots also grants public SELECT)
+# production migration 20260628031516_database_v2_foundation.sql applied
+# repository filename matches production Supabase migration history timestamp
+# 8 tables present in production: usage_events, team_runs, team_run_steps, code_runs, leaderboard_snapshots, artifacts, model_price_history, cleanup_log
+# all 8 tables are present with RLS enabled; leaderboard_snapshots keeps public SELECT per foundation policy
 
 P0 provider recovery refresh on 2026-09-17:
 # production migration 20260927065448_recover_openrouter_model_catalog.sql applied

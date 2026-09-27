@@ -65,9 +65,9 @@ src/lib/server/models.ts
 # server-side allowlist моделей
 ```
 
-Forward-only migration `20260824193629_recover_openrouter_model_catalog.sql` деактивирует, но не удаляет, старые OpenRouter text rows и upsert-ит тот же curated set. Её применение к production Supabase остаётся отдельным owner/reviewer gate.
+Forward-only migration `20260927065448_recover_openrouter_model_catalog.sql` применена в production: она деактивировала, но не удалила, старые OpenRouter text rows и upsert-нула тот же curated set. Production DB и local fallback сейчас выровнены на 8 active/public text-моделей.
 
-Live verification 2026-09-17:
+Live verification 2026-09-17; каталог повторно сверен с текущими OpenRouter model pages/discovery 2026-09-27:
 
 ```text
 npm run test:models-verify
