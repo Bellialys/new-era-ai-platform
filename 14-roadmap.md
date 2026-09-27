@@ -80,7 +80,8 @@ v2.0.0-alpha.1 - AI Team Mode
 # DB v2 Foundation применена в production ✅
 # P0 model catalog migration применена и DB/local catalog синхронизированы ✅
 # Этапы 1–2 security/provider recovery закрыты и перепроверены 2026-09-27 ✅
-# Upstash Redis и единый usage budget остаются отдельным Этапом 3 перед stable release
+# Stage 3.0 OpenRouter funding/BYOK architecture + repeat audit documented 2026-09-27 ✅; runtime implementation not started
+# Stage 3.1 External Readiness — следующий разрешённый шаг: live account/workspace capability probe, Management API/Guardrail/Budget verification, KMS/Redis/budget-policy decisions до любого key provisioning
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
 # scheduled live models:verify считается operational после первого подтверждённого live run
 ```
