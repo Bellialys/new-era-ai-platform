@@ -1,0 +1,42 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-04",
+  "title": "Apply Provider Credential Migration to Production",
+  "status": "in_progress",
+  "priority": "critical",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-04.json",
+    "14-roadmap.md",
+    "15-changelog.md"
+  ],
+  "checksRequired": [
+    "migration:preflight",
+    "migration:apply",
+    "migration:verify",
+    "rls:verify",
+    "advisors:security",
+    "advisors:performance",
+    "state:check",
+    "docs:check",
+    "diff:check"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T00:27:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T00:27:00+03:00",
+      "note": "Created after explicit user approval to continue with the protected production Supabase gate."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T00:27:00+03:00",
+      "note": "Additive-only migration preflight and production application. No existing table/column/data deletion."
+    }
+  ],
+  "notes": "Production DDL gate for the already-reviewed migration 20260927152222_stage3_provider_credentials.sql. Backup/PITR tooling is not exposed by the connected Supabase MCP; migration is additive-only and rollback would be forward-fix/drop of newly created empty tables if ever required."
+}
