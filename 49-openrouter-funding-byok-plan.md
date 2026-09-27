@@ -484,7 +484,7 @@ Auth + rate limit + validate key with OpenRouter + reject management key as infe
 
 ### `DELETE /api/integrations/openrouter`
 
-Disconnect and crypto-shred our stored BYOK copy.
+Disconnect deletes our live BYOK ciphertext + wrapped DEK and records safe non-secret deletion state; immutable backup semantics follow ADR-004 and are not described as instant crypto-shredding.
 
 ### `PATCH /api/profile/ai-funding`
 
