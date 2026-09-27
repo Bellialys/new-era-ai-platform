@@ -1,0 +1,41 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-05",
+  "title": "Add AWS KMS and Vercel OIDC Dependencies",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-05.json",
+    "package.json",
+    "package-lock.json"
+  ],
+  "checksRequired": [
+    "audit",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T00:34:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T00:34:00+03:00",
+      "note": "Created after explicit user approval to continue AWS KMS/OIDC work."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T00:34:00+03:00",
+      "note": "Install only the official KMS client and Vercel AWS OIDC credential provider, pinned exactly, before adapter code."
+    }
+  ],
+  "notes": "Dependency-only slice. No AWS resources, env values, credentials, runtime KMS calls or route changes."
+}
