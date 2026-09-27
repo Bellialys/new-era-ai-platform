@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-06",
   "title": "AWS KMS Data-Key Adapter",
-  "status": "in_progress",
+  "status": "done",
   "priority": "critical",
   "files": [
     ".project/state.json",
@@ -21,9 +21,19 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T00:39:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:unit",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T00:42:36+03:00",
+  "commitHash": "55e954620bb70e53042fb36f3254d6008bd1a70c",
   "transitions": [
     {
       "from": null,
@@ -36,7 +46,19 @@
       "to": "in_progress",
       "at": "2026-09-28T00:39:00+03:00",
       "note": "Implement GenerateDataKey/Decrypt adapter using Vercel OIDC credentials only; no static AWS credentials, no live KMS call."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T00:42:20+03:00",
+      "note": "After one TypeScript weak-type fix, CI passed audit, typecheck, lint, full tests, env/model verifier tests, build, state/docs checks and smoke. Unit tests verify KMS commands and OIDC-only configuration guards."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T00:42:36+03:00",
+      "note": "AWS KMS adapter code completed without live AWS calls, infrastructure mutation, environment changes, credential persistence or route activation."
     }
   ],
-  "notes": "Unit-tested adapter only. AWS OIDC provider, IAM role, KMS key and Vercel environment values remain external infrastructure gates."
+  "notes": "Completed unit-tested KMS GenerateDataKey(AES_256)/Decrypt adapter using @vercel/oidc-aws-credentials-provider. Static AWS access-key envs are explicitly rejected for this credential path. Live AWS KMS/IAM/OIDC infrastructure remains external."
 }
