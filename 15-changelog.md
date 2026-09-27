@@ -16,6 +16,30 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.1 Free OAuth architecture - 2026-09-27
+
+### Changed
+
+- Free-first user funding path switched from future Management API provisioning to OpenRouter OAuth PKCE.
+- Each authenticated New Era user will connect their own OpenRouter account and receive a user-controlled API key through the official OAuth flow.
+- PKCE S256 is mandatory; New Era callback also uses independent random `state` for CSRF/correlation.
+- Authorization code is exchanged server-side through OpenRouter `POST /api/v1/auth/keys`.
+- User-controlled credential consumes the user's own OpenRouter quota/balance instead of the shared New Era OpenRouter quota.
+- Management API, Guardrails and platform-managed per-user keys are deferred to the future platform-funded track and no longer block the Free-user MVP.
+
+### Security
+
+- No API key is placed in callback URLs, logs, analytics or audit payloads.
+- Persistent credential storage remains blocked until Stage 3.2 encryption foundation is implemented.
+- No plain PostgreSQL or localStorage fallback is allowed.
+- Existing curated model governance, app rate limits and fan-out ceilings remain mandatory for user-funded calls.
+
+### Stage status
+
+- Stage 3.1 Free OAuth readiness: complete.
+- Stage 3.2 Data + crypto foundation: next.
+- Platform paid allowance remains `$0`.
+
 ## Stage 3.1 live account probe - 2026-09-27
 
 ### Verified
