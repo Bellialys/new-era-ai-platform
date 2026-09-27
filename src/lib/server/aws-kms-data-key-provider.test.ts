@@ -20,28 +20,27 @@ const context: CredentialEncryptionContext = {
 describe("AWS KMS data-key provider", () => {
   it("requests an AES-256 data key with non-PII encryption context", async () => {
     const commands: unknown[] = [];
+    const sdkPlaintext = new Uint8Array(32).fill(1);
     const client: KmsClientLike = {
       async send(command) {
         commands.push(command);
         return {
-          Plaintext: new Uint8Array(32).fill(1),
+          Plaintext: sdkPlaintext,
           CiphertextBlob: new Uint8Array([9, 8, 7]),
-          KeyId: "arn:aws:kms:eu-west-1:111122223333:key/example",
+          KeyId: "kms-key-ref",
           $metadata: {},
         };
       },
     };
 
-    const provider = new AwsKmsDataKeyProvider(
-      client,
-      "arn:aws:kms:eu-west-1:111122223333:key/example"
-    );
-
+    const provider = new AwsKmsDataKeyProvider(client, "kms-key-ref");
     const result = await provider.generateDataKey(context);
 
     expect(result.plaintextKey).toHaveLength(32);
+    expect([...result.plaintextKey]).toEqual(new Array(32).fill(1));
+    expect([...sdkPlaintext]).toEqual(new Array(32).fill(0));
     expect(result.encryptedKey).toEqual(new Uint8Array([9, 8, 7]));
-    expect(result.kmsKeyId).toContain(":key/example");
+    expect(result.kmsKeyId).toBe("kms-key-ref");
 
     const command = commands[0];
     expect(command).toBeInstanceOf(GenerateDataKeyCommand);
@@ -102,20 +101,27 @@ describe("AWS KMS data-key provider", () => {
     );
   });
 
-  it("requires OIDC config and rejects static AWS credentials", () => {
+  it("requires the documented KMS id and rejects static AWS credentials", () => {
     expect(() =>
       createAwsKmsDataKeyProviderFromEnv({
-        AWS_REGION: "eu-west-1",
-        AWS_ROLE_ARN: "arn:aws:iam::111122223333:role/new-era",
-        AWS_KMS_KEY_ID: "arn:aws:kms:eu-west-1:111122223333:key/example",
-        AWS_ACCESS_KEY_ID: "example-static-id",
+        AWS_REGION: "region-ref",
+        AWS_ROLE_ARN: "role-ref",
+        AI_CREDENTIAL_KMS_KEY_ID: "kms-key-ref",
+        AWS_ACCESS_KEY_ID: "present",
       })
     ).toThrow(AwsKmsConfigurationError);
 
     expect(() =>
       createAwsKmsDataKeyProviderFromEnv({
-        AWS_REGION: "eu-west-1",
+        AWS_REGION: "region-ref",
       })
     ).toThrow("AWS_ROLE_ARN");
+
+    expect(() =>
+      createAwsKmsDataKeyProviderFromEnv({
+        AWS_REGION: "region-ref",
+        AWS_ROLE_ARN: "role-ref",
+      })
+    ).toThrow("AI_CREDENTIAL_KMS_KEY_ID");
   });
 });
