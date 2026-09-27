@@ -1052,3 +1052,19 @@ OWASP ASVS, OWASP LLM Top 10, NIST SSDF, SLSA, ISO 27001/SOC 2 readiness, Google
 Не переносить Image Arena раньше Stable Prompt Arena.
 # сначала должен быть стабильный текстовый MVP, лимиты, Storage и безопасность
 ```
+
+## Stage 3 - OpenRouter funding, per-user keys and BYOK
+
+После закрытия Stage 1/2 следующий инфраструктурный этап выполняется по `49-openrouter-funding-byok-plan.md`.
+
+Порядок:
+
+1. OpenRouter plan/Management API/Workspace/Guardrail + Upstash + KMS readiness;
+2. data + crypto foundation без переключения inference traffic;
+3. OpenRouter price sync + actual `usage.cost` attribution;
+4. auth-only BYOK beta;
+5. lazy platform-managed per-user keys;
+6. distributed rate-limit/cost hardening;
+7. только затем расширение paid catalog.
+
+Provider pricing, monetary budgets и anti-abuse rate limits являются разными слоями. Published price зеркалит OpenRouter; actual request cost берётся из provider usage.
