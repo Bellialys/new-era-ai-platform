@@ -1314,3 +1314,26 @@ UI сравнения
 ```
 
 Ключевое правило: PostgreSQL не должен хранить бинарные изображения; в базе хранится только metadata и путь к файлу в Supabase Storage.
+
+## OpenRouter funding gateway (Stage 3 target)
+
+Детальный контракт: `49-openrouter-funding-byok-plan.md`.
+
+Целевая архитектура не разрешает Arena routes самостоятельно выбирать API key. Перед OpenRouter появляется единый server-side Funding Resolver + OpenRouter Gateway:
+
+```text
+Arena route
+  -> resolve authenticated identity
+  -> resolve funding source (platform | user_byok)
+  -> resolve/decrypt allowed credential
+  -> validate governed model
+  -> OpenRouter request
+  -> capture usage/cost
+  -> safe response
+```
+
+Для `platform` один зарегистрированный пользователь получает максимум один активный platform-managed inference key в MVP; provisioning выполняется лениво через Management API. Guests отдельные provider keys не получают.
+
+Для `user_byok` пользователь подключает свой OpenRouter API key. Ключ остаётся server-side secret; frontend после сохранения видит только safe status/fingerprint.
+
+Provider pricing, monetary budget и anti-abuse rate limit — независимые слои. OpenRouter price catalog является published-price SSOT, `usage.cost` — preferred actual-cost SSOT, OpenRouter key limit/Guardrail — hard monetary enforcement, Upstash — distributed abuse/load protection.

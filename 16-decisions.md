@@ -929,3 +929,84 @@ Blind comparison должен быть enforced на backend. UI-маска не
 ## Когда пересмотреть
 
 Если появится отдельный режим соревнования с другими правилами раскрытия, публичными share-ссылками без owner identity или multi-vote судейством, нужно пересмотреть reveal policy и возможно вынести blind semantics в отдельный mode/permission model.
+
+# DEC-015 - Hybrid OpenRouter funding
+
+## Статус
+
+```text
+Accepted
+# 2026-09-27, architecture-only; implementation pending
+```
+
+## Решение
+
+New Era поддерживает два источника funding: `platform` и `user_byok`.
+
+`platform` использует platform-managed OpenRouter inference credential; `user_byok` использует OpenRouter API key, принадлежащий пользователю. Оба проходят через единый server-side gateway и model governance.
+
+New Era users не отображаются 1:1 в OpenRouter organization members.
+
+## Причина
+
+Это разделяет ответственность за расходы, позволяет пользователю подключать собственный баланс и не связывает public SaaS identity с administrative membership OpenRouter.
+
+---
+
+# DEC-016 - Lazy per-user platform OpenRouter keys
+
+## Статус
+
+```text
+Accepted
+# implementation pending OpenRouter Management API readiness
+```
+
+## Решение
+
+Для authenticated platform-funded user целевой MVP использует максимум один active OpenRouter inference key. Key создаётся лениво при первом использовании, а не при signup. Guests отдельные keys не получают.
+
+## Причина
+
+Lazy provisioning уменьшает key sprawl, Management API load и abuse surface. Guest provisioning создаёт неприемлемый риск массового создания provider credentials.
+
+## Ограничение
+
+Отдельный key даёт attribution и hard per-key budget, но не считается способом умножить account/provider-wide free или rate limits.
+
+---
+
+# DEC-017 - OpenRouter price parity and actual-cost semantics
+
+## Статус
+
+```text
+Accepted
+```
+
+## Решение
+
+Published model price в New Era зеркалит OpenRouter catalog/discovery без скрытой New Era markup. Для завершённого запроса preferred factual cost — OpenRouter `usage.cost`.
+
+Если actual provider cost отсутствует, estimate хранится отдельно и никогда не маркируется actual.
+
+Будущая коммерческая цена New Era должна храниться отдельно от provider cost и подчиняться ADR-002, если появляется реальное списание пользовательского баланса.
+
+---
+
+# DEC-018 - Provider credentials follow ADR-004 KMS envelope encryption
+
+## Статус
+
+```text
+Accepted
+# implementation pending KMS selection
+```
+
+## Решение
+
+Persistent OpenRouter BYOK и platform-managed inference secrets используют envelope encryption/KMS boundary из ADR-004. Plaintext provider key не хранится в PostgreSQL, `profiles`, browser storage, logs или audit payloads.
+
+Supabase Vault не становится primary store автоматически, даже если extension доступен; такой переход требует отдельного ADR, сравнивающего threat model, portability, access boundary и rollback.
+
+Vercel -> cloud KMS authentication по возможности использует short-lived OIDC/workload identity.
