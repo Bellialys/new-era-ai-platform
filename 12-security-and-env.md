@@ -653,7 +653,7 @@ Secret keys не выводятся во frontend.
 # OPENROUTER_API_KEY и service role key остаются server-side
 
 Изображения хранятся в Supabase Storage в стабильном режиме.
-# PostgreSQL хранит только metadata и storage path; alpha backend может вернуть provider URL, если Storage upload/fetch недоступен
+# PostgreSQL хранит только metadata/storage path; alpha backend не возвращает raw provider URL/base64 и fail-fast при недоступном Storage до provider fan-out
 
 Количество генераций ограничено.
 # нужны лимиты на пользователя, IP, модель и период времени
@@ -663,3 +663,55 @@ Image-capable модели проходят allowlist.
 ```
 
 До появления этих контролей нельзя добавлять `/image-arena` и `/api/image-arena/generate` в код.
+
+## Stage 3: OpenRouter credential security
+
+Полный план: `49-openrouter-funding-byok-plan.md`.
+
+### Planned server-only configuration
+
+Следующие значения появятся в env-check только в том implementation PR, где runtime действительно начнёт их читать:
+
+```env
+OPENROUTER_MANAGEMENT_KEY=
+# только Management API: create/update/disable/revoke keys; запрещён для inference
+
+OPENROUTER_WORKSPACE_ID=
+# server-side configuration identifier
+
+OPENROUTER_DEFAULT_GUARDRAIL_ID=
+# server-side configuration identifier
+
+AI_CREDENTIAL_KMS_KEY_ID=
+# ссылка на KMS key; не сам DEK и не plaintext provider secret
+```
+
+Не добавлять эти переменные в `env-check.config.json` заранее: env SSOT должен отражать только реально используемый runtime contract.
+
+### User BYOK secrets
+
+OpenRouter key пользователя:
+
+- приходит только на auth-only backend route по TLS;
+- не записывается в logs/analytics/audit payload;
+- не сохраняется в `profiles`;
+- не сохраняется в localStorage/sessionStorage;
+- persistent storage разрешён только после envelope encryption/KMS foundation по ADR-004;
+- после сохранения API возвращает только safe fingerprint/label/status;
+- при KMS/decryption failure provider call fail-closed, plaintext fallback запрещён.
+
+### Platform-managed user keys
+
+- Management key никогда не передаётся в OpenRouter completion/image endpoint;
+- platform-managed inference key создаётся лениво только для authenticated user;
+- secret проходит тот же encrypted credential storage path, что и BYOK-class secrets;
+- user не может сам назначить себе provider-side platform limit;
+- guest provisioning запрещён.
+
+### KMS authentication
+
+Предпочтителен short-lived workload identity/OIDC от Vercel к выбранному cloud KMS. Долгоживущие AWS/GCP/Azure access secrets добавляются только если OIDC технически невозможен и после отдельного security review.
+
+### Supabase Vault
+
+Production уже имеет `supabase_vault`. Vault остаётся допустимой альтернативой, но не меняет принятый ADR-004 автоматически. Использование Vault как primary BYOK store требует отдельного ADR, потому что это меняет encryption/key-management boundary.

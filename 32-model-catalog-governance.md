@@ -109,7 +109,7 @@ Runtime defaults также входят в verification scope:
 - Judge primary: `google/gemma-4-31b-it:free`;
 - Judge fallback: `google/gemma-4-26b-a4b-it:free`.
 
-Локальный fallback text catalog обновлён сразу. Production `public.models` должен быть выровнен forward-only migration `20260824193629_recover_openrouter_model_catalog.sql`; до применения migration через owner/reviewer gate live DB catalog нельзя считать синхронизированным.
+Локальный fallback text catalog и production `public.models` выровнены применённой forward-only migration `20260927065448_recover_openrouter_model_catalog.sql`; post-migration verification 2026-09-27 подтвердил 8 active/public curated OpenRouter text models и отсутствие неожиданного active/public drift.
 
 ---
 
@@ -518,3 +518,22 @@ Codex не имеет права:
 - сохранена в истории сравнений.
 
 Ни одна модель не должна использоваться в проекте без управляемой записи в каталоге.
+
+## 22. OpenRouter price parity policy
+
+Полный funding/cost contract: `49-openrouter-funding-byok-plan.md`.
+
+Правила:
+
+- current published price приходит из OpenRouter catalog/discovery;
+- `models` не должен становиться вручную поддерживаемым billing SSOT;
+- `model_price_history` хранит snapshots и источник/время проверки;
+- text pricing можно нормализовать для UI, но raw provider pricing сохраняется;
+- image/media pricing сохраняется в raw form, потому что billing unit может быть image, megapixel, token и т.д.;
+- actual завершённого запроса предпочитает provider `usage.cost`;
+- estimate и actual — разные поля/семантика;
+- New Era markup, если когда-либо появится, хранится отдельно от OpenRouter provider cost;
+- Account-level OpenRouter credit/BYOK fees не смешиваются с model inference price;
+- stale snapshot должен быть явно помечен stale и не выдаваться как гарантированно текущая цена.
+
+Новая модель не считается cost-ready, пока pricing source не подтверждён или модель явно маркирована как price-unknown.

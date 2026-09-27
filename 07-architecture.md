@@ -91,15 +91,17 @@ User Browser -> OpenRouter API
 # так делать нельзя, потому что секретный ключ может попасть в браузер
 ```
 
-Все секреты должны храниться только здесь:
+Project-wide plaintext secrets должны храниться только здесь:
 
 ```text
 .env.local
-# локальные секреты на компьютере разработчика
+# локальные project-wide секреты на компьютере разработчика
 
 Vercel Environment Variables
-# production и preview секреты на Vercel
+# production и preview project-wide секреты
 ```
+
+Per-user provider credentials — отдельный класс данных. Они никогда не хранятся plaintext в PostgreSQL: persistent BYOK/platform-managed secrets допускаются только как encrypted ciphertext + KMS metadata по `49-openrouter-funding-byok-plan.md` и ADR-004.
 
 ## Общая архитектурная схема
 
@@ -1304,7 +1306,7 @@ OpenRouter image-capable models
 
 Supabase Storage
 # бинарные файлы изображений сохраняются в Storage bucket
-# v2.0 alpha может вернуть provider URL, если Storage upload/fetch недоступен
+# v2.0 alpha принимает только validated provider base64 и successful Supabase Storage upload; raw provider URL/base64 fallback клиенту не возвращается
 
 Supabase PostgreSQL metadata
 # в базе хранится metadata, model_id, task_id, storage_path, размеры, статус и ошибки
@@ -1314,3 +1316,26 @@ UI сравнения
 ```
 
 Ключевое правило: PostgreSQL не должен хранить бинарные изображения; в базе хранится только metadata и путь к файлу в Supabase Storage.
+
+## OpenRouter funding gateway (Stage 3 target)
+
+Детальный контракт: `49-openrouter-funding-byok-plan.md`.
+
+Целевая архитектура не разрешает Arena routes самостоятельно выбирать API key. Перед OpenRouter появляется единый server-side Funding Resolver + OpenRouter Gateway:
+
+```text
+Arena route
+  -> resolve authenticated identity
+  -> resolve funding source (platform | user_openrouter)
+  -> resolve/decrypt allowed credential
+  -> validate governed model
+  -> OpenRouter request
+  -> capture usage/cost
+  -> safe response
+```
+
+Для `platform` один зарегистрированный пользователь получает максимум один активный platform-managed inference key в MVP; provisioning выполняется лениво через Management API. Guests отдельные provider keys не получают.
+
+Для `user_openrouter` пользователь подключает свой OpenRouter API key. Ключ остаётся server-side secret; frontend после сохранения видит только safe status/fingerprint.
+
+Provider pricing, monetary budget и anti-abuse rate limit — независимые слои. OpenRouter price catalog является published-price SSOT, `usage.cost` — preferred actual-cost SSOT, per-key `limit` — hard cap конкретного platform credential, Guardrail — дополнительная policy/per-key budget защита, а aggregate Workspace Budget является отдельной capability и используется только если доступна account/tier. Upstash отвечает за distributed abuse/load protection.

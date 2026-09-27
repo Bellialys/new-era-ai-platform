@@ -89,7 +89,7 @@
 - Code Arena: сравнение кодовых решений отдельно от запуска, запуск кода через внешний runner только для авторизованных пользователей;
 - backend route `POST /api/team-run` — AI Team Mode с auth gate, rate limit (3/10 min/user), 4 роли (Planner → Researcher → Critic → Finalizer);
 - страница `/team` — AI Team Mode UI за feature flag `NEXT_PUBLIC_ENABLE_TEAM_MODE`;
-- backend route `POST /api/image-compare` — Image Arena alpha, auth only, Supabase Storage с degraded provider-URL fallback;
+- backend route `POST /api/image-compare` — Image Arena alpha, auth only, provider base64 validation + обязательный Supabase Storage upload; raw provider URL/base64 fallback отсутствует;
 - DB v2 Foundation: 8 новых таблиц (`usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`);
 - `package-lock.json`;
 - текущий `typecheck` проходит; полный release gate ещё должен пройти.
@@ -183,7 +183,7 @@ Visual Studio Code
 
 - запуск пользовательского кода внутри server-side процесса приложения;
 - обход auth/rate-limit для `/api/code-run`;
-- AI Team Mode;
+- включать AI Team Mode публично без feature flag/release gate;
 - Image Arena без отдельного safety/storage review;
 - платёжную систему без отдельного billing review;
 - много новых режимов одновременно.
@@ -211,6 +211,9 @@ README.md
 
 16-decisions.md
 # архитектурные решения
+
+49-openrouter-funding-byok-plan.md
+# следующий Stage 3: platform funding, per-user OpenRouter keys, BYOK, pricing и cost controls
 ```
 
 ## Проверочные команды

@@ -789,58 +789,43 @@ prompt-arena
 
 ---
 
-# DEC-012 - Image Arena откладывается до стабильной Prompt Arena
+# DEC-012 - Image Arena после стабильной Prompt Arena
 
 ## Статус
 
 ```text
-Deferred
-# решение зафиксировано, реализация отложена
+Implemented as auth-only alpha / follow-up hardening remains
+# обновлено 2026-09-27
 ```
 
 ## Решение
 
-Image Arena / Visual Arena не реализуется в текущем MVP и откладывается до стабильной Prompt Arena, настроенного Supabase Storage, лимитов стоимости и safety-контролей. В v2.0.0-alpha.1 backend route существует, но полный Storage/persistence режим ещё не является stable contract: при недоступном Storage alpha может вернуть provider URL.
+Image Arena была отложена до стабильной Prompt Arena и затем реализована как auth-only alpha в v2.0.0-alpha.1 через `POST /api/image-compare`.
+
+Текущий backend contract:
+
+- image models вызываются только server-side;
+- OpenRouter Unified Image API возвращает base64 provider output;
+- backend валидирует raster signature/MIME/size;
+- successful result обязан быть загружен в Supabase Storage;
+- raw provider URL и provider base64 не используются как client fallback;
+- при недоступном Storage route fail-fast до платного provider fan-out;
+- отдельная ошибка модели не отменяет успешные результаты остальных моделей.
 
 ## Контекст
 
-Режим Image Arena позволяет пользователю ввести одну визуальную идею, получить изображения от нескольких image-capable моделей, сравнить их и выбрать лучший результат.
-
-Этот режим требует больше инфраструктуры, чем Prompt Arena:
-
-- image-capable models;
-- Supabase Storage;
-- metadata в PostgreSQL;
-- лимиты генераций;
-- контроль стоимости;
-- moderation/safety rules;
-- отдельный UI сравнения изображений.
-
-## Причина
-
-Image generation дороже и сложнее текстовых ответов. Если добавить режим слишком рано, он может сломать roadmap MVP, увеличить расходы и создать риски безопасности.
+Image generation остаётся более дорогим и сложным режимом, чем Prompt Arena, поэтому продвижение выше auth-only alpha требует отдельного persistence/safety/cost review.
 
 ## Последствия
 
-До этапа `v1.8` Image Arena остаётся только в документации.
+До следующего уровня готовности нельзя:
 
-Нельзя добавлять:
+- открывать paid Image generation без budget controls;
+- возвращать raw provider URL/base64;
+- считать Image Arena stable без dedicated persistence/safety review;
+- обходить model capability allowlist.
 
-- страницу `/image-arena`;
-- route `/api/image-arena/generate`;
-- таблицы `image_generations` или `artifacts` как обязательные для текущего MVP;
-- image generation calls из frontend;
-- произвольный выбор image model key пользователем.
-
-## Когда пересмотреть
-
-После Stable Prompt Arena и после того, как будут готовы:
-
-- Supabase Storage;
-- лимиты генераций;
-- allowlist model capabilities;
-- безопасное backend-хранение ключей;
-- понятные правила хранения image metadata.
+Полный текущий контракт — `31-image-arena-spec.md`.
 
 ---
 
@@ -929,3 +914,84 @@ Blind comparison должен быть enforced на backend. UI-маска не
 ## Когда пересмотреть
 
 Если появится отдельный режим соревнования с другими правилами раскрытия, публичными share-ссылками без owner identity или multi-vote судейством, нужно пересмотреть reveal policy и возможно вынести blind semantics в отдельный mode/permission model.
+
+# DEC-015 - Hybrid OpenRouter funding
+
+## Статус
+
+```text
+Accepted
+# 2026-09-27, architecture-only; implementation pending
+```
+
+## Решение
+
+New Era поддерживает два источника funding: `platform` и `user_openrouter`.
+
+`platform` использует platform-managed OpenRouter inference credential; `user_openrouter` использует OpenRouter API key, принадлежащий пользователю. OpenRouter upstream flag `usage.is_byok` является отдельной семантикой и не заменяет funding source. Оба проходят через единый server-side gateway и model governance.
+
+New Era users не отображаются 1:1 в OpenRouter organization members.
+
+## Причина
+
+Это разделяет ответственность за расходы, позволяет пользователю подключать собственный баланс и не связывает public SaaS identity с administrative membership OpenRouter.
+
+---
+
+# DEC-016 - Lazy per-user platform OpenRouter keys
+
+## Статус
+
+```text
+Accepted
+# implementation pending OpenRouter Management API readiness
+```
+
+## Решение
+
+Для authenticated platform-funded user целевой MVP использует максимум один active OpenRouter inference key. Key создаётся лениво при первом использовании, а не при signup. Guests отдельные keys не получают.
+
+## Причина
+
+Lazy provisioning уменьшает key sprawl, Management API load и abuse surface. Guest provisioning создаёт неприемлемый риск массового создания provider credentials.
+
+## Ограничение
+
+Отдельный key даёт attribution и hard per-key budget, но не считается способом умножить account/provider-wide free или rate limits.
+
+---
+
+# DEC-017 - OpenRouter price parity and actual-cost semantics
+
+## Статус
+
+```text
+Accepted
+```
+
+## Решение
+
+Published model price в New Era зеркалит OpenRouter catalog/discovery без скрытой New Era markup. Для завершённого запроса preferred factual cost — OpenRouter `usage.cost`.
+
+Если actual provider cost отсутствует, estimate хранится отдельно и никогда не маркируется actual.
+
+Будущая коммерческая цена New Era должна храниться отдельно от provider cost и подчиняться ADR-002, если появляется реальное списание пользовательского баланса.
+
+---
+
+# DEC-018 - Provider credentials follow ADR-004 KMS envelope encryption
+
+## Статус
+
+```text
+Accepted
+# implementation pending KMS selection
+```
+
+## Решение
+
+Persistent OpenRouter BYOK и platform-managed inference secrets используют envelope encryption/KMS boundary из ADR-004. Plaintext provider key не хранится в PostgreSQL, `profiles`, browser storage, logs или audit payloads.
+
+Supabase Vault не становится primary store автоматически, даже если extension доступен; такой переход требует отдельного ADR, сравнивающего threat model, portability, access boundary и rollback.
+
+Vercel -> cloud KMS authentication по возможности использует short-lived OIDC/workload identity.
