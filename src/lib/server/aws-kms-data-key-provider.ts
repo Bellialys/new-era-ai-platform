@@ -147,7 +147,14 @@ export class AwsKmsDataKeyProvider implements CredentialDataKeyProvider {
 }
 
 export function createAwsKmsDataKeyProviderFromEnv(
-  env: AwsKmsEnvironment = process.env
+  env: AwsKmsEnvironment = {
+    AWS_REGION: process.env.AWS_REGION,
+    AWS_ROLE_ARN: process.env.AWS_ROLE_ARN,
+    AWS_KMS_KEY_ID: process.env.AWS_KMS_KEY_ID,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
+  }
 ): AwsKmsDataKeyProvider {
   assertNoStaticAwsCredentials(env);
 
