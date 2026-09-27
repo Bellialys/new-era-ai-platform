@@ -278,6 +278,17 @@ Persistent provider secrets следуют ADR-004:
 
 Supabase Vault установлен в production и технически подходит для encrypted secrets, но не выбирается как основной путь без отдельного ADR, потому что это изменило бы ADR-004.
 
+### Sensitive credential mutations
+
+Connect/replace/disconnect/funding-switch operations are security-sensitive:
+
+- verified Supabase user is mandatory;
+- request must pass existing same-origin/CSRF protections appropriate to cookie auth;
+- browser-supplied `user_id`, credential owner, provider key limit or remote key id is never trusted;
+- rate limit credential mutations separately from inference;
+- consider a recent-auth/re-auth requirement before public rollout if Supabase session capabilities support it;
+- audit only action/result/safe credential id, never plaintext/ciphertext.
+
 ### Plaintext lifetime
 
 Plaintext key существует только в TLS request и server memory на время validation/encryption/inference и не попадает в persistence до шифрования.
@@ -623,6 +634,20 @@ Platform-managed:
 - account deletion/suspension => remote disable/revoke first, then local crypto-shred;
 - later reconciliation detects orphaned remote keys.
 
+### Account deletion and remote resources
+
+Account deletion cannot rely on a database cascade alone because OpenRouter keys are external resources.
+
+Target workflow:
+
+1. mark credential mutation/deletion in progress;
+2. disable/revoke platform-managed remote key;
+3. crypto-shred local secret;
+4. remove user-linked credential/funding rows;
+5. delete/anonymize account data according to retention policy.
+
+If remote revoke is unavailable, account erasure must not require keeping user PII indefinitely. Preserve only the minimum opaque remote identifier in a service-only orphan reconciliation record, detach it from user identity, crypto-shred the secret, then retry remote cleanup asynchronously in a later operational stage.
+
 Usage follows `30-data-retention-policy.md`.
 Financial ledger rules apply only when real New Era billing exists.
 
@@ -660,7 +685,18 @@ Price sync incident:
 
 Эти значения не выдумываются в коде.
 
-## 22. Alternatives reviewed
+## 22. Scope boundary with future Marketplace BYOK
+
+This Stage 3 BYOK means **user-provided OpenRouter API key used server-side by New Era**.
+
+It does not replace future roadmap concepts:
+
+- v3.0 Marketplace BYOK: direct third-party provider connections/marketplace credentials;
+- v3.1 Client-Side BYOK: browser/provider callback model with different threat and billing semantics.
+
+Those future systems must reuse credential/KMS principles where applicable but require separate ADRs and must not overload `billing_source=user_openrouter`.
+
+## 23. Alternatives reviewed
 
 **One shared key only** — rejected as target; retained as migration fallback.
 
@@ -674,7 +710,7 @@ Price sync incident:
 
 **Supabase Vault as primary** — technically viable and installed, but would require a new ADR replacing/amending ADR-004.
 
-## 23. Implementation start gate
+## 24. Implementation start gate
 
 Implementation begins only when:
 
@@ -693,7 +729,7 @@ feat(provider): add OpenRouter credential and funding foundation
 
 It creates schema/types/service interfaces/tests only. It must not provision real user keys or enable BYOK traffic yet.
 
-## 24. External references reviewed
+## 25. External references reviewed
 
 OpenRouter:
 - https://openrouter.ai/docs/api/api-reference/api-keys/get-current-key

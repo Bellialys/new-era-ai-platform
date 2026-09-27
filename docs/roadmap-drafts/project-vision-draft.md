@@ -106,6 +106,8 @@ SSO/SCIM, Data Residency (EU/US), Custom Domains, SLA-гарантии, Audit Lo
 - **Judge Mode** — модель-судья с многокритериальной оценкой
 - **AI Team Mode** — несколько моделей с ролями (Planner → Critic → Finalizer)
 
+> **BYOK terminology:** Stage 3 OpenRouter-key BYOK (`49-openrouter-funding-byok-plan.md`) is a server-side OpenRouter account connection. Future Marketplace/Client-Side BYOK are separate later architectures.
+
 ### Analytics & Billing
 - `usage_events` → `daily_usage_rollups` — детальный учёт расходов
 - Spending Dashboard с прогнозом и объяснимостью (ML, Conformal Prediction)
@@ -154,7 +156,7 @@ SSO/SCIM, Data Residency (EU/US), Custom Domains, SLA-гарантии, Audit Lo
 2. **Не коммитить секреты** — `.env.local` только локально, Vercel Env для production
 3. **Append-Only Ledger** — `billing_events` никогда не удаляется и не редактируется
 4. **Reconciliation = alert only** — никогда не автокорректирует баланс
-5. **HMAC-SHA256 для API keys** — не bcrypt (слишком медленно для per-request верификации)
+5. **HMAC-SHA256 для New Era-issued verification API keys** — не bcrypt; decryptable external provider credentials follow ADR-004 envelope encryption/KMS
 6. **Request logs вне PostgreSQL** — OTEL → Loki/Tempo, в PG только агрегаты
 7. **Crypto-Shredding для GDPR** — удаляем DEK, не перезаписываем данные
 8. **Regional isolation** — EU-данные физически не пересекают в US Data Plane
