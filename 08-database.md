@@ -528,7 +528,7 @@ with check (true);
 | `20260705223814_enforce_models_access_level_rls.sql` | Выравнивает direct Data API SELECT на `models` с `access_level`: anon=`anonymous`, authenticated=`anonymous`/`registered`, `pro`/`admin`=`premium` |
 | `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql` | Применена в production: atomic admin user/model mutation + mandatory audit RPCs и concurrent-safe last-admin trigger; execute только `service_role` |
 | `20260824213000_serialize_admin_role_updates.sql` | Применена в production: сериализует admin role updates и усиливает last-admin invariant |
-| `20260917132000_recover_openrouter_model_catalog.sql` | Pending до deployment PR #61: P0 provider recovery деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
+| `20260927065448_recover_openrouter_model_catalog.sql` | Применена в production 2026-09-27: P0 provider recovery деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
 
 Release-gate note:
 
@@ -540,9 +540,9 @@ Release-gate note:
 Remote Supabase migration history and local migration filenames are aligned
 through 20260824213000_serialize_admin_role_updates.
 
-20260917132000_recover_openrouter_model_catalog.sql remains pending.
-# apply only after PR #61 code is merged and the production deployment is READY
-# then verify /api/models, /api/code-models, Team/Judge and provider discovery
+20260927065448_recover_openrouter_model_catalog.sql is applied.
+# production application completed after PR #61 code deployment reached READY
+# post-migration verification: 8 active/public OpenRouter text models; historical rows preserved
 
 Remote post-migration verification on 2026-06-18:
 # models.status is generated always as (...), mismatch count = 0
@@ -565,10 +565,10 @@ v2.0.0-alpha.1 sync on 2026-06-28:
 # all new tables: RLS enabled, service_role only (leaderboard_snapshots also grants public SELECT)
 
 P0 provider recovery refresh on 2026-09-17:
-# local migration 20260917132000_recover_openrouter_model_catalog.sql created
+# production migration 20260927065448_recover_openrouter_model_catalog.sql applied
 # migration is forward-only: historical model rows and UUID references are preserved
-# production application is pending an explicit owner/reviewer gate
-# local fallback catalog is already the curated 8-model set; live DB is not considered aligned until migration verification
+# verified result: 8 active/public curated text models; 0 unexpected active/public text models
+# local fallback catalog and live DB catalog are aligned
 ```
 
 Удалённые устаревшие локальные миграции:
@@ -601,7 +601,7 @@ P0 provider recovery refresh on 2026-09-17:
 3. `models` заполняется curated OpenRouter text model set; P0 recovery set содержит 8 provider-discovery-verified IDs.
 4. Добавлен server-side Supabase client.
 5. `/api/models` читает активные публичные модели из Supabase.
-6. Если Supabase недоступен, `/api/models` использует hardcoded fallback из тех же 8 curated text IDs; production DB выравнивается pending migration `20260917132000_recover_openrouter_model_catalog.sql`.
+6. Если Supabase недоступен, `/api/models` использует hardcoded fallback из тех же 8 curated text IDs; production DB выровнена применённой migration `20260927065448_recover_openrouter_model_catalog.sql`.
 7. Перед вызовом OpenRouter backend резолвит `selectionId` в server-only `model_key`.
 8. `/api/compare` best-effort сохраняет `tasks` и `model_responses`.
 9. `votes` подготовлена для выбора лучшего ответа и реакций.

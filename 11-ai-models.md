@@ -165,7 +165,7 @@ models.model_key
 
 ## Следующий шаг
 
-После merge PR #61 применить pending recovery migration к production Supabase только через отдельный owner/reviewer gate, затем проверить `/api/models`, `/api/code-models`, Team/Judge и прогнать Promptfoo platform E2E. До применения migration production DB catalog нельзя считать синхронизированным с 8-model fallback catalog.
+PR #61 слит, recovery migration `20260927065448_recover_openrouter_model_catalog.sql` применена к production Supabase. Production catalog синхронизирован с 8-model fallback catalog; следующий operational шаг — периодически проверять provider drift через `models:verify` и platform smoke.
 
 Hardcoded allowlist остаётся безопасным fallback, а не основным источником production-каталога.
 
