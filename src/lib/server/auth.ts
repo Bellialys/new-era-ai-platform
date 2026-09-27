@@ -5,14 +5,17 @@
  * caller is identified two ways, in priority order:
  *   1. a verified Supabase user, read from the auth cookie (refreshed by the
  *      proxy) — RLS-scoped publishable client, so getUser() is trustworthy;
- *   2. an anonymous guest, identified by a server-set httpOnly cookie that the
- *      browser cannot forge per request.
+ *   2. an anonymous guest, identified by a server-set httpOnly cookie whose
+ *      UUID is also verified against the anonymous_sessions table. httpOnly
+ *      protects browser JavaScript; it does not make a client-supplied cookie
+ *      intrinsically trustworthy.
  *
  * Both `/api/compare` and `/api/vote` derive identity through this module.
  */
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabaseServerClient } from "./supabase";
 
 const GUEST_COOKIE_NAME = "na_guest";
 const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365; // 1 year
@@ -65,10 +68,32 @@ export async function getAuthenticatedUserId(request: NextRequest): Promise<stri
   }
 }
 
-/** Existing, well-formed guest id from the httpOnly cookie, or null. */
+/** Well-formed guest id from the httpOnly cookie, or null. This is syntax-only. */
 export function readGuestSessionId(request: NextRequest): string | null {
   const value = request.cookies.get(GUEST_COOKIE_NAME)?.value;
   return value && UUID_PATTERN.test(value) ? value : null;
+}
+
+async function guestSessionExists(guestId: string): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+
+  // Local development can run without persistence. Production fails closed:
+  // a forged UUID must never become an authenticated guest identity.
+  if (!supabase) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("anonymous_sessions")
+      .select("id")
+      .eq("id", guestId)
+      .maybeSingle();
+
+    return !error && data?.id === guestId;
+  } catch {
+    return false;
+  }
 }
 
 /** Persist the guest id as an httpOnly cookie on the outgoing response. */
@@ -103,7 +128,7 @@ export async function resolveRequestIdentity(request: NextRequest): Promise<Requ
   }
 
   const guestId = readGuestSessionId(request);
-  if (guestId) {
+  if (guestId && await guestSessionExists(guestId)) {
     return { kind: "guest", userId: null, guestId };
   }
 

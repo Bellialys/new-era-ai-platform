@@ -19,6 +19,11 @@ export function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_PATTERN.test(value);
 }
 
+/** True only for a JSON object (not null, arrays, or scalar JSON values). */
+export function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export class ApiError extends Error {
   constructor(
     public statusCode: number,
