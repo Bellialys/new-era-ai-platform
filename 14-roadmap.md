@@ -80,8 +80,9 @@ v2.0.0-alpha.1 - AI Team Mode
 # DB v2 Foundation применена в production ✅
 # P0 model catalog migration применена и DB/local catalog синхронизированы ✅
 # Этапы 1–2 security/provider recovery закрыты и перепроверены 2026-09-27 ✅
-# Stage 3.0 OpenRouter funding/BYOK architecture + repeat audit documented 2026-09-27 ✅; runtime implementation not started
-# Stage 3.1 External Readiness — следующий разрешённый шаг: live account/workspace capability probe, Management API/Guardrail/Budget verification, KMS/Redis/budget-policy decisions до любого key provisioning
+# Stage 3.0 OpenRouter funding/BYOK architecture + repeat audit closed 2026-09-27 ✅ (PR #68, main 6ad6ea34)
+# Stage 3.1 External Readiness — IN PROGRESS: production deploy/health confirmed ✅; AWS KMS + Vercel OIDC selected ✅; paid Redis fail-closed policy + conservative catalog/fan-out policy documented ✅
+# Stage 3.1 remaining blockers: live OpenRouter Management/account workspace probe, Guardrail/Workspace Budget capability, numeric per-user/canary budget approval, key-cardinality evidence; no real provisioning or paid traffic before these gates
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
 # scheduled live models:verify считается operational после первого подтверждённого live run
 ```
