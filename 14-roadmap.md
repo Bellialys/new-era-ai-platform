@@ -85,7 +85,8 @@ v2.0.0-alpha.1 - AI Team Mode
 # Platform funding remains $0; Management API/Guardrails/per-user platform keys deferred to future paid Stage 3.5 and no longer block the Free-user track
 # Stage 3.2 Data + Crypto Foundation — IN PROGRESS: OAuth PKCE protocol ✅; credential schema/types ✅; AES-256-GCM envelope codec ✅; provider credential migration applied to production ✅
 # Production credential tables verified with RLS/service-role-only policies; migration history aligned to production version 20260927212853
-# Stage 3.2 remaining blocker: real AWS KMS adapter + Vercel OIDC/IAM configuration before encrypted credential persistence can be activated
+# Stage 3.2 AWS KMS adapter ✅: GenerateDataKey(AES_256)/Decrypt, Vercel OIDC-only credentials, encryption-context binding and plaintext-DEK zeroization reviewed and merged
+# Stage 3.2 remaining external blocker: create/configure real AWS OIDC provider + least-privilege IAM role + KMS key, then set AWS_REGION/AWS_ROLE_ARN/AI_CREDENTIAL_KMS_KEY_ID in Vercel before encrypted credential persistence can be activated
 # Separate operational issue remains: GitHub Actions OPENROUTER_API_KEY secret must be restored for scheduled live models:verify
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
 # scheduled live models:verify считается operational после первого подтверждённого live run
