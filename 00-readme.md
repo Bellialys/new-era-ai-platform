@@ -183,7 +183,7 @@ Visual Studio Code
 
 - запуск пользовательского кода внутри server-side процесса приложения;
 - обход auth/rate-limit для `/api/code-run`;
-- AI Team Mode;
+- включать AI Team Mode публично без feature flag/release gate;
 - Image Arena без отдельного safety/storage review;
 - платёжную систему без отдельного billing review;
 - много новых режимов одновременно.

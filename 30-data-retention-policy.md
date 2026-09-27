@@ -15,7 +15,7 @@ Draft / MVP policy
 
 ## Главные правила
 
-1. Не хранить секреты в базе данных, логах, markdown-файлах или frontend bundle.
+1. Не хранить plaintext-секреты в базе данных, логах, markdown-файлах или frontend bundle. Persistent provider credentials допускаются только как encrypted ciphertext + KMS metadata по ADR-004.
 2. Не логировать API keys, service role keys, Authorization headers и production env values.
 3. Хранить только данные, которые нужны для продукта, аудита ошибок или безопасности.
 4. Для guest data использовать ограниченный срок хранения.

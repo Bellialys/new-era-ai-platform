@@ -147,7 +147,7 @@ New Era users **не становятся OpenRouter organization members**. Org
 
 Отдельный key **не означает**, что provider/account-wide limits автоматически умножаются на число пользователей.
 
-### 4.2 `user_byok`
+### 4.2 `user_openrouter` (UI: BYOK)
 
 - только authenticated user;
 - ключ проверяется server-side через OpenRouter до сохранения;
@@ -193,6 +193,17 @@ New Era хранит snapshot для истории, но stale snapshot не о
 ### Estimate
 
 До запроса UI может показывать только estimate с явной пометкой approximate.
+
+### Pricing freshness
+
+Pricing snapshot всегда содержит `source_checked_at`. Конкретный production TTL/cadence не фиксируется до implementation review, чтобы не выдумывать SLA провайдера.
+
+Правило отображения:
+
+- fresh snapshot можно показывать как текущую published price;
+- stale/unknown snapshot явно маркируется;
+- для paid action backend может выполнить on-demand refresh до показа/подтверждения цены;
+- sync failure не меняет последний snapshot задним числом.
 
 ### Account-level fees are separate
 
@@ -258,7 +269,9 @@ ADR-004 уже принял envelope encryption / DEK-per-user-or-connection к�
 
 Persistent provider secrets следуют ADR-004:
 
-- ciphertext в Supabase;\n- plaintext DEK никогда не хранится в БД;\n- KMS/эквивалент управляет KEK и шифрованием DEK (например GenerateDataKey/envelope pattern);
+- ciphertext в Supabase;
+- plaintext DEK никогда не хранится в БД;
+- KMS/эквивалент управляет KEK и шифрованием DEK (например GenerateDataKey/envelope pattern);
 - database dump сам по себе не раскрывает secret;
 - crypto-shredding уничтожает возможность расшифровки;
 - Vercel к KMS по возможности аутентифицируется short-lived OIDC credentials.
@@ -280,7 +293,7 @@ id uuid PK
 user_id uuid NOT NULL
 provider text = 'openrouter'
 origin text = 'platform_managed' | 'user_provided'
-status text = 'pending' | 'active' | 'revoking' | 'revoked' | 'error'
+status text = 'pending' | 'active' | 'revoking' | 'revoked' | 'orphaned' | 'error'
 provider_key_hash text nullable
 safe_fingerprint text nullable
 secret_ciphertext text/bytea
@@ -294,6 +307,8 @@ last_used_at timestamptz nullable
 created_at timestamptz
 rotated_at timestamptz nullable
 revoked_at timestamptz nullable
+reconcile_after timestamptz nullable
+last_error_code text nullable
 ```
 
 Rules:
@@ -303,6 +318,8 @@ Rules:
 - backend/service layer only;
 - one active platform credential per user in MVP;
 - one active persistent BYOK credential per user in MVP;
+- planned partial UNIQUE constraints prevent more than one `pending|active` credential per `(user_id, provider, origin)`;
+- credential rows use an opaque internal id as the remote key label/reference; email/display name are not used;
 - raw secret never appears in user-facing API.
 
 ### `ai_funding_preferences`
@@ -357,6 +374,18 @@ none -> pending -> Management API create -> encrypt -> active
 ```
 
 Provisioning must be idempotent. Concurrent first requests cannot create multiple active keys. Safe local fingerprint может использовать HMAC-SHA256 по ADR-001, но HMAC не заменяет reversible encrypted secret.
+
+Provisioning не должен держать длинную PostgreSQL transaction/row lock во время внешнего HTTP-вызова. Целевой алгоритм:
+
+1. atomic local claim создаёт одну `pending` credential row через UNIQUE/UPSERT/RPC;
+2. конкурентные запросы видят существующий `pending|active` row и не создают новый remote key;
+3. backend создаёт OpenRouter key, используя opaque local credential id как безопасную correlation label;
+4. returned secret немедленно шифруется;
+5. тот же pending row атомарно переводится в `active`;
+6. если remote create успешен, а local activation не удалась, backend немедленно пытается remote revoke;
+7. если revoke тоже не удался, safe remote identifier/status фиксируется как `orphaned` для reconciliation; secret в reconciliation metadata не хранится.
+
+Нельзя считать external Management API call и PostgreSQL update одной ACID-транзакцией. Компенсирующая revoke/reconciliation логика обязательна.
 
 ### BYOK key
 
@@ -418,7 +447,8 @@ Every inference should capture when available:
 - prompt/completion/total tokens;
 - latency;
 - actual `usage.cost`;
-- `provider_is_byok` (OpenRouter upstream-BYOK flag, not our funding source);\n- billing source;
+- `provider_is_byok` (OpenRouter upstream-BYOK flag, not our funding source);
+- billing source;
 - provider request id;
 - safe error code.
 
@@ -537,7 +567,8 @@ Security:
 - guest cannot provision platform key.
 
 Concurrency:
-- simultaneous first requests create at most one active key;
+- simultaneous first requests create at most one `pending|active` key;
+- remote-create/local-persist failure either revokes remote key or records safe `orphaned` reconciliation state;
 - rotation/inference deterministic;
 - disconnect during inference does not leak credential.
 

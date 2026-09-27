@@ -1336,6 +1336,6 @@ Arena route
 
 Для `platform` один зарегистрированный пользователь получает максимум один активный platform-managed inference key в MVP; provisioning выполняется лениво через Management API. Guests отдельные provider keys не получают.
 
-Для `user_byok` пользователь подключает свой OpenRouter API key. Ключ остаётся server-side secret; frontend после сохранения видит только safe status/fingerprint.
+Для `user_openrouter` пользователь подключает свой OpenRouter API key. Ключ остаётся server-side secret; frontend после сохранения видит только safe status/fingerprint.
 
 Provider pricing, monetary budget и anti-abuse rate limit — независимые слои. OpenRouter price catalog является published-price SSOT, `usage.cost` — preferred actual-cost SSOT, OpenRouter key limit/Guardrail — hard monetary enforcement, Upstash — distributed abuse/load protection.
