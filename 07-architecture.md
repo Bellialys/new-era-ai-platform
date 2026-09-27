@@ -1306,7 +1306,7 @@ OpenRouter image-capable models
 
 Supabase Storage
 # бинарные файлы изображений сохраняются в Storage bucket
-# v2.0 alpha может вернуть provider URL, если Storage upload/fetch недоступен
+# v2.0 alpha принимает только validated provider base64 и successful Supabase Storage upload; raw provider URL/base64 fallback клиенту не возвращается
 
 Supabase PostgreSQL metadata
 # в базе хранится metadata, model_id, task_id, storage_path, размеры, статус и ошибки

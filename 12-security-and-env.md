@@ -653,7 +653,7 @@ Secret keys не выводятся во frontend.
 # OPENROUTER_API_KEY и service role key остаются server-side
 
 Изображения хранятся в Supabase Storage в стабильном режиме.
-# PostgreSQL хранит только metadata и storage path; alpha backend может вернуть provider URL, если Storage upload/fetch недоступен
+# PostgreSQL хранит только metadata/storage path; alpha backend не возвращает raw provider URL/base64 и fail-fast при недоступном Storage до provider fan-out
 
 Количество генераций ограничено.
 # нужны лимиты на пользователя, IP, модель и период времени
