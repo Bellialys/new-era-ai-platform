@@ -1,0 +1,62 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-01",
+  "title": "OpenRouter OAuth PKCE Protocol Foundation",
+  "status": "done",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-01.json",
+    "src/lib/server/openrouter-oauth.ts",
+    "src/lib/server/openrouter-oauth.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-27T15:19:42Z",
+  "commitHash": "0ef42b39fdf812d8f18531a1ffa475c42edb6fc8",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-27T15:13:16Z",
+      "note": "Created after Stage 3.1 Free OAuth readiness was approved and merged."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-27T15:13:16Z",
+      "note": "Implement protocol-only OpenRouter OAuth PKCE S256 helpers and tests without persistence, secrets, or runtime route changes."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-27T15:19:42Z",
+      "note": "PR CI passed audit, typecheck, lint, full tests, env/model verifier tests, build, state/docs checks and smoke; diff and secret review were clean."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-27T15:19:42Z",
+      "note": "OAuth PKCE protocol foundation completed without persistence, route activation, secrets, or paid traffic."
+    }
+  ],
+  "notes": "Completed protocol-only Free-first OAuth groundwork. S256 verifier/challenge/state, secure callback URL construction, constant-time state comparison and server-side authorization-code exchange are covered by tests. No credential persistence, Supabase DDL, runtime routes or paid traffic."
+}
