@@ -210,12 +210,12 @@ describe("POST /api/image-compare — request validation", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("returns a controlled 400 when JSON body is null", async () => {
-    const response = await POST(makeRequest(null));
+  it.each([null, [], 42, true])("returns INVALID_BODY for non-object JSON %p", async (value) => {
+    const response = await POST(makeRequest(value));
     const body = await response.json() as { error?: string };
 
     expect(response.status).toBe(400);
-    expect(body.error).toBe("VALIDATION_ERROR");
+    expect(body.error).toBe("INVALID_BODY");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

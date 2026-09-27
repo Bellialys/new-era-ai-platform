@@ -13,6 +13,7 @@ import {
   checkRateLimit,
   getApiKey,
   getSupabaseServerClient,
+  isJsonObject,
 } from "@/lib/server";
 
 export const maxDuration = 60;
@@ -45,10 +46,6 @@ type ImageStorageBucket = ReturnType<SupabaseServerClient["storage"]["from"]>;
 type BoundedJsonResult =
   | { success: true; data: unknown }
   | { success: false; reason: "invalid" | "too_large" };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 async function cancelResponseBody(response: Response): Promise<void> {
   try {
@@ -254,7 +251,7 @@ async function generateImage(
   }
 
   const providerJson = await readBoundedProviderJson(res);
-  if (!providerJson.success || !isRecord(providerJson.data)) {
+  if (!providerJson.success || !isJsonObject(providerJson.data)) {
     console.warn("[image-compare] Provider returned an invalid response", {
       modelId,
       reason: providerJson.success ? "invalid_shape" : providerJson.reason,
@@ -338,10 +335,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "INVALID_JSON", message: "Invalid request body" }, { status: 400 });
   }
 
-  if (!isRecord(body)) {
+  if (!isJsonObject(body)) {
     logApiRequest("POST", "/api/image-compare", 400, Date.now() - startTime, requestId);
     return NextResponse.json(
-      { error: "VALIDATION_ERROR", message: "Request body must be an object" },
+      { error: "INVALID_BODY", message: "Request body must be a JSON object." },
       { status: 400 }
     );
   }

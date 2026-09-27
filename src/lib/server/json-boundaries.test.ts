@@ -7,6 +7,7 @@ const guardedRoutes = [
   "src/app/api/stream-compare/route.ts",
   "src/app/api/code-compare/route.ts",
   "src/app/api/code-run/route.ts",
+  "src/app/api/image-compare/route.ts",
   "src/app/api/team-run/route.ts",
   "src/app/api/vote/route.ts",
   "src/app/api/profile/route.ts",
