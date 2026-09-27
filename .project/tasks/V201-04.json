@@ -2,13 +2,14 @@
   "$schema": "../task.schema.json",
   "id": "V201-04",
   "title": "Apply Provider Credential Migration to Production",
-  "status": "in_progress",
+  "status": "done",
   "priority": "critical",
   "files": [
     ".project/state.json",
     ".project/tasks/V201-04.json",
     "14-roadmap.md",
-    "15-changelog.md"
+    "15-changelog.md",
+    "supabase/migrations/20260927212853_stage3_provider_credentials.sql"
   ],
   "checksRequired": [
     "migration:preflight",
@@ -21,9 +22,19 @@
     "docs:check",
     "diff:check"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T00:27:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "migration:preflight",
+    "migration:apply",
+    "migration:verify",
+    "rls:verify",
+    "advisors:security",
+    "advisors:performance",
+    "state:check",
+    "docs:check",
+    "diff:check"
+  ],
+  "lastUpdated": "2026-09-28T00:30:00+03:00",
+  "commitHash": "4561f8b3d5959281b23b7bafc85c96f9532ce922",
   "transitions": [
     {
       "from": null,
@@ -36,7 +47,19 @@
       "to": "in_progress",
       "at": "2026-09-28T00:27:00+03:00",
       "note": "Additive-only migration preflight and production application. No existing table/column/data deletion."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T00:29:30+03:00",
+      "note": "Production migration applied successfully. Both tables are empty, RLS-enabled and service-role-only; constraints/indexes verified; post-migration advisors reviewed. Supabase-assigned version was reconciled with repository filename."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T00:30:00+03:00",
+      "note": "Remote and repository migration versions both end at 20260927212853_stage3_provider_credentials. No destructive data operation occurred."
     }
   ],
-  "notes": "Production DDL gate for the already-reviewed migration 20260927152222_stage3_provider_credentials.sql. Backup/PITR tooling is not exposed by the connected Supabase MCP; migration is additive-only and rollback would be forward-fix/drop of newly created empty tables if ever required."
+  "notes": "Production DDL completed. Migration is additive-only; provider_credentials and ai_funding_preferences exist with zero rows, RLS enabled and no anon/authenticated grants. Connected Supabase MCP exposes no backup/PITR inspection action, so recovery evidence is limited to additive design and forward-fix strategy. Existing leaked-password-protection warning predates this migration."
 }
