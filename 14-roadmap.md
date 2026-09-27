@@ -69,7 +69,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - P0 provider recovery: curated catalog из 8 text IDs выровнен между local fallback и production Supabase; migration `20260927065448_recover_openrouter_model_catalog.sql` применена и проверена 2026-09-27;
 - AI Team Mode: `POST /api/team-run` (auth gate, rate 3/10 min, 4 роли) + страница `/team` за feature flag; current runtime persistence: `tasks` + `model_responses`;
 - Image Arena backend: `POST /api/image-compare` alpha (auth only), provider `POST /api/v1/images`, base64 raster validation и обязательный Supabase Storage upload без provider-URL fallback;
-- scheduled `models:verify`: text/Team/Judge/Image discovery ежедневно в `03:17 UTC` и вручную; workflow присутствует в `main`, а secret `OPENROUTER_API_KEY` передаётся только live-step. Наличие/значение repository secret нельзя подтвердить через текущий read-only GitHub connector; operational monitoring считается подтверждённым только после успешного scheduled/manual live run. Pull request CI запускает mock `test:models-verify` без provider secret;
+- scheduled `models:verify`: text/Team/Judge/Image discovery ежедневно в `03:17 UTC` и вручную; workflow присутствует в `main`. Read-only Actions probe 2026-09-27 подтвердил, что repository secret `OPENROUTER_API_KEY` сейчас не доступен workflow (env пустой), поэтому live scheduled verification **не operational** до добавления secret в GitHub Actions. Pull request CI продолжает запускать mock `test:models-verify` без provider secret;
 - DB v2 Foundation: 8 таблиц аналитики и истории (`usage_events`, `team_runs`, `team_run_steps`, `code_runs`, `leaderboard_snapshots`, `artifacts`, `model_price_history`, `cleanup_log`) уже присутствуют в production; runtime writes to `usage_events` and `team_runs`/`team_run_steps` are planned for v2.1.
 
 Текущий release-gate для v2.0:
@@ -81,8 +81,9 @@ v2.0.0-alpha.1 - AI Team Mode
 # P0 model catalog migration применена и DB/local catalog синхронизированы ✅
 # Этапы 1–2 security/provider recovery закрыты и перепроверены 2026-09-27 ✅
 # Stage 3.0 OpenRouter funding/BYOK architecture + repeat audit closed 2026-09-27 ✅ (PR #68, main 6ad6ea34)
-# Stage 3.1 External Readiness — IN PROGRESS: production deploy/health confirmed ✅; AWS KMS + Vercel OIDC selected ✅; paid Redis fail-closed policy + conservative catalog/fan-out policy documented ✅
-# Stage 3.1 remaining blockers: live OpenRouter Management/account workspace probe, Guardrail/Workspace Budget capability, numeric per-user/canary budget approval, key-cardinality evidence; no real provisioning or paid traffic before these gates
+# Stage 3.1 External Readiness — IN PROGRESS: production deploy/health ✅; AWS KMS + Vercel OIDC ✅; paid Redis fail-closed + conservative catalog/fan-out ✅; live Vercel OpenRouter probe confirms Free account, valid inference key, workspace association and no Management/Guardrail access ✅
+# Stage 3.1 safe budget defaults: platform paid allowance $0; future lifecycle canary limit $0.01/day with zero inference ✅
+# Stage 3.1 remaining blockers: OpenRouter upgrade/capability enabling Management API, server-side Management key, Management/Guardrail canary, GitHub Actions OPENROUTER_API_KEY secret restoration, key-cardinality evidence before mass rollout; no real user provisioning or paid traffic before these gates
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
 # scheduled live models:verify считается operational после первого подтверждённого live run
 ```

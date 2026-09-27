@@ -98,7 +98,22 @@ Provider request должен явно запрашивать usage accounting �
 
 На 2026-09-27 публичные материалы OpenRouter расходятся по названиям tiers и feature matrix. Текущая pricing page показывает `Free | Standard | Business | Enterprise` и отдельную матрицу Management API / Budgets & Spend Controls; более ранний материал о spend controls использует другую tier terminology и описывает availability иначе.
 
-Вывод повторного аудита: **название тарифа нельзя использовать как capability detector**. Единственный безопасный rollout gate — live capability probe именно нашего OpenRouter account/workspace.
+Live sanitized probe нашего **фактического Vercel OpenRouter inference key** 2026-09-27 подтвердил:
+
+- `is_free_tier = true`;
+- текущий key не является management key;
+- текущий key не является provisioning key;
+- key уже связан с workspace;
+- у key присутствует provider limit metadata;
+- `GET /api/v1/keys` с текущим inference key возвращает `401`;
+- `GET /api/v1/guardrails` с текущим inference key возвращает `401`;
+- сам `GET /api/v1/key` с Vercel Preview проходит успешно, то есть OpenRouter credential в Vercel присутствует и валиден.
+
+Отдельный GitHub Actions read-only probe подтвердил, что repository secret `OPENROUTER_API_KEY` **не задан**: workflow получил пустое значение. Поэтому scheduled/manual live `models:verify` в GitHub Actions пока не operational, несмотря на наличие workflow файла.
+
+Текущая OpenRouter pricing matrix указывает Management API key и Budgets & Spend Controls как недоступные для Free и доступные начиная со Standard. Поэтому на текущем Free account Management/Guardrail provisioning считается фактически blocked до изменения account capability.
+
+Вывод: **название тарифа не используется как единственный capability detector**, но live probe + current pricing matrix вместе дают достаточное основание считать Management rollout заблокированным на текущем account state. После изменения account tier/capabilities live probe повторяется.
 
 Stage 3.1 обязан проверить:
 
@@ -573,18 +588,33 @@ CREDENTIAL_DECRYPTION_FAILED
 - user BYOK сохраняет app anti-abuse controls; Redis outage не должен превращать пользовательский BYOK в обход model governance/concurrency, но его provider balance не считается деньгами New Era;
 - fan-out ceiling берётся из server-side mode policy: Prompt Arena <=5 parallel provider calls, Code Arena <=3, Image Arena <=3; AI Team Mode = 4 sequential calls; Judge = primary + максимум один fallback attempt. Любое повышение этих ceilings проходит cost/security review.
 
-Остаётся заблокировано до account-specific evidence:
+Live account probe 2026-09-27 закрыл часть account-specific вопросов:
 
-- actual OpenRouter Management API capability нашего account;
-- actual production `workspace_id`;
-- CRUD `/api/v1/keys` probe с Management credential;
-- Guardrail availability/assignment semantics именно нашего account;
-- aggregate Workspace Budget availability именно нашего account;
-- acceptable key cardinality/provisioning scale — публичный documented unlimited-key guarantee не предполагается;
-- numeric per-user platform money budget;
-- disposable low-limit canary create/read/update/delete после owner-approved test budget.
+- current account = Free;
+- current inference key valid;
+- workspace association существует;
+- current key не имеет Management/Guardrail access;
+- Management API/Budgets & Spend Controls недоступны на текущем Free state по current pricing matrix;
+- GitHub Actions repository secret `OPENROUTER_API_KEY` отсутствует и должен быть добавлен отдельно для scheduled live model verification.
 
-Management credential нельзя передавать в чат/репозиторий. Для live probe он создаётся в OpenRouter и хранится только как server-side secret `OPENROUTER_MANAGEMENT_KEY` в approved environment. До этого Stage 3.1 остаётся `in_progress`, а Stage 3.2 runtime/schema work не начинается.
+Безопасные numeric defaults зафиксированы без открытия платного трафика:
+
+- initial platform **paid** allowance = `$0` (paid models disabled);
+- future Management lifecycle canary key hard limit = `$0.01/day`;
+- Stage 3.1 canary выполняет только create/read/update/delete и **не отправляет inference**, поэтому planned spend = `$0`;
+- положительный пользовательский daily budget (например $1/day) вводится только отдельным owner decision после canary и cost telemetry.
+
+Остаётся заблокировано до изменения account capability:
+
+- перейти на OpenRouter capability level с Management API (current pricing: Standard или выше);
+- создать отдельный Management API key и сохранить только server-side как `OPENROUTER_MANAGEMENT_KEY`;
+- получить/проверить actual production `workspace_id` через Management context, не публикуя его как client input;
+- выполнить read-only list + disposable `$0.01/day` create/read/update/delete canary через `/api/v1/keys`;
+- проверить Guardrail list/assignment semantics именно нашего account;
+- определить, доступен ли aggregate Workspace Budget (не ожидать его вне Enterprise без live evidence);
+- перед Stage 3.5 mass rollout подтвердить acceptable key cardinality/provisioning scale; публичного unlimited-key contract нет.
+
+Management credential нельзя передавать в чат/репозиторий. До этих account-level действий Stage 3.1 остаётся `in_progress`, а Stage 3.2 runtime/schema work не начинается.
 
 ### Stage 3.2 — Data + crypto foundation
 
@@ -767,15 +797,22 @@ Already decided during External Readiness:
 6. Platform-funded paid Redis outage: fail closed for new paid calls if the required distributed limiter is unavailable.
 7. Fan-out maximums do not silently increase beyond current server-side mode ceilings.
 
+Safe numeric defaults fixed during readiness:
+
+1. Initial platform paid allowance = **$0**; paid platform models remain disabled.
+2. Management lifecycle canary hard limit = **$0.01/day**, with zero inference calls in Stage 3.1.
+3. Positive per-user paid budgets remain a later explicit product/owner decision after telemetry and canary evidence.
+
 Still required before implementation traffic:
 
-1. Live-confirm actual OpenRouter account capabilities (Management API, per-key limits, Guardrails, optional aggregate Workspace Budget).
-2. Confirm actual production `workspace_id`.
-3. Choose numeric initial platform per-user money budget values.
-4. Approve a tiny disposable canary budget for Management API lifecycle verification.
-5. Confirm acceptable OpenRouter key cardinality/provisioning scale for rollout; no assumption of unlimited per-user keys.
+1. Upgrade/change OpenRouter account capability so a Management API key can be created (current live account is Free).
+2. Live-confirm Management API, Guardrails and optional aggregate Workspace Budget with that Management credential.
+3. Confirm actual production `workspace_id` in Management context.
+4. Complete disposable create/read/update/delete canary.
+5. Restore GitHub Actions live model verification by adding the existing inference key as repository secret `OPENROUTER_API_KEY`.
+6. Confirm acceptable OpenRouter key cardinality/provisioning scale before Stage 3.5 mass rollout; no assumption of unlimited per-user keys.
 
-Numeric money values and provider capabilities are not invented in code.
+No positive paid budget is activated by these readiness defaults.
 
 ## 22. Scope boundary with future Marketplace BYOK
 
@@ -818,7 +855,7 @@ Implementation begins only when:
 - acceptable key cardinality/provisioning scale is confirmed;
 - first implementation PR does not enable paid traffic.
 
-**Current gate:** Stage 3.0 is complete. Stage 3.1 is **in progress**. Production health, KMS choice, OIDC direction, catalog policy, Redis paid-outage policy and fan-out policy are documented. Runtime implementation, DB migration, real key provisioning and BYOK traffic remain disabled until the account-specific OpenRouter probe, workspace id, numeric money budget/canary budget and key-cardinality evidence are complete.
+**Current gate:** Stage 3.0 is complete. Stage 3.1 is **in progress**. Production health, KMS choice, OIDC direction, catalog policy, Redis paid-outage policy, fan-out policy, current Free account state, workspace presence and zero-spend canary budget are verified/documented. Runtime implementation, DB migration, real user-key provisioning and BYOK traffic remain disabled until the OpenRouter account exposes Management API, a Management credential is stored server-side, Management/Guardrail lifecycle canary passes, GitHub live verifier secret is restored and key-cardinality evidence is sufficient for the intended rollout.
 
 Recommended first implementation PR:
 

@@ -16,6 +16,35 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.1 live account probe - 2026-09-27
+
+### Verified
+
+- Sanitized Vercel Preview probe against `GET https://openrouter.ai/api/v1/key` succeeded with the project's existing OpenRouter inference credential.
+- Current OpenRouter account/key state: `is_free_tier=true`, current key is neither management nor provisioning, workspace association exists, provider limit metadata exists.
+- Read-only `GET /api/v1/keys` and `GET /api/v1/guardrails` with the current inference key both returned `401`; no mutation was attempted.
+- Current OpenRouter pricing matrix lists Management API key and Budgets & Spend Controls as unavailable on Free and available starting from Standard.
+- A dedicated GitHub Actions read-only probe received an empty `secrets.OPENROUTER_API_KEY`; scheduled/manual live `models:verify` is therefore not operational until that repository secret is added.
+
+### Decisions
+
+- Initial platform paid allowance remains `$0`; platform paid models stay disabled.
+- Future Management lifecycle canary uses a `$0.01/day` hard key limit and performs create/read/update/delete only, with no inference request during Stage 3.1.
+- Positive per-user paid budgets are deferred until the Management canary and actual-cost telemetry exist.
+- No assumption of unlimited API-key cardinality is made; mass one-key-per-user rollout remains gated on account/provider evidence.
+
+### Remaining blocker
+
+- The current Free account cannot complete the planned Management API readiness path. Account capability must first be upgraded/enabled so a separate server-only Management key can be created.
+- After that: confirm workspace in Management context, run Management/Guardrail canary, restore GitHub live-verifier secret, and only then close Stage 3.1.
+
+### Safety
+
+- No OpenRouter secret value was logged or returned.
+- No paid inference was sent.
+- No Management/Guardrail mutation was performed.
+- Temporary diagnostic branch/preview is not part of production `main`.
+
 ## Stage 3.1 External Readiness - 2026-09-27
 
 ### Verified
