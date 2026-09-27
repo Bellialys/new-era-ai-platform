@@ -1,10 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { NextRequest, NextResponse } from "next/server";
 
-const { getUserMock } = vi.hoisted(() => ({ getUserMock: vi.fn() }));
+const {
+  getUserMock,
+  getSupabaseServerClientMock,
+  guestFromMock,
+  guestSelectMock,
+  guestEqMock,
+  guestMaybeSingleMock,
+} = vi.hoisted(() => ({
+  getUserMock: vi.fn(),
+  getSupabaseServerClientMock: vi.fn(),
+  guestFromMock: vi.fn(),
+  guestSelectMock: vi.fn(),
+  guestEqMock: vi.fn(),
+  guestMaybeSingleMock: vi.fn(),
+}));
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: vi.fn(() => ({ auth: { getUser: getUserMock } })),
+}));
+
+vi.mock("./supabase", () => ({
+  getSupabaseServerClient: getSupabaseServerClientMock,
 }));
 
 import {
@@ -16,6 +34,12 @@ import {
 
 const USER_ID = "33333333-3333-4333-8333-333333333333";
 const VALID_GUEST = "44444444-4444-4444-8444-444444444444";
+
+const guestQuery = {
+  select: guestSelectMock,
+  eq: guestEqMock,
+  maybeSingle: guestMaybeSingleMock,
+};
 
 /** Minimal NextRequest stub exposing only the cookie API these helpers use. */
 function mockRequest(cookies: Record<string, string> = {}): NextRequest {
@@ -48,6 +72,18 @@ const savedEnv: Record<string, string | undefined> = {};
 
 beforeEach(() => {
   getUserMock.mockReset();
+  getSupabaseServerClientMock.mockReset();
+  guestFromMock.mockReset();
+  guestSelectMock.mockReset();
+  guestEqMock.mockReset();
+  guestMaybeSingleMock.mockReset();
+
+  guestFromMock.mockReturnValue(guestQuery);
+  guestSelectMock.mockReturnValue(guestQuery);
+  guestEqMock.mockReturnValue(guestQuery);
+  guestMaybeSingleMock.mockResolvedValue({ data: { id: VALID_GUEST }, error: null });
+  getSupabaseServerClientMock.mockReturnValue({ from: guestFromMock });
+
   for (const key of ENV_KEYS) savedEnv[key] = process.env[key];
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
@@ -55,6 +91,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const key of ENV_KEYS) {
     if (savedEnv[key] === undefined) delete process.env[key];
     else process.env[key] = savedEnv[key];
@@ -121,6 +158,26 @@ describe("resolveRequestIdentity", () => {
     getUserMock.mockResolvedValue({ data: { user: null }, error: null });
     const identity = await resolveRequestIdentity(mockRequest({ na_guest: VALID_GUEST }));
     expect(identity).toEqual({ kind: "guest", userId: null, guestId: VALID_GUEST });
+    expect(guestFromMock).toHaveBeenCalledWith("anonymous_sessions");
+    expect(guestEqMock).toHaveBeenCalledWith("id", VALID_GUEST);
+  });
+
+  it("rejects a well-formed guest UUID that does not exist in anonymous_sessions", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null }, error: null });
+    guestMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+
+    const identity = await resolveRequestIdentity(mockRequest({ na_guest: VALID_GUEST }));
+
+    expect(identity).toEqual({ kind: "none", userId: null, guestId: null });
+  });
+
+  it("fails closed when guest-session verification throws", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null }, error: null });
+    guestMaybeSingleMock.mockRejectedValue(new Error("database unavailable"));
+
+    const identity = await resolveRequestIdentity(mockRequest({ na_guest: VALID_GUEST }));
+
+    expect(identity).toEqual({ kind: "none", userId: null, guestId: null });
   });
 
   it("resolves to none (no auto-minted guest) when nothing identifies the caller", async () => {
@@ -135,10 +192,21 @@ describe("resolveRequestIdentity", () => {
     expect(identity.kind).toBe("none");
   });
 
-  it("still resolves a guest when Supabase is unconfigured", async () => {
+  it("still resolves a guest in local/test mode when persistence is unconfigured", async () => {
     for (const key of ENV_KEYS) delete process.env[key];
+    getSupabaseServerClientMock.mockReturnValue(null);
     const identity = await resolveRequestIdentity(mockRequest({ na_guest: VALID_GUEST }));
     expect(identity).toEqual({ kind: "guest", userId: null, guestId: VALID_GUEST });
     expect(getUserMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unverifiable guest in production when persistence is unconfigured", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    for (const key of ENV_KEYS) delete process.env[key];
+    getSupabaseServerClientMock.mockReturnValue(null);
+
+    const identity = await resolveRequestIdentity(mockRequest({ na_guest: VALID_GUEST }));
+
+    expect(identity).toEqual({ kind: "none", userId: null, guestId: null });
   });
 });

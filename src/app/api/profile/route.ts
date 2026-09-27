@@ -5,7 +5,13 @@
  * Requires an authenticated session.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createErrorResponse, logApiRequest, ApiError, getAuthenticatedUserId } from "@/lib/server";
+import {
+  createErrorResponse,
+  logApiRequest,
+  ApiError,
+  getAuthenticatedUserId,
+  isJsonObject,
+} from "@/lib/server";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
 
 interface ProfileResponse {
@@ -95,27 +101,32 @@ export async function PATCH(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     if (!supabase) throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
 
-    let body: PatchBody;
+    let body: unknown;
     try {
-      body = (await request.json()) as PatchBody;
+      body = await request.json();
     } catch {
       throw new ApiError(400, "INVALID_JSON", "Request body must be valid JSON.");
     }
 
+    if (!isJsonObject(body)) {
+      throw new ApiError(400, "INVALID_BODY", "Request body must be a JSON object.");
+    }
+
+    const patchBody = body as PatchBody;
     const updates: Record<string, string | null> = {};
 
-    if ("displayName" in body) {
-      const v = typeof body.displayName === "string" ? body.displayName.trim() : null;
+    if ("displayName" in patchBody) {
+      const v = typeof patchBody.displayName === "string" ? patchBody.displayName.trim() : null;
       if (v !== null && v.length > 60) throw new ApiError(400, "VALIDATION_ERROR", "Display name max 60 characters.");
       updates["display_name"] = v || null;
     }
-    if ("firstName" in body) {
-      const v = typeof body.firstName === "string" ? body.firstName.trim() : null;
+    if ("firstName" in patchBody) {
+      const v = typeof patchBody.firstName === "string" ? patchBody.firstName.trim() : null;
       if (v !== null && v.length > 60) throw new ApiError(400, "VALIDATION_ERROR", "First name max 60 characters.");
       updates["first_name"] = v || null;
     }
-    if ("lastName" in body) {
-      const v = typeof body.lastName === "string" ? body.lastName.trim() : null;
+    if ("lastName" in patchBody) {
+      const v = typeof patchBody.lastName === "string" ? patchBody.lastName.trim() : null;
       if (v !== null && v.length > 60) throw new ApiError(400, "VALIDATION_ERROR", "Last name max 60 characters.");
       updates["last_name"] = v || null;
     }

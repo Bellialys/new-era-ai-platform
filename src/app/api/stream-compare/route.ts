@@ -23,6 +23,7 @@ import {
   logApiRequest,
   checkDailyLimit,
   fisherYatesShuffle,
+  isJsonObject,
   blindSlotId,
   blindSlotName,
 } from "@/lib/server";
@@ -248,6 +249,17 @@ export async function POST(request: NextRequest): Promise<Response> {
   try { body = await request.json(); } catch {
     logApiRequest("POST", "/api/stream-compare", 400, Date.now() - startTime);
     return new Response(JSON.stringify({ status: "error", error: { code: "INVALID_JSON" } }), { status: 400, headers: { "Content-Type": "application/json" } });
+  }
+
+  if (!isJsonObject(body)) {
+    logApiRequest("POST", "/api/stream-compare", 400, Date.now() - startTime);
+    return new Response(
+      JSON.stringify({
+        status: "error",
+        error: { code: "INVALID_BODY", message: "Request body must be a JSON object." },
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   const { prompt, modelIds, modeSlug, blind } = body as StreamCompareRequest;

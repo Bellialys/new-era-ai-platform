@@ -220,6 +220,15 @@ describe("POST /api/team-run — request validation", () => {
     expect(fetchOpenRouterMock).not.toHaveBeenCalled();
   });
 
+  it.each([null, [], 42, true])("returns 400 INVALID_BODY for non-object JSON %p", async (value) => {
+    const res = await POST(makeRequest(value));
+    const body = await res.json() as { errorCode?: string };
+
+    expect(res.status).toBe(400);
+    expect(body.errorCode).toBe("INVALID_BODY");
+    expect(fetchOpenRouterMock).not.toHaveBeenCalled();
+  });
+
   it("returns 400 VALIDATION_ERROR for an empty task string", async () => {
     const res = await POST(makeRequest({ task: "" }));
     const body = await res.json() as { errorCode?: string };

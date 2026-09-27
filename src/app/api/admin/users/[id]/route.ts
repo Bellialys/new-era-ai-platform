@@ -3,6 +3,7 @@ import {
   ApiError,
   checkAdminMutationRateLimit,
   createErrorResponse,
+  isJsonObject,
   logApiRequest,
   requireAdmin,
 } from "@/lib/server";
@@ -50,27 +51,32 @@ export async function PATCH(
     const supabase = getSupabaseServerClient();
     if (!supabase) throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
 
-    let body: PatchBody;
+    let body: unknown;
     try {
-      body = (await request.json()) as PatchBody;
+      body = await request.json();
     } catch {
       throw new ApiError(400, "INVALID_JSON", "Request body must be valid JSON.");
     }
 
-    const updates: Record<string, string> = {};
-
-    if ("role" in body) {
-      if (!VALID_ROLES.includes(body.role as UserRole)) {
-        throw new ApiError(400, "VALIDATION_ERROR", `role must be one of: ${VALID_ROLES.join(", ")}.`);
-      }
-      updates["role"] = body.role as string;
+    if (!isJsonObject(body)) {
+      throw new ApiError(400, "INVALID_BODY", "Request body must be a JSON object.");
     }
 
-    if ("plan" in body) {
-      if (!VALID_PLANS.includes(body.plan as UserPlan)) {
+    const patchBody = body as PatchBody;
+    const updates: Record<string, string> = {};
+
+    if ("role" in patchBody) {
+      if (!VALID_ROLES.includes(patchBody.role as UserRole)) {
+        throw new ApiError(400, "VALIDATION_ERROR", `role must be one of: ${VALID_ROLES.join(", ")}.`);
+      }
+      updates["role"] = patchBody.role as string;
+    }
+
+    if ("plan" in patchBody) {
+      if (!VALID_PLANS.includes(patchBody.plan as UserPlan)) {
         throw new ApiError(400, "VALIDATION_ERROR", `plan must be one of: ${VALID_PLANS.join(", ")}.`);
       }
-      updates["plan"] = body.plan as string;
+      updates["plan"] = patchBody.plan as string;
     }
 
     if (Object.keys(updates).length === 0) {

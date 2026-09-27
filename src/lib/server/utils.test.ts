@@ -6,6 +6,7 @@ import {
   blindSlotName,
   createErrorResponse,
   fisherYatesShuffle,
+  isJsonObject,
   isUuid,
   logApiRequest,
   validatePrompt,
@@ -106,6 +107,17 @@ describe("createErrorResponse", () => {
 
     const withoutId = createErrorResponse(new ApiError(404, "TASK_NOT_FOUND", "nope"));
     expect(withoutId).not.toHaveProperty("requestId");
+  });
+});
+
+describe("isJsonObject", () => {
+  it("accepts plain JSON objects", () => {
+    expect(isJsonObject({})).toBe(true);
+    expect(isJsonObject({ prompt: "hello" })).toBe(true);
+  });
+
+  it.each([null, [], "text", 42, true])("rejects non-object JSON value %p", (value) => {
+    expect(isJsonObject(value)).toBe(false);
   });
 });
 
