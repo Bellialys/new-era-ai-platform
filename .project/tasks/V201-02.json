@@ -1,0 +1,69 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-02",
+  "title": "Provider Credential Data Foundation",
+  "status": "done",
+  "priority": "critical",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-02.json",
+    "supabase/migrations/20260927152222_stage3_provider_credentials.sql",
+    "src/lib/server/provider-credentials.ts",
+    "src/lib/server/provider-credentials.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "schema:review",
+    "migration:sync",
+    "rls:review",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "schema:review",
+    "migration:sync",
+    "rls:review",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-27T15:26:37Z",
+  "commitHash": "dc8c45d32b7f15d22dfab790409bae37651b2482",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-27T15:22:22Z",
+      "note": "Created after Free-first OAuth readiness and protocol foundation were merged."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-27T15:22:22Z",
+      "note": "Prepare credential/funding schema and server-side domain types only. Migration is committed but not applied to production in this task."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-27T15:26:37Z",
+      "note": "CI passed audit, typecheck, lint, tests, build, state/docs and smoke. Production migration history matched repository before the change; RLS/grants and schema were reviewed. Migration remains unapplied."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-27T15:26:37Z",
+      "note": "Credential data foundation is ready for merge as code/schema definition only. Production DDL application remains a separate gate."
+    }
+  ],
+  "notes": "Completed schema/type foundation. Migration remains unapplied to production. No plaintext provider-key column, no OAuth route activation, no KMS calls, no env changes, no paid traffic."
+}
