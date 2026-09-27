@@ -2,7 +2,7 @@
 
 ## Статус
 
-**Architecture plan merged / Stage 3.0 re-audit complete / runtime implementation not started**
+**Stage 3.0 complete / Stage 3.1 External Readiness in progress / runtime implementation not started**
 
 Дата ревью внешних контрактов: **2026-09-27**.
 Дата повторного code/architecture audit: **2026-09-27** (`main` baseline `a5b9fc6b4471635b1ed5a4923a8eef58247d88f6`).
@@ -47,7 +47,7 @@ OpenRouter Management API позволяет создавать, читать, �
 - `disabled`;
 - `include_byok_in_limit`.
 
-Для platform-managed key создание должно явно передавать целевой `workspace_id`, а не полагаться на неявный workspace context. Create response возвращает plaintext key только в момент создания; дальнейший lifecycle должен опираться на безопасный provider key hash/identifier, который используется для GET/PATCH/DELETE.
+OpenRouter допускает omission `workspace_id` и тогда использует default workspace. New Era target design всё равно **явно передаёт проверенный production `workspace_id`**, чтобы provisioning не зависел от изменяемого default workspace. Create response возвращает plaintext key только в момент создания; дальнейший lifecycle опирается на safe provider key hash/identifier для GET/PATCH/DELETE.
 
 Документированная семантика reset: daily — в 00:00 UTC, weekly — недельный интервал Monday-Sunday, monthly — календарный месяц.
 
@@ -312,16 +312,20 @@ Management key запрещено использовать для inference.
 
 ### Encryption decision
 
-ADR-004 уже принял envelope encryption / DEK-per-user-or-connection как target architecture.
+Stage 3.1 выбирает **AWS KMS + Vercel OIDC** как target для persistent OpenRouter credential encryption. Детальная граница зафиксирована в обновлённом ADR-004.
 
 Persistent provider secrets следуют ADR-004:
 
-- ciphertext в Supabase;
+- provider secret шифруется локально AES-256-GCM случайным per-credential DEK;
+- AWS KMS symmetric KEK через `GenerateDataKey(AES_256)` выдаёт plaintext DEK только для кратковременного использования и wrapped/encrypted DEK для persistence;
+- в Supabase хранятся provider ciphertext + encrypted DEK + non-secret KMS metadata;
 - plaintext DEK никогда не хранится в БД;
-- KMS/эквивалент управляет KEK и шифрованием DEK (например GenerateDataKey/envelope pattern);
-- database dump сам по себе не раскрывает secret;
-- crypto-shredding уничтожает возможность расшифровки;
-- Vercel к KMS по возможности аутентифицируется short-lived OIDC credentials.
+- Vercel -> AWS использует short-lived OIDC/workload identity вместо static AWS access keys;
+- IAM cryptographic permissions ограничиваются конкретным KMS key ARN;
+- encryption context содержит только opaque non-PII metadata;
+- database dump без доступа к KMS сам по себе не раскрывает provider secret.
+
+Критическое уточнение повторного review: обычный shared KMS KEK + wrapped DEK, который попал в immutable backup, **не является автоматическим crypto-shredding**. AWS KMS не хранит generated DEK как отдельный deletable per-user object. Поэтому Stage 3 не заявляет мгновенное криптографическое уничтожение исторических backup copies простым удалением live DB row. Для такой гарантии нужен отдельный deletion-capable subject-key design/ADR.
 
 Supabase Vault установлен в production и технически подходит для encrypted secrets, но не выбирается как основной путь без отдельного ADR, потому что это изменило бы ADR-004.
 
@@ -427,8 +431,8 @@ Raw pricing is required for image/media non-token billing units.
 
 ```text
 none -> pending -> Management API create -> encrypt -> active
-     -> rotate -> revoking -> remote disable/revoke
-     -> crypto-shred local secret -> revoked metadata
+     -> rotate -> revoking -> remote disable/delete
+     -> delete live ciphertext/wrapped DEK -> revoked metadata
 ```
 
 Provisioning must be idempotent. Concurrent first requests cannot create multiple active keys. Safe local fingerprint может использовать HMAC-SHA256 по ADR-001, но HMAC не заменяет reversible encrypted secret.
@@ -449,7 +453,7 @@ Provisioning не должен держать длинную PostgreSQL transact
 
 ```text
 submit -> validate -> encrypt -> active -> verify on demand
-       -> disconnect -> crypto-shred -> safe audit metadata only
+       -> disconnect -> delete live ciphertext/wrapped DEK -> safe audit metadata only
 ```
 
 New Era не может revoke внешний пользовательский OpenRouter key; disconnect удаляет только нашу копию.
@@ -551,18 +555,36 @@ CREDENTIAL_DECRYPTION_FAILED
 
 Этот документ. Runtime не меняется.
 
-### Stage 3.1 — External readiness
+### Stage 3.1 — External readiness — IN PROGRESS
 
-- probe actual OpenRouter account capabilities instead of inferring them from tier names: Management API key, CRUD `/api/v1/keys`, workspaces, Guardrails and Workspace Budget availability;
-- verify production `workspace_id` explicitly before any automated key create;
-- verify key lifecycle semantics with a disposable low-limit canary only after owner budget approval; no mass provisioning in readiness stage;
-- create/rotate a separate Management API key only after capability confirmation and store it only in approved secret storage;
-- define default/key Guardrail policy;
-- if aggregate Workspace Budget is available, define it; otherwise document the account-wide risk fallback without pretending Guardrail is a shared pool;
-- confirm production Upstash and select Redis outage behavior for cost-bearing routes;
-- choose KMS provider compatible with ADR-004;
-- configure Vercel OIDC to KMS/cloud role where possible;
-- define initial platform per-user money policy and maximum concurrent provider fan-out.
+Подтверждено на 2026-09-27:
+
+- Stage 3.0 re-audit PR слит в `main`; post-merge CI green;
+- production deployment нового `main` = READY; public `/api/health` = 200 `{"status":"ok"}`;
+- OpenRouter current contracts повторно проверены: Management key нужен для key CRUD; key create поддерживает USD `limit`, reset interval и workspace association; plaintext key возвращается только при create;
+- current OpenRouter pricing page показывает Management API/Budgets & Spend Controls как account/tier capability, поэтому feature availability всё равно проверяется live, а не inferred из названия тарифа;
+- AWS KMS выбран как target credential KMS;
+- Vercel OIDC выбран как target AWS authentication boundary;
+- production Upstash availability уже была зафиксирована завершённым production task V200-02; Stage 3 docs не меняли эти env values, но текущий connector не предоставляет fresh secret/env enumeration;
+- initial rollout policy: platform-funded **paid models remain disabled** до numeric budget approval и live provider-control verification;
+- first BYOK beta остаётся на том же curated/governed catalog; BYOK не разблокирует произвольные модели;
+- session-only BYOK откладывается; Stage 3.4 сначала реализует persistent encrypted BYOK;
+- platform-funded cost-bearing Redis outage policy: новые paid calls fail closed при недоступности required distributed limiter; provider per-key limit остаётся последним hard monetary stop;
+- user BYOK сохраняет app anti-abuse controls; Redis outage не должен превращать пользовательский BYOK в обход model governance/concurrency, но его provider balance не считается деньгами New Era;
+- fan-out ceiling берётся из server-side mode policy: Prompt Arena <=5 parallel provider calls, Code Arena <=3, Image Arena <=3; AI Team Mode = 4 sequential calls; Judge = primary + максимум один fallback attempt. Любое повышение этих ceilings проходит cost/security review.
+
+Остаётся заблокировано до account-specific evidence:
+
+- actual OpenRouter Management API capability нашего account;
+- actual production `workspace_id`;
+- CRUD `/api/v1/keys` probe с Management credential;
+- Guardrail availability/assignment semantics именно нашего account;
+- aggregate Workspace Budget availability именно нашего account;
+- acceptable key cardinality/provisioning scale — публичный documented unlimited-key guarantee не предполагается;
+- numeric per-user platform money budget;
+- disposable low-limit canary create/read/update/delete после owner-approved test budget.
+
+Management credential нельзя передавать в чат/репозиторий. Для live probe он создаётся в OpenRouter и хранится только как server-side secret `OPENROUTER_MANAGEMENT_KEY` в approved environment. До этого Stage 3.1 остаётся `in_progress`, а Stage 3.2 runtime/schema work не начинается.
 
 ### Stage 3.2 — Data + crypto foundation
 
@@ -680,13 +702,16 @@ Never log API key, Authorization header or full prompt by default.
 
 BYOK:
 - plaintext persistence = zero;
-- encrypted secret until disconnect/account deletion;
-- disconnect => crypto-shred according to ADR-004;
+- encrypted live secret until disconnect/account deletion;
+- disconnect => delete live ciphertext + wrapped DEK and prevent restore-time reactivation;
+- New Era cannot revoke the user's external OpenRouter key;
+- retained encrypted backup copies follow retention/restore policy; Stage 3 does not claim instant backup crypto-shredding;
 - safe metadata follows retention policy.
 
 Platform-managed:
 - active while platform access is enabled;
-- account deletion/suspension => remote disable/revoke first, then local crypto-shred;
+- account deletion/suspension => remote disable/delete first, then delete live ciphertext + wrapped DEK;
+- retained encrypted backup copies must never reactivate a revoked remote credential during restore;
 - later reconciliation detects orphaned remote keys.
 
 ### Account deletion and remote resources
@@ -696,12 +721,15 @@ Account deletion cannot rely on a database cascade alone because OpenRouter keys
 Target workflow:
 
 1. mark credential mutation/deletion in progress;
-2. disable/revoke platform-managed remote key;
-3. crypto-shred local secret;
-4. remove user-linked credential/funding rows;
-5. delete/anonymize account data according to retention policy.
+2. disable/delete platform-managed remote key;
+3. delete live credential ciphertext + wrapped DEK;
+4. write the minimum tombstone/revocation state needed so a later backup restore cannot reactivate the credential;
+5. remove user-linked credential/funding rows;
+6. delete/anonymize account data according to retention policy.
 
-If remote revoke is unavailable, account erasure must not require keeping user PII indefinitely. Preserve only the minimum opaque remote identifier in a service-only orphan reconciliation record, detach it from user identity, crypto-shred the secret, then retry remote cleanup asynchronously in a later operational stage.
+If remote delete is unavailable, account erasure must not require keeping user PII indefinitely. Preserve only the minimum opaque remote identifier in a service-only orphan reconciliation record, detach it from user identity, delete the live encrypted secret, then retry remote cleanup asynchronously in a later operational stage.
+
+True cryptographic erasure of immutable historical copies requires the separate deletion-capable key design described by ADR-004 and is not falsely claimed by this Stage 3 credential design.
 
 Usage follows `30-data-retention-policy.md`.
 Financial ledger rules apply only when real New Era billing exists.
@@ -727,18 +755,27 @@ Price sync incident:
 - do not claim stale price is current;
 - actual `usage.cost` remains preferred.
 
-## 21. Owner decisions required before implementation traffic
+## 21. Stage 3.1 decisions and remaining owner inputs
 
-1. Confirm actual OpenRouter account capabilities (Management API, per-key limits, Guardrails, optional aggregate Workspace Budget) rather than inferring them from a plan label.
-2. Choose initial platform per-user money budget values.
-3. Choose KMS provider.
-4. Decide whether a session-only BYOK option is needed in addition to persistent BYOK.
-5. Decide whether platform mode remains free-model-only initially.
-6. Keep BYOK catalog curated in first beta (recommended: yes).
-7. Approve Redis outage policy for cost-bearing requests.
-8. Confirm acceptable OpenRouter key cardinality/provisioning scale for our rollout; no assumption of unlimited per-user keys.
+Already decided during External Readiness:
 
-Эти значения не выдумываются в коде.
+1. KMS provider: **AWS KMS**.
+2. Vercel -> AWS authentication: short-lived **Vercel OIDC**, no static AWS access key target.
+3. Session-only BYOK: deferred; persistent encrypted BYOK first.
+4. Platform mode: free-model-only until paid-budget controls are live-verified.
+5. BYOK beta catalog: curated/governed catalog first.
+6. Platform-funded paid Redis outage: fail closed for new paid calls if the required distributed limiter is unavailable.
+7. Fan-out maximums do not silently increase beyond current server-side mode ceilings.
+
+Still required before implementation traffic:
+
+1. Live-confirm actual OpenRouter account capabilities (Management API, per-key limits, Guardrails, optional aggregate Workspace Budget).
+2. Confirm actual production `workspace_id`.
+3. Choose numeric initial platform per-user money budget values.
+4. Approve a tiny disposable canary budget for Management API lifecycle verification.
+5. Confirm acceptable OpenRouter key cardinality/provisioning scale for rollout; no assumption of unlimited per-user keys.
+
+Numeric money values and provider capabilities are not invented in code.
 
 ## 22. Scope boundary with future Marketplace BYOK
 
@@ -774,11 +811,14 @@ Implementation begins only when:
 - docs/state checks are green;
 - current OpenRouter Management/Guardrail/Workspace capabilities are reconfirmed against the actual account;
 - no secrets are added to repository;
-- KMS choice is documented;
-- Redis outage policy and initial money budget policy are owner-approved;
-- first PR does not enable paid traffic.
+- AWS KMS + Vercel OIDC choice is documented;
+- Redis outage policy is documented;
+- initial numeric money budget and canary budget are owner-approved;
+- actual OpenRouter account/workspace capabilities are live-verified;
+- acceptable key cardinality/provisioning scale is confirmed;
+- first implementation PR does not enable paid traffic.
 
-**Current gate:** Stage 3.0 documentation/re-audit is complete; Stage 3.1 External Readiness is the next allowed step. Runtime implementation, DB migration, real key provisioning and BYOK traffic remain disabled until the Stage 3.1 evidence/owner decisions are complete.
+**Current gate:** Stage 3.0 is complete. Stage 3.1 is **in progress**. Production health, KMS choice, OIDC direction, catalog policy, Redis paid-outage policy and fan-out policy are documented. Runtime implementation, DB migration, real key provisioning and BYOK traffic remain disabled until the account-specific OpenRouter probe, workspace id, numeric money budget/canary budget and key-cardinality evidence are complete.
 
 Recommended first implementation PR:
 
@@ -804,6 +844,10 @@ Supabase:
 
 Vercel:
 - https://vercel.com/changelog/openid-connect-federation-now-generally-available
+
+AWS:
+- https://docs.aws.amazon.com/kms/latest/developerguide/data-keys.html
+- https://docs.aws.amazon.com/kms/latest/APIReference/API_GenerateDataKey.html
 
 Internal:
 - `docs/adr/002-double-entry-ledger-billing.md`
