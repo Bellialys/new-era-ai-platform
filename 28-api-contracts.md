@@ -77,6 +77,12 @@ in-memory fallback работает per-process и ограничен 10 000 LRU
 
 Release-gate note: `POST /api/guest` создаёт anonymous session и должен пройти отдельный abuse/rate-limit review перед public release.
 
+## Общая JSON boundary policy
+
+Для mutating API routes, которые читают JSON body, верхний уровень запроса должен быть JSON-объектом. Синтаксически валидные, но неподходящие значения `null`, массив, строка, число или boolean завершаются controlled `400 INVALID_BODY`, а не `500`.
+
+Эта policy покрыта общим regression test для Prompt/Stream/Code/Image/Team/Vote/Profile/Judge и admin PATCH routes.
+
 ## `GET /api/models`
 
 Возвращает модели, доступные для Prompt Arena.
@@ -183,7 +189,7 @@ Streaming-запрос:
 
 > **Идентичность определяется из cookie, не из тела.**
 > Авторизованные пользователи — через Supabase-сессию (`sb-*` cookie).
-> Гости — через httpOnly cookie `na_guest` (выдаётся сервером автоматически).
+> Гости — через httpOnly cookie `na_guest`, которую создаёт/обновляет явный `POST /api/guest`; UUID дополнительно проверяется по `anonymous_sessions`, поэтому произвольная клиентская cookie не является доверенной identity.
 > Поле `anonymousSessionId` в теле запроса **игнорируется** — не передавать.
 
 Правила:

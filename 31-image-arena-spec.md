@@ -13,7 +13,7 @@ Image Arena реализована как auth-only alpha в v2.0.0-alpha.1.
 # основной стабильный продукт остаётся Prompt Arena
 ```
 
-Dedicated Image Arena persistence, production paid-generation smoke и полный safety/storage review остаются release gates.
+Dedicated Image Arena persistence, production paid-generation smoke и полный safety review остаются follow-up gates для продвижения Image Arena выше auth-only alpha. Они не блокируют закрытие provider-recovery Этапа 2, который охватывает provider contract, catalog, validation и production Storage configuration.
 
 ## Цель режима
 
@@ -208,4 +208,4 @@ Safety controls готовы.
 - provider-specific request options как общие для всех моделей без capability discovery;
 - raw provider URL/base64 fallback.
 
-Backend `POST /api/image-compare` существует как auth-only alpha (v2.0.0-alpha.1). Dedicated persistence, подтверждённый production Storage policy и полный safety review — follow-up задачи.
+Backend `POST /api/image-compare` существует как auth-only alpha (v2.0.0-alpha.1). Production bucket `images` проверен: public, 5 MiB, MIME allowlist PNG/JPEG/WebP. Dedicated persistence, paid end-to-end generation smoke и полный safety review — follow-up задачи для следующего уровня готовности Image Arena.
