@@ -789,58 +789,43 @@ prompt-arena
 
 ---
 
-# DEC-012 - Image Arena откладывается до стабильной Prompt Arena
+# DEC-012 - Image Arena после стабильной Prompt Arena
 
 ## Статус
 
 ```text
-Deferred
-# решение зафиксировано, реализация отложена
+Implemented as auth-only alpha / follow-up hardening remains
+# обновлено 2026-09-27
 ```
 
 ## Решение
 
-Image Arena / Visual Arena не реализуется в текущем MVP и откладывается до стабильной Prompt Arena, настроенного Supabase Storage, лимитов стоимости и safety-контролей. В v2.0.0-alpha.1 backend route существует, но полный Storage/persistence режим ещё не является stable contract: при недоступном Storage alpha может вернуть provider URL.
+Image Arena была отложена до стабильной Prompt Arena и затем реализована как auth-only alpha в v2.0.0-alpha.1 через `POST /api/image-compare`.
+
+Текущий backend contract:
+
+- image models вызываются только server-side;
+- OpenRouter Unified Image API возвращает base64 provider output;
+- backend валидирует raster signature/MIME/size;
+- successful result обязан быть загружен в Supabase Storage;
+- raw provider URL и provider base64 не используются как client fallback;
+- при недоступном Storage route fail-fast до платного provider fan-out;
+- отдельная ошибка модели не отменяет успешные результаты остальных моделей.
 
 ## Контекст
 
-Режим Image Arena позволяет пользователю ввести одну визуальную идею, получить изображения от нескольких image-capable моделей, сравнить их и выбрать лучший результат.
-
-Этот режим требует больше инфраструктуры, чем Prompt Arena:
-
-- image-capable models;
-- Supabase Storage;
-- metadata в PostgreSQL;
-- лимиты генераций;
-- контроль стоимости;
-- moderation/safety rules;
-- отдельный UI сравнения изображений.
-
-## Причина
-
-Image generation дороже и сложнее текстовых ответов. Если добавить режим слишком рано, он может сломать roadmap MVP, увеличить расходы и создать риски безопасности.
+Image generation остаётся более дорогим и сложным режимом, чем Prompt Arena, поэтому продвижение выше auth-only alpha требует отдельного persistence/safety/cost review.
 
 ## Последствия
 
-До этапа `v1.8` Image Arena остаётся только в документации.
+До следующего уровня готовности нельзя:
 
-Нельзя добавлять:
+- открывать paid Image generation без budget controls;
+- возвращать raw provider URL/base64;
+- считать Image Arena stable без dedicated persistence/safety review;
+- обходить model capability allowlist.
 
-- страницу `/image-arena`;
-- route `/api/image-arena/generate`;
-- таблицы `image_generations` или `artifacts` как обязательные для текущего MVP;
-- image generation calls из frontend;
-- произвольный выбор image model key пользователем.
-
-## Когда пересмотреть
-
-После Stable Prompt Arena и после того, как будут готовы:
-
-- Supabase Storage;
-- лимиты генераций;
-- allowlist model capabilities;
-- безопасное backend-хранение ключей;
-- понятные правила хранения image metadata.
+Полный текущий контракт — `31-image-arena-spec.md`.
 
 ---
 

@@ -54,3 +54,15 @@ const keyHash = crypto.createHmac('sha256', process.env.API_KEY_SECRET)
 **Смягчение рисков:**
 - `API_KEY_SECRET` хранится только в Vercel Environment Variables, не в коде
 - Регулярная ротация `API_KEY_SECRET` (при компрометации — batch ротация всех ключей)
+
+## Scope clarification — 2026-09-27
+
+Этот ADR относится к **New Era-issued API keys / non-reversible verification identifiers**, где серверу не нужно восстанавливать исходный secret.
+
+Он **не применяется как storage mechanism для external provider credentials** (например, пользовательского OpenRouter BYOK key), потому что такой secret требуется расшифровать перед исходящим provider request.
+
+Для provider credentials:
+
+- HMAC-SHA256 разрешён как safe fingerprint/lookup value;
+- HMAC не заменяет encrypted credential;
+- persistent provider secret следует ADR-004 envelope encryption/KMS и `49-openrouter-funding-byok-plan.md`.

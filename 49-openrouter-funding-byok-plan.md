@@ -342,7 +342,7 @@ none -> pending -> Management API create -> encrypt -> active
      -> crypto-shred local secret -> revoked metadata
 ```
 
-Provisioning must be idempotent. Concurrent first requests cannot create multiple active keys.
+Provisioning must be idempotent. Concurrent first requests cannot create multiple active keys. Safe local fingerprint может использовать HMAC-SHA256 по ADR-001, но HMAC не заменяет reversible encrypted secret.
 
 ### BYOK key
 
@@ -492,6 +492,9 @@ CREDENTIAL_DECRYPTION_FAILED
 - key limit/reset;
 - rotation/revocation lifecycle;
 - guardrail association;
+- begin with a controlled canary cohort;
+- verify OpenRouter key-cardinality/provisioning expectations before mass rollout;
+- monitor Management API error/latency and orphan-key reconciliation;
 - shared `OPENROUTER_API_KEY` becomes controlled migration fallback only.
 
 ### Stage 3.6 — Distributed limits and cost protection
@@ -609,6 +612,7 @@ Price sync incident:
 5. Decide whether platform mode remains free-model-only initially.
 6. Keep BYOK catalog curated in first beta (recommended: yes).
 7. Approve Redis outage policy for cost-bearing requests.
+8. Confirm acceptable OpenRouter key cardinality/provisioning scale for our rollout; no assumption of unlimited per-user keys.
 
 Эти значения не выдумываются в коде.
 

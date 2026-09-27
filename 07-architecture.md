@@ -91,15 +91,17 @@ User Browser -> OpenRouter API
 # так делать нельзя, потому что секретный ключ может попасть в браузер
 ```
 
-Все секреты должны храниться только здесь:
+Project-wide plaintext secrets должны храниться только здесь:
 
 ```text
 .env.local
-# локальные секреты на компьютере разработчика
+# локальные project-wide секреты на компьютере разработчика
 
 Vercel Environment Variables
-# production и preview секреты на Vercel
+# production и preview project-wide секреты
 ```
+
+Per-user provider credentials — отдельный класс данных. Они никогда не хранятся plaintext в PostgreSQL: persistent BYOK/platform-managed secrets допускаются только как encrypted ciphertext + KMS metadata по `49-openrouter-funding-byok-plan.md` и ADR-004.
 
 ## Общая архитектурная схема
 
