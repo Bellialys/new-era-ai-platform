@@ -985,13 +985,82 @@ Published model price в New Era зеркалит OpenRouter catalog/discovery �
 
 ```text
 Accepted
-# implementation pending KMS selection
+# 2026-09-27: KMS target selected, implementation still pending
 ```
 
 ## Решение
 
-Persistent OpenRouter BYOK и platform-managed inference secrets используют envelope encryption/KMS boundary из ADR-004. Plaintext provider key не хранится в PostgreSQL, `profiles`, browser storage, logs или audit payloads.
+Persistent OpenRouter BYOK и platform-managed inference secrets используют envelope encryption boundary из ADR-004. Plaintext provider key не хранится в PostgreSQL, `profiles`, browser storage, logs или audit payloads.
 
-Supabase Vault не становится primary store автоматически, даже если extension доступен; такой переход требует отдельного ADR, сравнивающего threat model, portability, access boundary и rollback.
+Stage 3 credential-encryption target — **AWS KMS + Vercel OIDC**:
 
-Vercel -> cloud KMS authentication по возможности использует short-lived OIDC/workload identity.
+- AWS KMS symmetric KEK;
+- `GenerateDataKey(AES_256)`;
+- local AES-256-GCM per credential;
+- Supabase хранит ciphertext + encrypted DEK;
+- Vercel получает short-lived AWS identity через OIDC, а не static AWS access keys;
+- cryptographic IAM actions ограничиваются конкретным KMS key ARN.
+
+Supabase Vault не становится primary store автоматически, даже если extension доступен; такой переход требует отдельного ADR.
+
+Важное уточнение ADR-004: shared KMS KEK + wrapped DEK внутри immutable backup даёт encryption at rest, но сам по себе не гарантирует crypto-shredding исторического backup. Такая гарантия требует отдельного deletion-capable subject-key design.
+
+---
+
+# DEC-019 - Paid platform traffic fails closed on distributed-limiter outage
+
+## Статус
+
+```text
+Accepted
+# applies when platform-funded paid traffic is enabled
+```
+
+## Решение
+
+Текущий in-memory fallback сохраняется для существующего бесплатного/не cost-bearing runtime, но не считается достаточной финансовой защитой.
+
+Когда platform-funded paid traffic будет включён:
+
+- required distributed limiter = Upstash/approved Redis backend;
+- если distributed limiter недоступен, **новые platform-funded paid calls fail closed**;
+- OpenRouter per-key spending limit остаётся независимым последним hard monetary stop;
+- приложение не подменяет monetary budget request-count лимитом;
+- восстановление Redis не должно автоматически replay-ить отклонённые inference requests.
+
+User-provided OpenRouter BYOK не расходует platform funds, но продолжает подчиняться model governance, concurrency и anti-abuse controls.
+
+## Причина
+
+Serverless in-memory counters разделены по экземплярам и не могут гарантировать общий лимит при scale-out/outage. Для расходов New Era availability не должна иметь приоритет над финансовым containment.
+
+---
+
+# DEC-020 - Stage 3 conservative rollout policy
+
+## Статус
+
+```text
+Accepted
+# 2026-09-27 External Readiness
+```
+
+## Решение
+
+До live OpenRouter Management capability probe и numeric budget approval:
+
+- platform mode остаётся на curated free-model set;
+- paid platform models не включаются;
+- BYOK beta использует тот же governed catalog, а не произвольный model id;
+- session-only BYOK откладывается, первым реализуется persistent encrypted BYOK;
+- текущие fan-out ceilings являются максимумами rollout baseline:
+  - Prompt Arena: до 5 provider calls parallel;
+  - Code Arena: до 3 parallel;
+  - Image Arena: до 3 parallel;
+  - AI Team Mode: 4 sequential;
+  - Judge: primary + максимум один fallback attempt;
+- увеличение fan-out требует отдельного cost/security review.
+
+## Причина
+
+Это позволяет построить credential/usage foundation без скрытого повышения стоимости, key-sprawl и abuse surface до подтверждения реальных account-level controls OpenRouter.
