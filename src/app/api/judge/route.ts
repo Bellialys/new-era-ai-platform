@@ -14,6 +14,7 @@ import {
   fetchOpenRouterResponse,
   getSupabaseServerClient,
   logApiRequest,
+  isJsonObject,
   ApiError,
 } from "@/lib/server";
 import type { JudgeVerdict } from "@/types/arena";
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    if (typeof body !== "object" || body === null) {
+    if (!isJsonObject(body)) {
       logApiRequest("POST", "/api/judge", 400, Date.now() - startTime, requestId);
       return NextResponse.json(
         { status: "error", errorCode: "INVALID_BODY", message: "Request body must be a JSON object.", requestId },

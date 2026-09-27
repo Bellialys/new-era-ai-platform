@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/server/admin";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +23,14 @@ function StatCard({ label, value }: StatCardProps) {
 }
 
 export default async function AdminDashboardPage() {
+  // Protect the page itself before any service-role query. Layout guards are
+  // not a data-security boundary for independently executed Server Components.
+  try {
+    await requireAdmin();
+  } catch {
+    redirect("/");
+  }
+
   let totalUsers = 0;
   let totalTasks = 0;
   let totalVotes = 0;

@@ -5,6 +5,7 @@ import {
   fetchOpenRouterResponse,
   saveArenaRun,
   logApiRequest,
+  isJsonObject,
   ApiError,
 } from "@/lib/server";
 import {
@@ -96,7 +97,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const b = body as Record<string, unknown>;
+    if (!isJsonObject(body)) {
+      logApiRequest("POST", "/api/team-run", 400, Date.now() - startTime, requestId);
+      return NextResponse.json(
+        {
+          status: "error",
+          errorCode: "INVALID_BODY",
+          message: "Request body must be a JSON object.",
+          requestId,
+        },
+        { status: 400 }
+      );
+    }
+
+    const b = body;
 
     // Validate task — trim first so whitespace-only input fails the min-length check.
     const rawTask = typeof b.task === "string" ? b.task.trim() : "";

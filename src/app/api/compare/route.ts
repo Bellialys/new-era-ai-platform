@@ -14,6 +14,7 @@ import {
   validateModelIds,
   validateModeSlug,
   createErrorResponse,
+  isJsonObject,
   logApiRequest,
   resolveSelectedModels,
   fetchMultipleResponses,
@@ -314,6 +315,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       return NextResponse.json(
         createErrorResponse(
           new ApiError(400, "INVALID_JSON", "Request body must be valid JSON.")
+        ),
+        { status: 400 }
+      );
+    }
+
+    if (!isJsonObject(body)) {
+      logApiRequest("POST", "/api/compare", 400, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(400, "INVALID_BODY", "Request body must be a JSON object.")
         ),
         { status: 400 }
       );

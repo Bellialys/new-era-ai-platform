@@ -13,6 +13,7 @@ import {
 } from "@/lib/arena/constants";
 import {
   createErrorResponse,
+  isJsonObject,
   logApiRequest,
   ApiError,
   checkRateLimit,
@@ -83,7 +84,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { code, language } = body as { code?: unknown; language?: unknown; responseId?: unknown };
+    if (!isJsonObject(body)) {
+      logApiRequest("POST", "/api/code-run", 400, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(400, "INVALID_BODY", "Request body must be a JSON object.")
+        ),
+        { status: 400 }
+      );
+    }
+
+    const { code, language } = body;
 
     if (typeof language !== "string" || !ALLOWED_LANGUAGES.includes(language as SupportedLanguage)) {
       logApiRequest("POST", "/api/code-run", 400, Date.now() - startTime);

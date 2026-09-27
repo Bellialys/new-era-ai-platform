@@ -3,6 +3,7 @@ import {
   ApiError,
   checkAdminMutationRateLimit,
   createErrorResponse,
+  isJsonObject,
   logApiRequest,
   requireAdmin,
 } from "@/lib/server";
@@ -49,39 +50,44 @@ export async function PATCH(
     const supabase = getSupabaseServerClient();
     if (!supabase) throw new ApiError(500, "INTERNAL_ERROR", "Database not configured.");
 
-    let body: PatchBody;
+    let body: unknown;
     try {
-      body = (await request.json()) as PatchBody;
+      body = await request.json();
     } catch {
       throw new ApiError(400, "INVALID_JSON", "Request body must be valid JSON.");
     }
 
-    const updates: Record<string, unknown> = {};
-
-    if ("is_active" in body) {
-      if (typeof body.is_active !== "boolean") {
-        throw new ApiError(400, "VALIDATION_ERROR", "is_active must be a boolean.");
-      }
-      updates["is_active"] = body.is_active;
+    if (!isJsonObject(body)) {
+      throw new ApiError(400, "INVALID_BODY", "Request body must be a JSON object.");
     }
 
-    if ("name" in body) {
-      const v = typeof body.name === "string" ? body.name.trim() : null;
+    const patchBody = body as PatchBody;
+    const updates: Record<string, unknown> = {};
+
+    if ("is_active" in patchBody) {
+      if (typeof patchBody.is_active !== "boolean") {
+        throw new ApiError(400, "VALIDATION_ERROR", "is_active must be a boolean.");
+      }
+      updates["is_active"] = patchBody.is_active;
+    }
+
+    if ("name" in patchBody) {
+      const v = typeof patchBody.name === "string" ? patchBody.name.trim() : null;
       if (!v || v.length > 100) {
         throw new ApiError(400, "VALIDATION_ERROR", "name must be a non-empty string (max 100 chars).");
       }
       updates["display_name"] = v;
     }
 
-    if ("access_level" in body) {
-      if (!VALID_ACCESS_LEVELS.includes(body.access_level as AccessLevel)) {
+    if ("access_level" in patchBody) {
+      if (!VALID_ACCESS_LEVELS.includes(patchBody.access_level as AccessLevel)) {
         throw new ApiError(
           400,
           "VALIDATION_ERROR",
           `access_level must be one of: ${VALID_ACCESS_LEVELS.join(", ")}.`
         );
       }
-      updates["access_level"] = body.access_level;
+      updates["access_level"] = patchBody.access_level;
     }
 
     if (Object.keys(updates).length === 0) {

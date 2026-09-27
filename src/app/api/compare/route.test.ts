@@ -201,6 +201,15 @@ describe("POST /api/compare — input validation", () => {
     expect(body.errorCode).toBe("INVALID_JSON");
   });
 
+  it.each([null, [], 42, true])("returns 400 INVALID_BODY for non-object JSON %p", async (value) => {
+    const res = await POST(makeRequest(value));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errorCode?: string };
+    expect(body.errorCode).toBe("INVALID_BODY");
+    expect(resolveSelectedModelsMock).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for an invalid modeSlug", async () => {
     const res = await POST(makeRequest({ ...VALID_BODY, modeSlug: "invalid-slug" }));
 
