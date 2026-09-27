@@ -613,13 +613,30 @@ CREDENTIAL_DECRYPTION_FAILED
 
 Future platform-funded Management track остаётся отложенным до явного решения перейти с Free account и включить платный budget.
 
-### Stage 3.2 — Data + crypto foundation
+### Stage 3.2 — Data + crypto foundation — IN PROGRESS
 
-- migration for credentials/funding metadata;
-- KMS/envelope crypto adapter;
-- service-role-only storage;
-- crypto tests;
-- no inference routing change.
+Completed:
+
+- provider credential/funding migration is applied to production and local/remote migration history is aligned;
+- `provider_credentials` and `ai_funding_preferences` are RLS-enabled, service-role-only and currently empty;
+- no plaintext provider-key column exists;
+- AES-256-GCM envelope codec is implemented with context binding and plaintext-key zeroization;
+- pinned AWS KMS + Vercel OIDC dependencies are merged;
+- AWS KMS adapter implements `GenerateDataKey(AES_256)` + `Decrypt`;
+- adapter uses Vercel OIDC and rejects static AWS access credentials;
+- project runtime contract uses `AWS_REGION`, `AWS_ROLE_ARN`, `AI_CREDENTIAL_KMS_KEY_ID`;
+- review hardening wipes both the SDK-owned plaintext DEK and crypto working copy;
+- no inference routing change and no credential persistence activation yet.
+
+Remaining external infrastructure gate:
+
+- create/configure AWS OIDC provider for the Vercel team/project production subject;
+- create least-privilege IAM role with only required KMS permissions on the selected key;
+- create/select symmetric KMS `ENCRYPT_DECRYPT` key;
+- configure the three server-side Vercel values;
+- perform a live `GenerateDataKey -> encrypt -> Decrypt -> decrypt` canary without storing a real OpenRouter user credential.
+
+Stage 3.2 is not marked complete until this live KMS canary passes.
 
 ### Stage 3.3 — Pricing + actual usage
 
