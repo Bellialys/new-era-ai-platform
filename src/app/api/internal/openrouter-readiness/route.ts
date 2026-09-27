@@ -57,6 +57,27 @@ export async function GET() {
 
     const meta = data as Record<string, unknown>;
 
+    const probeStatus = async (url: string) => {
+      try {
+        const probeResponse = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
+        return probeResponse.status;
+      } catch {
+        return 0;
+      }
+    };
+
+    const [managementKeysStatus, guardrailsStatus] = await Promise.all([
+      probeStatus("https://openrouter.ai/api/v1/keys"),
+      probeStatus("https://openrouter.ai/api/v1/guardrails"),
+    ]);
+
     return NextResponse.json(
       {
         status: "pass",
@@ -69,6 +90,8 @@ export async function GET() {
         limitReset: typeof meta.limit_reset === "string" ? meta.limit_reset : null,
         hasExpiry:
           typeof meta.expires_at === "string" && meta.expires_at.trim().length > 0,
+        managementKeysReadStatus: managementKeysStatus,
+        guardrailsReadStatus: guardrailsStatus,
       },
       { headers: { "Cache-Control": "no-store" } }
     );
