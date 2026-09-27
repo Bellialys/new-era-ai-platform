@@ -2,7 +2,7 @@
 
 ## Статус
 
-**Stage 3.0 complete / Stage 3.1 External Readiness in progress / runtime implementation not started**
+**Stage 3.0 complete / Stage 3.1 Free OAuth readiness complete / Stage 3.2 foundation next**
 
 Дата ревью внешних контрактов: **2026-09-27**.
 Дата повторного code/architecture audit: **2026-09-27** (`main` baseline `a5b9fc6b4471635b1ed5a4923a8eef58247d88f6`).
@@ -13,12 +13,12 @@
 
 ## 1. Цель
 
-Построить управляемую OpenRouter-инфраструктуру, в которой пользователь может работать в двух режимах:
+Построить управляемую OpenRouter-инфраструктуру с двумя независимыми funding tracks:
 
-1. **Platform funding** — AI-запрос оплачивается балансом New Era.
-2. **User BYOK** — пользователь подключает собственный OpenRouter API key, и AI-запрос идёт за счёт его OpenRouter аккаунта.
+1. **User OpenRouter (Free-first)** — основной ближайший путь: зарегистрированный пользователь New Era подключает **свой собственный OpenRouter аккаунт через OAuth PKCE**, а OpenRouter выдаёт user-controlled API key этого пользователя. Его free/paid quota принадлежит его OpenRouter account и не расходует quota New Era.
+2. **Platform funding (future)** — New Era оплачивает inference со своего баланса и позже использует OpenRouter Management API для platform-managed per-user keys и денежных лимитов.
 
-Для platform funding целевая схема — **один активный OpenRouter inference key на одного зарегистрированного пользователя**, созданный backend через OpenRouter Management API.
+На текущем OpenRouter Free account New Era **не пытается** создавать отдельные platform-managed keys. Management API track отложен до будущего платного режима платформы.
 
 Главные свойства:
 
@@ -93,6 +93,26 @@ Provider request должен явно запрашивать usage accounting �
 - нельзя записывать рассчитанную цену как «фактическую»;
 - разрешено сохранить estimate отдельно;
 - `cost_source` должен явно показывать `provider_usage | estimated | unknown`.
+
+### OAuth PKCE for Free-first user connections
+
+Официальный OpenRouter OAuth PKCE flow подтверждён 2026-09-27 и становится основным способом подключения пользовательского OpenRouter в ближайшем MVP.
+
+Contract:
+
+1. New Era генерирует cryptographically random `code_verifier`.
+2. Для S256 вычисляется `code_challenge = base64url(SHA-256(code_verifier))`.
+3. Пользователь перенаправляется на `https://openrouter.ai/auth` с `callback_url`, `code_challenge` и `code_challenge_method=S256`.
+4. Обязательный New Era `state` используется для CSRF/callback correlation.
+5. После авторизации OpenRouter возвращает одноразовый `code` на callback.
+6. Backend New Era обменивает `code` + исходный `code_verifier` через `POST https://openrouter.ai/api/v1/auth/keys`.
+7. OpenRouter возвращает **user-controlled API key**. Это credential пользователя, а не sub-key нашего Free account.
+8. Authorization code single-use и истекает примерно через 10 минут; callback обязан fail closed при state/verifier mismatch/expiry.
+9. Полученный key далее проходит New Era credential security boundary; plaintext не логируется и не попадает в URL, analytics или audit payloads.
+
+OpenRouter официально допускает безопасное хранение user-controlled key в browser или собственной БД приложения. New Era target остаётся server-side encrypted persistence через credential layer; до готовности KMS persistence feature остаётся disabled, а не деградирует в plain DB/localStorage.
+
+Следствие: отдельный OpenRouter Free account каждого пользователя означает отдельную provider-side quota этого пользователя. New Era не утверждает и не пытается умножать free quota созданием множества keys внутри одного account.
 
 ### Plans and controls
 
@@ -202,17 +222,19 @@ New Era users **не становятся OpenRouter organization members**. Org
 
 Отдельный key **не означает**, что provider/account-wide limits автоматически умножаются на число пользователей.
 
-### 4.2 `user_openrouter` (UI: BYOK)
+### 4.2 `user_openrouter` (UI: Connect OpenRouter)
 
 - только authenticated user;
-- ключ проверяется server-side через OpenRouter до сохранения;
-- пользователь видит только safe fingerprint/label/status;
-- plaintext не возвращается после сохранения;
-- запрос использует именно BYOK credential;
+- основной connect flow = OpenRouter OAuth PKCE S256, а не ручное копирование API key;
+- callback state/verifier проверяются server-side;
+- authorization code обменивается на user-controlled OpenRouter API key через `POST /api/v1/auth/keys`;
+- credential принадлежит OpenRouter account пользователя и использует его собственную provider quota;
+- ручной BYOK может быть добавлен позже как fallback, но не является primary UX;
+- пользователь видит только connection status/safe fingerprint, а не сохранённый plaintext;
 - usage: `billing_source = user_openrouter`;
-- BYOK не расходует platform inference key;
-- New Era всё равно применяет anti-abuse/concurrency limits;
-- OpenRouter account balance/limits пользователя остаются provider-side authority.
+- пользовательский OpenRouter не расходует platform inference key/quota;
+- New Era всё равно применяет model governance, anti-abuse и concurrency limits;
+- OpenRouter account balance/free quota/limits пользователя остаются provider-side authority.
 
 ### Terminology: New Era BYOK vs OpenRouter BYOK
 
@@ -570,51 +592,26 @@ CREDENTIAL_DECRYPTION_FAILED
 
 Этот документ. Runtime не меняется.
 
-### Stage 3.1 — External readiness — IN PROGRESS
+### Stage 3.1 — Free OAuth readiness — COMPLETE
 
-Подтверждено на 2026-09-27:
+Завершено 2026-09-27 для выбранного Free-first направления:
 
-- Stage 3.0 re-audit PR слит в `main`; post-merge CI green;
-- production deployment нового `main` = READY; public `/api/health` = 200 `{"status":"ok"}`;
-- OpenRouter current contracts повторно проверены: Management key нужен для key CRUD; key create поддерживает USD `limit`, reset interval и workspace association; plaintext key возвращается только при create;
-- current OpenRouter pricing page показывает Management API/Budgets & Spend Controls как account/tier capability, поэтому feature availability всё равно проверяется live, а не inferred из названия тарифа;
-- AWS KMS выбран как target credential KMS;
-- Vercel OIDC выбран как target AWS authentication boundary;
-- production Upstash availability уже была зафиксирована завершённым production task V200-02; Stage 3 docs не меняли эти env values, но текущий connector не предоставляет fresh secret/env enumeration;
-- initial rollout policy: platform-funded **paid models remain disabled** до numeric budget approval и live provider-control verification;
-- first BYOK beta остаётся на том же curated/governed catalog; BYOK не разблокирует произвольные модели;
-- session-only BYOK откладывается; Stage 3.4 сначала реализует persistent encrypted BYOK;
-- platform-funded cost-bearing Redis outage policy: новые paid calls fail closed при недоступности required distributed limiter; provider per-key limit остаётся последним hard monetary stop;
-- user BYOK сохраняет app anti-abuse controls; Redis outage не должен превращать пользовательский BYOK в обход model governance/concurrency, но его provider balance не считается деньгами New Era;
-- fan-out ceiling берётся из server-side mode policy: Prompt Arena <=5 parallel provider calls, Code Arena <=3, Image Arena <=3; AI Team Mode = 4 sequential calls; Judge = primary + максимум один fallback attempt. Любое повышение этих ceilings проходит cost/security review.
+- текущий New Era OpenRouter account live-проверен как Free; shared inference key валиден;
+- Management/Guardrail access текущему key недоступен и **не блокирует Free-first OAuth path**;
+- официальный OpenRouter OAuth PKCE contract live-rechecked;
+- S256 выбран обязательным методом PKCE;
+- New Era callback использует independent cryptographically random `state`;
+- OAuth authorization code считается single-use/short-lived и обменивается server-side через `POST /api/v1/auth/keys`;
+- returned key трактуется как user-controlled OpenRouter credential и расходует quota пользователя;
+- platform-paid allowance остаётся `$0`; paid platform models disabled;
+- Management API/per-user platform keys перенесены в future platform-funded track и больше не являются blocker для Stage 3.2/3.3/Free OAuth MVP;
+- AWS KMS + Vercel OIDC остаются target для persistent provider credential encryption;
+- до готовности encrypted persistence запрещён plain PostgreSQL/localStorage fallback;
+- curated model governance, current fan-out ceilings и anti-abuse rules остаются обязательными независимо от funding source.
 
-Live account probe 2026-09-27 закрыл часть account-specific вопросов:
+Отдельный operational defect остаётся вне OAuth blocker: GitHub Actions repository secret `OPENROUTER_API_KEY` сейчас отсутствует, поэтому scheduled live `models:verify` надо восстановить отдельно.
 
-- current account = Free;
-- current inference key valid;
-- workspace association существует;
-- current key не имеет Management/Guardrail access;
-- Management API/Budgets & Spend Controls недоступны на текущем Free state по current pricing matrix;
-- GitHub Actions repository secret `OPENROUTER_API_KEY` отсутствует и должен быть добавлен отдельно для scheduled live model verification.
-
-Безопасные numeric defaults зафиксированы без открытия платного трафика:
-
-- initial platform **paid** allowance = `$0` (paid models disabled);
-- future Management lifecycle canary key hard limit = `$0.01/day`;
-- Stage 3.1 canary выполняет только create/read/update/delete и **не отправляет inference**, поэтому planned spend = `$0`;
-- положительный пользовательский daily budget (например $1/day) вводится только отдельным owner decision после canary и cost telemetry.
-
-Остаётся заблокировано до изменения account capability:
-
-- перейти на OpenRouter capability level с Management API (current pricing: Standard или выше);
-- создать отдельный Management API key и сохранить только server-side как `OPENROUTER_MANAGEMENT_KEY`;
-- получить/проверить actual production `workspace_id` через Management context, не публикуя его как client input;
-- выполнить read-only list + disposable `$0.01/day` create/read/update/delete canary через `/api/v1/keys`;
-- проверить Guardrail list/assignment semantics именно нашего account;
-- определить, доступен ли aggregate Workspace Budget (не ожидать его вне Enterprise без live evidence);
-- перед Stage 3.5 mass rollout подтвердить acceptable key cardinality/provisioning scale; публичного unlimited-key contract нет.
-
-Management credential нельзя передавать в чат/репозиторий. До этих account-level действий Stage 3.1 остаётся `in_progress`, а Stage 3.2 runtime/schema work не начинается.
+Future platform-funded Management track остаётся отложенным до явного решения перейти с Free account и включить платный budget.
 
 ### Stage 3.2 — Data + crypto foundation
 
@@ -637,15 +634,19 @@ Management credential нельзя передавать в чат/репозит
 - safe price/status API;
 - no paid-model expansion.
 
-### Stage 3.4 — BYOK beta
+### Stage 3.4 — OpenRouter OAuth user beta
 
-- auth-only connect/validate/store/disconnect;
-- funding resolver;
+- auth-only `Connect OpenRouter` using OAuth PKCE S256;
+- CSRF-safe state + short-lived verifier lifecycle;
+- callback code exchange through server-side OpenRouter auth endpoint;
+- encrypted credential persistence only after Stage 3.2 crypto foundation is operational;
+- funding resolver selects `user_openrouter`;
 - same governed catalog initially;
 - strict secret-redaction tests;
+- disconnect deletes New Era copy; user retains control of their OpenRouter account/key;
 - feature flag / controlled rollout.
 
-### Stage 3.5 — Platform per-user keys
+### Stage 3.5 — Future platform-funded per-user keys
 
 - lazy Management API provisioning;
 - one active key per registered user;
@@ -803,16 +804,22 @@ Safe numeric defaults fixed during readiness:
 2. Management lifecycle canary hard limit = **$0.01/day**, with zero inference calls in Stage 3.1.
 3. Positive per-user paid budgets remain a later explicit product/owner decision after telemetry and canary evidence.
 
-Still required before implementation traffic:
+Required for the Free OAuth implementation track:
 
-1. Upgrade/change OpenRouter account capability so a Management API key can be created (current live account is Free).
-2. Live-confirm Management API, Guardrails and optional aggregate Workspace Budget with that Management credential.
-3. Confirm actual production `workspace_id` in Management context.
+1. Build Stage 3.2 credential schema + crypto abstraction without enabling plaintext persistence.
+2. Implement OAuth PKCE S256 start/callback flow with server-side state/verifier validation.
+3. Connect returned user-controlled key to the unified gateway only after encrypted persistence is available.
+4. Restore GitHub Actions live model verification separately by adding the existing inference key as repository secret `OPENROUTER_API_KEY`.
+
+Deferred to future platform-funded Stage 3.5:
+
+1. Upgrade/change OpenRouter account capability so a Management API key can be created.
+2. Live-confirm Management API, Guardrails and optional aggregate Workspace Budget.
+3. Confirm production `workspace_id` in Management context.
 4. Complete disposable create/read/update/delete canary.
-5. Restore GitHub Actions live model verification by adding the existing inference key as repository secret `OPENROUTER_API_KEY`.
-6. Confirm acceptable OpenRouter key cardinality/provisioning scale before Stage 3.5 mass rollout; no assumption of unlimited per-user keys.
+5. Confirm acceptable OpenRouter key cardinality/provisioning scale.
 
-No positive paid budget is activated by these readiness defaults.
+No positive platform-paid budget is activated by the Free OAuth path.
 
 ## 22. Scope boundary with future Marketplace BYOK
 
@@ -855,7 +862,7 @@ Implementation begins only when:
 - acceptable key cardinality/provisioning scale is confirmed;
 - first implementation PR does not enable paid traffic.
 
-**Current gate:** Stage 3.0 is complete. Stage 3.1 is **in progress**. Production health, KMS choice, OIDC direction, catalog policy, Redis paid-outage policy, fan-out policy, current Free account state, workspace presence and zero-spend canary budget are verified/documented. Runtime implementation, DB migration, real user-key provisioning and BYOK traffic remain disabled until the OpenRouter account exposes Management API, a Management credential is stored server-side, Management/Guardrail lifecycle canary passes, GitHub live verifier secret is restored and key-cardinality evidence is sufficient for the intended rollout.
+**Current gate:** Stage 3.0 and the Free-first Stage 3.1 readiness are complete. **Stage 3.2 is now allowed.** Runtime user-key persistence remains disabled until the credential schema + encryption boundary are implemented and verified. Management API, Guardrail, platform-paid budget and key-cardinality evidence are deferred to the future platform-funded Stage 3.5 and no longer block OAuth PKCE groundwork.
 
 Recommended first implementation PR:
 
