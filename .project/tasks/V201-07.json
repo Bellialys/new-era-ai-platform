@@ -1,0 +1,40 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-07",
+  "title": "AWS KMS and Vercel OIDC Infrastructure Template",
+  "status": "in_progress",
+  "priority": "critical",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-07.json",
+    "infra/aws-kms-vercel-oidc.yaml",
+    "docs/infra/aws-kms-vercel-oidc.md"
+  ],
+  "checksRequired": [
+    "template:review",
+    "iam:least-privilege",
+    "kms:policy-review",
+    "docs:check",
+    "state:check",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T09:24:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T09:24:00+03:00",
+      "note": "Created after live Vercel readiness probe showed AWS_REGION present but role/KMS/OIDC runtime configuration absent."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T09:24:00+03:00",
+      "note": "Prepare reproducible CloudFormation infrastructure only; no AWS account mutation is possible through connected tools."
+    }
+  ],
+  "notes": "Infrastructure-as-code only. Separate preview/production Vercel roles, one symmetric KMS key, no static AWS credentials. Live deployment remains external because no AWS connector is installed."
+}
