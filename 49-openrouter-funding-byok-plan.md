@@ -2,14 +2,17 @@
 
 ## Статус
 
-**Stage 3.0 complete / Stage 3.1 Free OAuth readiness complete / Stage 3.2 foundation next**
+**Stage 3.0 complete / Stage 3.1 Free OAuth readiness complete / Stage 3.2 foundation + KMS canary ready; live AWS/Vercel gate pending**
 
 Дата ревью внешних контрактов: **2026-09-27**.
 Дата повторного code/architecture audit: **2026-09-27** (`main` baseline `a5b9fc6b4471635b1ed5a4923a8eef58247d88f6`).
 
-Этот документ фиксирует архитектуру следующего этапа после закрытых Stage 1 и Stage 2.
-Он не создаёт ключи, не меняет production database schema и не включает платные модели.
-Реализация начинается только отдельными PR после повторной проверки внешних API.
+Этот документ фиксирует архитектуру Stage 3 после закрытых Stage 1 и Stage 2.
+На текущем `main` уже реализованы OAuth PKCE protocol foundation, encrypted credential schema,
+AES-256-GCM envelope codec, AWS KMS/Vercel OIDC adapter, CloudFormation IaC и reusable KMS canary.
+Production credential tables созданы, но хранение пользовательских OpenRouter credentials остаётся disabled
+до развёртывания AWS/Vercel OIDC infrastructure и успешного live preview canary.
+Платные platform-funded модели по-прежнему не включены.
 
 ## 1. Цель
 
