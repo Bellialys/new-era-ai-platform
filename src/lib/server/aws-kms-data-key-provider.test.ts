@@ -2,7 +2,20 @@ import {
   DecryptCommand,
   GenerateDataKeyCommand,
 } from "@aws-sdk/client-kms";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const oidcProviderCalls = vi.hoisted(() => [] as Array<Record<string, unknown>>);
+
+vi.mock("@vercel/oidc-aws-credentials-provider", () => ({
+  awsCredentialsProvider: (options: Record<string, unknown>) => {
+    oidcProviderCalls.push(options);
+    return async () => ({
+      accessKeyId: "test",
+      secretAccessKey: "test",
+      sessionToken: "test",
+    });
+  },
+}));
 import type { CredentialEncryptionContext } from "./credential-crypto";
 import {
   AwsKmsConfigurationError,
@@ -167,6 +180,26 @@ describe("AWS KMS data-key provider", () => {
     ).rejects.toThrow("accepted an unexpected encryption-context key");
 
     expect([...sdkPlaintext]).toEqual(new Array(32).fill(0));
+  });
+
+  it("passes the configured AWS region into the Vercel OIDC credential provider", () => {
+    oidcProviderCalls.length = 0;
+
+    const provider = createAwsKmsDataKeyProviderFromEnv({
+      AWS_REGION: "eu-west-1",
+      AWS_ROLE_ARN: "arn:aws:iam::123456789012:role/new-era-vercel-kms",
+      AI_CREDENTIAL_KMS_KEY_ID:
+        "arn:aws:kms:eu-west-1:123456789012:key/00000000-0000-0000-0000-000000000000",
+    });
+
+    expect(provider).toBeInstanceOf(AwsKmsDataKeyProvider);
+    expect(oidcProviderCalls).toHaveLength(1);
+    expect(oidcProviderCalls[0]).toMatchObject({
+      roleArn: "arn:aws:iam::123456789012:role/new-era-vercel-kms",
+      clientConfig: {
+        region: "eu-west-1",
+      },
+    });
   });
 
   it("requires the documented KMS id and rejects static AWS credentials", () => {
