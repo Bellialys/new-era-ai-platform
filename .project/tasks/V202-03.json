@@ -1,0 +1,43 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V202-03",
+  "title": "Stage 3.3 Usage Event Mapping Contract",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V202-03.json",
+    "src/lib/server/openrouter-usage.ts",
+    "src/lib/server/openrouter-usage.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "usage:no-secret-contract",
+    "usage:actual-cost-contract",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T02:02:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T02:02:00+03:00",
+      "note": "Stacked after unified gateway foundation while Vercel rate limiting blocks merge checks on the parent PR."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T02:02:00+03:00",
+      "note": "Define a pure safe telemetry mapping contract only; no Supabase persistence or schema change."
+    }
+  ],
+  "notes": "Pure mapping layer. It must preserve billing/cost/provider metadata while refusing to serialize credential secrets or arbitrary provider payloads."
+}
