@@ -3,6 +3,14 @@ import {
   GenerateDataKeyCommand,
 } from "@aws-sdk/client-kms";
 import { describe, expect, it, vi } from "vitest";
+import type { CredentialEncryptionContext } from "./credential-crypto";
+import {
+  AwsKmsConfigurationError,
+  AwsKmsDataKeyProvider,
+  createAwsKmsDataKeyProviderFromEnv,
+  runAwsKmsExtraContextPolicyCanary,
+  type KmsClientLike,
+} from "./aws-kms-data-key-provider";
 
 const oidcProviderCalls = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 
@@ -16,14 +24,6 @@ vi.mock("@vercel/oidc-aws-credentials-provider", () => ({
     });
   },
 }));
-import type { CredentialEncryptionContext } from "./credential-crypto";
-import {
-  AwsKmsConfigurationError,
-  AwsKmsDataKeyProvider,
-  createAwsKmsDataKeyProviderFromEnv,
-  runAwsKmsExtraContextPolicyCanary,
-  type KmsClientLike,
-} from "./aws-kms-data-key-provider";
 
 const context: CredentialEncryptionContext = {
   credentialId: "00000000-0000-4000-8000-000000000001",
