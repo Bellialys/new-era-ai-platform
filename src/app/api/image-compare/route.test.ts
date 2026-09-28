@@ -30,6 +30,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 const consoleWarnMock = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+const originalPaidImageArenaEnv = process.env.ENABLE_PAID_IMAGE_ARENA;
 
 import { POST } from "./route";
 import {
@@ -117,6 +118,8 @@ function mockStorageClient(
 }
 
 beforeEach(() => {
+  process.env.ENABLE_PAID_IMAGE_ARENA = "true";
+
   resolveIdentityMock.mockReset();
   checkRateLimitMock.mockReset();
   getApiKeyMock.mockReset();
@@ -137,10 +140,32 @@ beforeEach(() => {
 });
 
 afterAll(() => {
+  if (originalPaidImageArenaEnv === undefined) {
+    delete process.env.ENABLE_PAID_IMAGE_ARENA;
+  } else {
+    process.env.ENABLE_PAID_IMAGE_ARENA = originalPaidImageArenaEnv;
+  }
   consoleWarnMock.mockRestore();
 });
 
 describe("POST /api/image-compare — identity and rate limiting", () => {
+  it("fails closed before any paid provider work when the paid-image switch is absent", async () => {
+    delete process.env.ENABLE_PAID_IMAGE_ARENA;
+
+    const response = await POST(makeRequest(VALID_BODY));
+    const body = await response.json() as { error?: string; message?: string };
+
+    expect(response.status).toBe(503);
+    expect(body).toEqual({
+      error: "IMAGE_PAID_GENERATION_DISABLED",
+      message: "Image generation is temporarily unavailable.",
+    });
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    expect(getClientMock).not.toHaveBeenCalled();
+    expect(getApiKeyMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("returns 401 for an unauthenticated caller", async () => {
     resolveIdentityMock.mockResolvedValue({ kind: "none", userId: null, guestId: null });
 
