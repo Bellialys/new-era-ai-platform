@@ -43,7 +43,26 @@ KMS calls are additionally constrained to the exact encryption-context key set
 
 Preview and production get separate trust subjects and separate role ARNs. A preview deployment therefore cannot assume the production role even though both roles use the same KMS key.
 
-This lets the first live KMS smoke test run in preview without broadening the production trust boundary.
+This lets the first live KMS smoke test run in preview without letting a preview token assume the production IAM role.
+
+### Environment-isolation caveat
+
+The current MVP CloudFormation stack intentionally uses **one KMS key for both preview and production roles**. Separate role trust policies stop a preview deployment from assuming the production role, but they do **not** create cryptographic separation at the KMS-key boundary: both roles currently have `kms:GenerateDataKey` and `kms:Decrypt` on the same key with the same `credential_id/provider/origin` context policy.
+
+Therefore, if a preview runtime could obtain production `secret_ciphertext + encrypted_dek + encryption context`, the shared KMS key alone would not prevent decryption.
+
+This is acceptable only for the current canary phase because real provider credentials are not persisted yet. Before encrypted OpenRouter credential persistence is activated, complete a dedicated environment-isolation review and choose one of these designs:
+
+1. **Preferred:** separate preview and production KMS keys, with each IAM role scoped only to its environment key.
+2. **Alternative:** add an explicit environment dimension to the encryption context and IAM/KMS conditions, with a reviewed persistence/restore contract.
+
+Until that review is closed:
+
+- preview must not be treated as cryptographically isolated from production merely because it has a different IAM role;
+- provider credential persistence remains disabled;
+- preview must not be granted production credential-row access as part of the canary workflow.
+
+Using separate customer-managed KMS keys may increase KMS key cost, so this remains an explicit pre-persistence security/cost decision rather than a silent architecture change.
 
 ## Deployment
 
