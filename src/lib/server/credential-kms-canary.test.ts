@@ -28,7 +28,9 @@ function contextBoundProvider(): CredentialDataKeyProvider {
         generatedContext.provider !== context.provider ||
         generatedContext.origin !== context.origin
       ) {
-        throw new Error("encryption context mismatch");
+        const error = new Error("encryption context mismatch");
+        error.name = "InvalidCiphertextException";
+        throw error;
       }
       return new Uint8Array(key);
     },
@@ -58,7 +60,36 @@ describe("credential KMS canary", () => {
 
     await expect(runCredentialKmsCanary(provider)).rejects.toMatchObject({
       name: "CredentialKmsCanaryError",
-      code: "KMS_CANARY_ROUND_TRIP_FAILED",
+      code: "KMS_CANARY_OPERATION_FAILED",
+    });
+  });
+
+  it("fails when the negative context check is inconclusive", async () => {
+    const key = new Uint8Array(32).fill(13);
+    let decryptCalls = 0;
+    const provider: CredentialDataKeyProvider = {
+      async generateDataKey() {
+        return {
+          plaintextKey: new Uint8Array(key),
+          encryptedKey: new Uint8Array([4, 5, 6]),
+          kmsKeyId: "kms-key-ref",
+        };
+      },
+      async decryptDataKey() {
+        decryptCalls += 1;
+        if (decryptCalls === 1) {
+          return new Uint8Array(key);
+        }
+
+        const error = new Error("transient provider failure");
+        error.name = "ThrottlingException";
+        throw error;
+      },
+    };
+
+    await expect(runCredentialKmsCanary(provider)).rejects.toMatchObject({
+      name: "CredentialKmsCanaryError",
+      code: "KMS_CANARY_OPERATION_FAILED",
     });
   });
 
