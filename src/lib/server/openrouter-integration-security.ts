@@ -1,6 +1,9 @@
 import type { NextRequest } from "next/server";
 import { ApiError } from "./utils";
-import { isOpenRouterOAuthBetaAvailable } from "./openrouter-integration-config";
+import {
+  isOpenRouterOAuthBetaAvailable,
+  type OpenRouterIntegrationEnvironment,
+} from "./openrouter-integration-config";
 
 export function requireSameOriginMutation(request: NextRequest): void {
   const origin = request.headers.get("origin");
@@ -21,7 +24,7 @@ export function requireSameOriginMutation(request: NextRequest): void {
 }
 
 export function requireOpenRouterOAuthBetaAvailable(
-  env: NodeJS.ProcessEnv = process.env
+  env: OpenRouterIntegrationEnvironment = process.env
 ): void {
   if (!isOpenRouterOAuthBetaAvailable(env)) {
     throw new ApiError(
