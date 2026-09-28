@@ -16,6 +16,32 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.2 KMS live-canary foundation - 2026-09-28
+
+### Added
+
+- Added server-only `runCredentialKmsCanary` as the reusable live readiness verifier.
+- Canary performs the existing AES-256-GCM credential-envelope round-trip through an injected `CredentialDataKeyProvider`.
+- The negative verification calls the provider layer directly with a different opaque `credential_id`, so AES-GCM AAD cannot mask a KMS enforcement failure.
+- A context mismatch is accepted as proof only when AWS KMS reports `InvalidCiphertextException`, matching the AWS KMS Decrypt contract for invalid additional authenticated data/encryption context.
+- Throttling, timeout, expired credentials and other operational errors fail closed as `KMS_CANARY_OPERATION_FAILED`.
+- If a provider incorrectly decrypts the mismatched context, any returned plaintext key is zeroed before the canary throws `KMS_CANARY_CONTEXT_MISMATCH_ACCEPTED`.
+- The exported canary interface documents its live KMS side effects, injected provider contract, safe result and error codes.
+
+### Verified
+
+- Unit coverage includes successful round-trip/context rejection, data-key-generation failure, inconclusive throttling failure and a provider that incorrectly accepts the wrong context.
+- Audit, typecheck, lint, full tests, env/model verifier tests, build, state/docs checks and smoke passed.
+- Vercel preview passed.
+- Both security review findings were fixed and resolved before merge.
+
+### Safety boundary
+
+- No API route invokes the canary yet.
+- No AWS resource or Vercel environment was changed.
+- No provider credential persistence, OpenRouter call or paid traffic was activated.
+- Live invocation remains blocked until the AWS CloudFormation stack and Vercel OIDC/env mapping are configured.
+
 ## Full synchronization audit and schema-check hardening - 2026-09-28
 
 ### Verified
