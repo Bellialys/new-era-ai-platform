@@ -647,7 +647,9 @@ Remaining external infrastructure gate:
 7. invoke the prepared preview extra-context policy canary and require `AccessDeniedException` as the negative proof;
 8. only after both preview canaries pass, map the production role/environment values and perform the production-readiness review.
 
-Stage 3.2 is not marked complete until the env-readiness check and **both** preview live KMS canaries pass.
+Stage 3.2 live infrastructure evidence requires the env-readiness check and **both** preview KMS canaries to pass.
+
+Before persistent provider credentials are activated, there is one additional environment-isolation decision: the current MVP IaC gives preview and production roles access to the same KMS key. Role separation prevents cross-environment role assumption but does not prevent a preview principal from decrypting production ciphertext if it can obtain the ciphertext, wrapped DEK and matching context. Preferred production design is separate KMS keys per environment; the alternative is an explicit environment-bound encryption-context/IAM design. No real provider credential persistence is enabled until this boundary is reviewed and implemented.
 
 ### Stage 3.3 — Pricing + actual usage
 
