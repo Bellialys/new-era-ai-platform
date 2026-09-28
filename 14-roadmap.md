@@ -93,6 +93,10 @@ v2.0.0-alpha.1 - AI Team Mode
 # Stage 3.2 IAM/KMS policy canary ✅: reusable raw GenerateDataKey probe with an extra encryption-context key merged; only AWS AccessDeniedException counts as proof, and any unexpectedly returned plaintext DEK is wiped
 # Stage 3.2 remaining external blocker: deploy infra/aws-kms-vercel-oidc.yaml in AWS, enable Vercel OIDC in Team Issuer mode, map stack outputs to Vercel env, run the KMS env-readiness check, then invoke both prepared preview canaries
 # Pre-persistence security gate: current MVP IaC shares one KMS key between preview/production; DEC-022 proposes separate preview/production KMS keys as preferred isolation, but recurring AWS key cost requires explicit approval before IaC switches from one key to two
+# Stage 3.3 remains intentionally skipped for now; open PRs #101/#102 are not dependencies of the Stage 3.4 branch
+# Stage 3.4 OAuth beta foundation 🟡: auth-only connect/callback/status/disconnect, signed short-lived PKCE flow state, encrypted credential lifecycle, server-side funding resolver and profile UI are implemented behind fail-closed flags in PR #104
+# Stage 3.4 activation gate: ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE stays false until Stage 3.2 live KMS/OIDC + environment-isolation gates pass; ENABLE_OPENROUTER_USER_OAUTH also defaults false
+# Because Stage 3.3 inference gateway cutover is intentionally skipped, current Arena requests still use the legacy platform credential path; Stage 3.4 does not silently route inference through the connected user credential
 # Separate operational issue remains: GitHub Actions OPENROUTER_API_KEY secret must be restored for scheduled live models:verify
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
 # scheduled live models:verify считается operational после первого подтверждённого live run
