@@ -91,7 +91,17 @@ Preview:
 
 Do not configure `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, or `AWS_SESSION_TOKEN`. The runtime adapter rejects static AWS credentials.
 
-Vercel OIDC must be enabled for the project so deployments receive a short-lived OIDC token. The IAM role then uses `sts:AssumeRoleWithWebIdentity`.
+Vercel OIDC must be enabled for the project so deployments receive a short-lived OIDC token.
+
+For this CloudFormation template, enable **Team Issuer** mode. The trust policy is intentionally scoped to:
+
+- issuer: `https://oidc.vercel.com/bellial-s-projects`;
+- audience: `https://vercel.com/bellial-s-projects`;
+- subject: `owner:bellial-s-projects:project:new-era-ai-platform:environment:<preview|production>`.
+
+The current application calls `awsCredentialsProvider({ roleArn })` without a custom audience, so the expected default audience remains `https://vercel.com/bellial-s-projects`. If the code is later changed to request a custom audience such as `sts.amazonaws.com`, the IAM OIDC provider/client-id and role trust condition must be reviewed and updated in the same change.
+
+The IAM role then uses `sts:AssumeRoleWithWebIdentity`.
 
 ## Environment readiness check
 

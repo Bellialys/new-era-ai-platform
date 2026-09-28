@@ -2,16 +2,18 @@
 
 ## Статус
 
-**Stage 3.0 complete / Stage 3.1 Free OAuth readiness complete / Stage 3.2 foundation + KMS canary ready; live AWS/Vercel gate pending**
+**Stage 3.0 complete / Stage 3.1 Free OAuth readiness complete / Stage 3.2 foundation + env-readiness + both KMS canaries ready; live AWS/Vercel Team Issuer gate pending**
 
 Дата ревью внешних контрактов: **2026-09-27**.
 Дата повторного code/architecture audit: **2026-09-27** (`main` baseline `a5b9fc6b4471635b1ed5a4923a8eef58247d88f6`).
 
 Этот документ фиксирует архитектуру Stage 3 после закрытых Stage 1 и Stage 2.
 На текущем `main` уже реализованы OAuth PKCE protocol foundation, encrypted credential schema,
-AES-256-GCM envelope codec, AWS KMS/Vercel OIDC adapter, CloudFormation IaC и reusable KMS canary.
+AES-256-GCM envelope codec, AWS KMS/Vercel OIDC adapter, CloudFormation IaC, dedicated KMS env-readiness checker,
+reusable round-trip/context-mismatch canary и extra-context IAM/KMS policy canary.
 Production credential tables созданы, но хранение пользовательских OpenRouter credentials остаётся disabled
-до развёртывания AWS/Vercel OIDC infrastructure и успешного live preview canary.
+до развёртывания AWS/Vercel OIDC Team Issuer infrastructure, успешного `--mode=kms` readiness check
+и успешного прохождения обоих live preview canaries.
 Платные platform-funded модели по-прежнему не включены.
 
 ## 1. Цель
@@ -628,18 +630,24 @@ Completed:
 - AWS KMS adapter implements `GenerateDataKey(AES_256)` + `Decrypt`;
 - adapter uses Vercel OIDC and rejects static AWS access credentials;
 - project runtime contract uses `AWS_REGION`, `AWS_ROLE_ARN`, `AI_CREDENTIAL_KMS_KEY_ID`;
-- review hardening wipes both the SDK-owned plaintext DEK and crypto working copy;
+- `npm run env:check -- --mode=kms` requires those three values and fails closed if static AWS credentials are present;
+- reusable round-trip/context-mismatch canary requires AWS `InvalidCiphertextException` for a changed `credential_id`;
+- reusable extra-context policy canary requires AWS `AccessDeniedException` when an unexpected encryption-context key is sent;
+- review hardening wipes SDK-owned plaintext DEK buffers, crypto working copies and any plaintext unexpectedly returned by the policy canary;
 - no inference routing change and no credential persistence activation yet.
 
 Remaining external infrastructure gate:
 
-- create/configure AWS OIDC provider for the Vercel team/project production subject;
-- create least-privilege IAM role with only required KMS permissions on the selected key;
-- create/select symmetric KMS `ENCRYPT_DECRYPT` key;
-- configure the three server-side Vercel values;
-- perform a live `GenerateDataKey -> encrypt -> Decrypt -> decrypt` canary without storing a real OpenRouter user credential.
+1. enable Vercel OIDC in **Team Issuer** mode for issuer `https://oidc.vercel.com/bellial-s-projects`;
+2. deploy `infra/aws-kms-vercel-oidc.yaml` in AWS, creating/reusing the team OIDC provider, symmetric KMS key, preview role and production role;
+3. verify the preview trust subject is `owner:bellial-s-projects:project:new-era-ai-platform:environment:preview` and production uses the equivalent `environment:production` subject;
+4. map preview `AWS_REGION`, `AWS_ROLE_ARN=PreviewRoleArn` and `AI_CREDENTIAL_KMS_KEY_ID=CredentialKmsKeyArn`; static AWS credential variables must remain absent;
+5. run `npm run env:check -- --mode=kms` successfully in the target environment;
+6. invoke the prepared preview round-trip/context-mismatch canary without storing a real OpenRouter user credential;
+7. invoke the prepared preview extra-context policy canary and require `AccessDeniedException` as the negative proof;
+8. only after both preview canaries pass, map the production role/environment values and perform the production-readiness review.
 
-Stage 3.2 is not marked complete until this live KMS canary passes.
+Stage 3.2 is not marked complete until the env-readiness check and **both** preview live KMS canaries pass.
 
 ### Stage 3.3 — Pricing + actual usage
 
@@ -882,15 +890,11 @@ Implementation begins only when:
 - acceptable key cardinality/provisioning scale is confirmed;
 - first implementation PR does not enable paid traffic.
 
-**Current gate:** Stage 3.0 and the Free-first Stage 3.1 readiness are complete. **Stage 3.2 is now allowed.** Runtime user-key persistence remains disabled until the credential schema + encryption boundary are implemented and verified. Management API, Guardrail, platform-paid budget and key-cardinality evidence are deferred to the future platform-funded Stage 3.5 and no longer block OAuth PKCE groundwork.
+**Current gate:** Stage 3.0 and the Free-first Stage 3.1 readiness are complete. Stage 3.2 code/data/crypto/KMS/IaC/readiness-canary foundations are implemented. Runtime user-key persistence remains disabled until the real AWS/Vercel OIDC infrastructure is deployed and both preview live KMS canaries pass. Management API, Guardrail, platform-paid budget and key-cardinality evidence are deferred to the future platform-funded Stage 3.5 and no longer block OAuth PKCE groundwork.
 
-Recommended first implementation PR:
+Historical first implementation slice is complete: credential/funding schema, domain types and encryption foundations are already merged.
 
-```text
-feat(provider): add OpenRouter credential and funding foundation
-```
-
-It creates schema/types/service interfaces/tests only. It must not provision real user keys or enable BYOK traffic yet.
+**Current next operational step:** deploy the reviewed AWS/Vercel OIDC infrastructure and execute the documented env-readiness check plus both preview KMS canaries. It must still not persist a real user OpenRouter key or enable BYOK traffic until that live gate is closed.
 
 ## 25. External references reviewed
 
