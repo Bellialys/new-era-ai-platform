@@ -7,6 +7,8 @@ const COOKIE_VERSION = 1;
 const MIN_SIGNING_SECRET_BYTES = 32;
 const STATE_PATTERN = /^[A-Za-z0-9_-]{32,256}$/;
 const VERIFIER_PATTERN = /^[A-Za-z0-9._~-]{43,128}$/;
+type OAuthSessionEnvironment = Readonly<Record<string, string | undefined>>;
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -43,7 +45,7 @@ function signingSecretBytes(secret: string): Buffer {
 }
 
 export function getOpenRouterOAuthCookieSigningSecret(
-  env: NodeJS.ProcessEnv = process.env
+  env: OAuthSessionEnvironment = process.env
 ): string {
   const secret = env.OPENROUTER_OAUTH_COOKIE_SECRET?.trim();
   if (!secret) {
