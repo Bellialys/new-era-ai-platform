@@ -157,7 +157,7 @@ export class AwsKmsDataKeyProvider implements CredentialDataKeyProvider {
       })
     )) as DecryptCommandOutput;
 
-    return copyRequiredBytes(
+    return copyAndWipeSensitiveBytes(
       output.Plaintext,
       "decrypted data key",
       AES_256_KEY_BYTES

@@ -56,11 +56,12 @@ describe("AWS KMS data-key provider", () => {
 
   it("decrypts only with the stored KMS key id and matching context", async () => {
     const commands: unknown[] = [];
+    const sdkPlaintext = new Uint8Array(32).fill(3);
     const client: KmsClientLike = {
       async send(command) {
         commands.push(command);
         return {
-          Plaintext: new Uint8Array(32).fill(3),
+          Plaintext: sdkPlaintext,
           KeyId: "kms-key-ref",
           $metadata: {},
         };
@@ -75,6 +76,8 @@ describe("AWS KMS data-key provider", () => {
     );
 
     expect(plaintext).toHaveLength(32);
+    expect([...plaintext]).toEqual(new Array(32).fill(3));
+    expect([...sdkPlaintext]).toEqual(new Array(32).fill(0));
     const command = commands[0];
     expect(command).toBeInstanceOf(DecryptCommand);
     expect((command as DecryptCommand).input).toMatchObject({
