@@ -1,0 +1,42 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V202-01",
+  "title": "Stage 3.3 Provider Usage Contract",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V202-01.json",
+    "src/lib/server/openrouter.ts",
+    "src/lib/server/openrouter.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "openrouter:usage-contract",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T01:36:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T01:36:00+03:00",
+      "note": "Stage 3.3 started in parallel while Codex owns the remaining Stage 3.2 live AWS/OIDC gate."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T01:36:00+03:00",
+      "note": "Add provider-reported usage/cost metadata and usage include request contract without switching routes, credentials, DB schema or funding source."
+    }
+  ],
+  "notes": "Backwards-compatible transport contract only. Existing routes keep using the legacy shared OPENROUTER_API_KEY. No user credential persistence, DB migration, paid catalog or Stage 3.2 file is changed."
+}
