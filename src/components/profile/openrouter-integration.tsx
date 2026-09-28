@@ -26,43 +26,52 @@ export function OpenRouterIntegration() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<UiMessage>(null);
 
-  async function loadStatus() {
-    try {
-      const response = await fetch("/api/integrations/openrouter", {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        setIntegration(null);
-        return;
-      }
-      const body = (await response.json()) as StatusResponse;
-      setEnabled(body.enabled);
-      setIntegration(body.integration);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    void loadStatus();
+    let active = true;
 
-    const params = new URLSearchParams(window.location.search);
-    const result = params.get("openrouter");
-    const code = params.get("code");
-    if (result === "connected") {
-      setMessage({
-        kind: "success",
-        text: "OpenRouter подключён. Для AI-запросов выбран ваш OpenRouter аккаунт.",
-      });
-    } else if (result === "error") {
-      setMessage({
-        kind: "error",
-        text:
-          code === "OPENROUTER_ALREADY_CONNECTED"
-            ? "OpenRouter уже подключён."
-            : "Подключение OpenRouter не завершено. Попробуйте ещё раз.",
-      });
+    async function initialize() {
+      try {
+        const response = await fetch("/api/integrations/openrouter", {
+          cache: "no-store",
+        });
+        if (!active) return;
+
+        if (!response.ok) {
+          setIntegration(null);
+        } else {
+          const body = (await response.json()) as StatusResponse;
+          if (!active) return;
+          setEnabled(body.enabled);
+          setIntegration(body.integration);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+
+      if (!active) return;
+      const params = new URLSearchParams(window.location.search);
+      const result = params.get("openrouter");
+      const code = params.get("code");
+      if (result === "connected") {
+        setMessage({
+          kind: "success",
+          text: "OpenRouter подключён. Для AI-запросов выбран ваш OpenRouter аккаунт.",
+        });
+      } else if (result === "error") {
+        setMessage({
+          kind: "error",
+          text:
+            code === "OPENROUTER_ALREADY_CONNECTED"
+              ? "OpenRouter уже подключён."
+              : "Подключение OpenRouter не завершено. Попробуйте ещё раз.",
+        });
+      }
     }
+
+    void initialize();
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function connect() {
