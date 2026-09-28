@@ -272,6 +272,50 @@
         "message": "must be the credential-encryption KMS key ARN or key id"
       },
       "example": "arn:aws:kms:eu-west-1:123456789012:key/00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "name": "ENABLE_OPENROUTER_USER_OAUTH",
+      "required": false,
+      "category": "config",
+      "groups": [
+        "basic",
+        "full"
+      ],
+      "validation": {
+        "type": "regex",
+        "pattern": "^(true|false)$",
+        "message": "must be true or false"
+      },
+      "example": "false"
+    },
+    {
+      "name": "ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE",
+      "required": false,
+      "category": "config",
+      "groups": [
+        "basic",
+        "full"
+      ],
+      "validation": {
+        "type": "regex",
+        "pattern": "^(true|false)$",
+        "message": "must be true or false"
+      },
+      "example": "false"
+    },
+    {
+      "name": "OPENROUTER_OAUTH_COOKIE_SECRET",
+      "required": false,
+      "category": "secret",
+      "groups": [
+        "full"
+      ],
+      "validation": {
+        "type": "regex",
+        "pattern": "^.{32,}$",
+        "message": "must be at least 32 characters when configured"
+      },
+      "example": "replace-with-at-least-32-random-characters"
     }
   ]
 }
