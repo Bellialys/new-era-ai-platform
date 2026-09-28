@@ -9,7 +9,9 @@ Parameters:
     Default: ""
     Description: >
       Optional existing IAM OIDC provider ARN for
-      https://oidc.vercel.com/bellial-s-projects. Leave empty to create it.
+      https://oidc.vercel.com/bellial-s-projects. The reused provider MUST
+      already include sts.amazonaws.com in its ClientIDList. Leave empty to
+      create a provider with the required AWS STS audience.
 
 Conditions:
   CreateVercelOidcProvider: !Equals [!Ref ExistingVercelOidcProviderArn, ""]
