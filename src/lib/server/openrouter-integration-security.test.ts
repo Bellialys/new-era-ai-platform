@@ -38,14 +38,14 @@ describe("OpenRouter integration security", () => {
 
   it("fails closed unless both beta gates are enabled", () => {
     expect(() =>
-      requireOpenRouterOAuthBetaAvailable({} as NodeJS.ProcessEnv)
+      requireOpenRouterOAuthBetaAvailable({})
     ).toThrow("not enabled");
 
     expect(() =>
       requireOpenRouterOAuthBetaAvailable({
         ENABLE_OPENROUTER_USER_OAUTH: "true",
         ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE: "true",
-      } as NodeJS.ProcessEnv)
+      })
     ).not.toThrow();
   });
 });
