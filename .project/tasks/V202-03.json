@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V202-03",
   "title": "Stage 3.3 Usage Event Mapping Contract",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -22,9 +22,20 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-29T02:02:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "usage:no-secret-contract",
+    "usage:actual-cost-contract",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-29T02:10:00+03:00",
+  "commitHash": "02e67429707733c1fdca029fe282c27e61c280b9",
   "transitions": [
     {
       "from": null,
@@ -37,7 +48,19 @@
       "to": "in_progress",
       "at": "2026-09-29T02:02:00+03:00",
       "note": "Define a pure safe telemetry mapping contract only; no Supabase persistence or schema change."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-29T02:09:30+03:00",
+      "note": "Dedicated validation passed audit, typecheck, lint, full tests, production build, state/docs checks and local production smoke."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-29T02:10:00+03:00",
+      "note": "Safe usage-event mapping contract completed with no persistence or schema mutation."
     }
   ],
-  "notes": "Pure mapping layer. It must preserve billing/cost/provider metadata while refusing to serialize credential secrets or arbitrary provider payloads."
+  "notes": "Completed pure telemetry mapping layer. Requested and provider-returned model identifiers remain distinct; actual cost is provider-reported or unknown; arbitrary extra properties including credentials are excluded by construction."
 }
