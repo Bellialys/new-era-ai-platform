@@ -16,6 +16,27 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.4 OpenRouter OAuth user beta foundation - 2026-09-29
+
+### Added
+
+- Added authenticated OpenRouter OAuth PKCE connection control-plane: connect, callback, safe status and disconnect routes.
+- Added a signed, user-bound, httpOnly OAuth flow cookie with a 10-minute verifier/state lifetime and dedicated server-only signing secret.
+- Added same-origin mutation protection and per-user rate limits for connection operations.
+- Added encrypted `user_oauth` credential persistence through the existing AES-256-GCM + AWS KMS boundary.
+- Added a server-only funding resolver that returns only billing source + opaque credential id and never the provider secret.
+- Added profile UI that exposes only safe connection metadata/fingerprint.
+- Disconnect now moves funding back to `platform` and clears the live ciphertext, wrapped DEK and KMS key id while retaining only safe non-secret status.
+- Added fail-closed rollout flags `ENABLE_OPENROUTER_USER_OAUTH=false` and `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false`.
+- Added regression coverage for signed flow integrity/expiry/user binding, rollout gates and same-origin mutation protection.
+
+### Safety and sequencing
+
+- Stage 3.3 remains intentionally skipped; PRs #101/#102 are not dependencies of the Stage 3.4 branch.
+- Current Arena inference is not switched to the connected user credential in this slice because that routing cutover belongs to the Stage 3.3 unified gateway.
+- `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` must stay false until Stage 3.2 live AWS/Vercel KMS canaries and the preview/production KMS isolation gate are complete.
+- No Vercel flag is enabled, no real user OpenRouter credential is persisted, no paid-model catalog is expanded and no platform-paid traffic is enabled by this change.
+
 ## Stage 3.2 KMS environment-isolation cost decision - 2026-09-28
 
 ### Proposed
