@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-14",
   "title": "Bind Vercel AWS OIDC to AWS-Specific Audience",
-  "status": "done",
+  "status": "in_progress",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -23,20 +23,9 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [
-    "typecheck",
-    "lint",
-    "test",
-    "build",
-    "state:check",
-    "docs:check",
-    "kms:oidc-audience-unit",
-    "cfn:contract-review",
-    "diff:check",
-    "audit"
-  ],
-  "lastUpdated": "2026-09-28T23:50:00+03:00",
-  "commitHash": "92c1187933a14dca69c964a05ec851bf3307d7fa",
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T00:15:00+03:00",
+  "commitHash": null,
   "transitions": [
     {
       "from": null,
@@ -61,6 +50,12 @@
       "to": "done",
       "at": "2026-09-28T23:50:00+03:00",
       "note": "AWS-specific OIDC audience hardening completed before live AWS deployment. No AWS resource, env, credential, database, route or paid traffic mutation."
+    },
+    {
+      "from": "done",
+      "to": "in_progress",
+      "at": "2026-09-29T00:15:00+03:00",
+      "note": "Reopened after PR review correctly found that an existing reused OIDC provider could lack the new sts.amazonaws.com client ID."
     }
   ],
   "notes": "Completed pre-deployment security hardening. Vercel custom OIDC audience is now provider-specific (sts.amazonaws.com), reducing cross-service token replay risk."
