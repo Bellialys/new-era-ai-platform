@@ -16,6 +16,36 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Full synchronization audit and schema-check hardening - 2026-09-28
+
+### Verified
+
+- GitHub `main` is `1f611670`; project state has no active task before this audit and the latest main CI is green.
+- Production Vercel deployment for the same SHA is `READY`; canonical production alias `/api/health` returns HTTP 200 and Vercel reports no grouped runtime errors in the last 7 days.
+- Repository and production Supabase migration histories match through `20260927212853_stage3_provider_credentials`.
+- Production model catalog contains 31 historical rows and exactly 8 active/public rows; the active set matches the eight-item runtime fallback catalog and current Team/Judge defaults remain inside that governed set.
+- All required public tables currently have RLS enabled.
+- Stage 3 credential/funding tables are empty, have no orphan user references, and expose no direct `anon`/`authenticated` table grants.
+- Auth users and profile rows are in sync. One preserved Prompt Arena task predates creation of `anonymous_sessions` and therefore has a historical guest identifier without a matching session row; it is retained because its three model responses are still valid historical data.
+- Storage configuration matches the current product contracts: private 2 MiB `avatars` and public 5 MiB `images`, both limited to PNG/JPEG/WebP. Avatar object policies remain owner-scoped.
+- Supabase security advisor has one existing account-level warning: leaked-password protection is disabled. No new schema security lint was introduced by Stage 3.
+- Scheduled `models:verify` still fails only because GitHub Actions secret `OPENROUTER_API_KEY` is absent; its local/mock verifier tests pass.
+
+### Hardened
+
+- `schema:check` now includes `provider_credentials` and `ai_funding_preferences`, their critical columns and Stage 3 CHECK constraints.
+- The checker now fails if RLS is disabled on any required public table.
+- The checker now verifies the `images` bucket alongside `avatars`.
+- Stage 3 credential/funding browser grants must remain fully denied while required service-role DML grants remain present.
+- `35-database-schema-sync.md` is updated to match the actual v2 + Stage 3 database contract.
+
+### Not changed
+
+- No production DDL or data mutation was required by this audit.
+- The pre-guest historical task was not deleted or rewritten.
+- AWS live infrastructure/OIDC/canary remains deferred until the user is available.
+- Stage 3.3 runtime work remains blocked on successful Stage 3.2 live KMS canary.
+
 ## Stage 3.2 AWS KMS infrastructure IaC - 2026-09-28
 
 ### Added
