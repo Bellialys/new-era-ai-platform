@@ -31,6 +31,7 @@ export interface OpenRouterUsageEvent {
     costUsd: number | null;
     costSource: OpenRouterGatewayResult["usage"]["costSource"];
     providerIsByok: boolean | null;
+    providerModelId: string | null;
   };
   providerIsByok: boolean | null;
   costSource: OpenRouterGatewayResult["usage"]["costSource"];
@@ -119,6 +120,7 @@ export function toOpenRouterUsageEvent(
       costUsd,
       costSource,
       providerIsByok,
+      providerModelId: input.result.providerModelId,
     },
     providerIsByok,
     costSource,
