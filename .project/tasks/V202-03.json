@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V202-03",
   "title": "Stage 3.3 Usage Event Mapping Contract",
-  "status": "done",
+  "status": "in_progress",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -22,20 +22,9 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [
-    "typecheck",
-    "lint",
-    "test",
-    "build",
-    "state:check",
-    "docs:check",
-    "usage:no-secret-contract",
-    "usage:actual-cost-contract",
-    "diff:check",
-    "audit"
-  ],
-  "lastUpdated": "2026-09-29T02:10:00+03:00",
-  "commitHash": "02e67429707733c1fdca029fe282c27e61c280b9",
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T02:13:00+03:00",
+  "commitHash": null,
   "transitions": [
     {
       "from": null,
@@ -60,7 +49,13 @@
       "to": "done",
       "at": "2026-09-29T02:10:00+03:00",
       "note": "Safe usage-event mapping contract completed with no persistence or schema mutation."
+    },
+    {
+      "from": "done",
+      "to": "in_progress",
+      "at": "2026-09-29T02:13:00+03:00",
+      "note": "Reopened after schema preflight showed actual provider model must be retained through provider_usage JSONB because the planned usage_events extension has no dedicated provider_model_id column."
     }
   ],
-  "notes": "Completed pure telemetry mapping layer. Requested and provider-returned model identifiers remain distinct; actual cost is provider-reported or unknown; arbitrary extra properties including credentials are excluded by construction."
+  "notes": "Revalidating after adding providerModelId to normalized providerUsage. No DB persistence or schema mutation."
 }
