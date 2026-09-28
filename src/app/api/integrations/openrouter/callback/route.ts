@@ -34,11 +34,14 @@ function profileRedirect(
   return url;
 }
 
-function clearFlowCookie(response: NextResponse): void {
+function clearFlowCookie(
+  response: NextResponse,
+  secure: boolean
+): void {
   response.cookies.set(OPENROUTER_OAUTH_FLOW_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: response.url.startsWith("https://"),
+    secure,
     path: "/api/integrations/openrouter",
     maxAge: 0,
   });
@@ -121,7 +124,7 @@ export async function GET(request: NextRequest) {
       profileRedirect(request, "connected"),
       303
     );
-    clearFlowCookie(response);
+    clearFlowCookie(response, request.nextUrl.protocol === "https:");
 
     logApiRequest(
       "GET",
@@ -136,14 +139,13 @@ export async function GET(request: NextRequest) {
       profileRedirect(request, "error", code),
       303
     );
-    clearFlowCookie(response);
+    clearFlowCookie(response, request.nextUrl.protocol === "https:");
 
     const statusCode =
       error instanceof ApiError
         ? error.statusCode
         : error instanceof OpenRouterOAuthError ||
-            error instanceof OpenRouterOAuthSessionError ||
-            error instanceof OpenRouterCredentialError
+            error instanceof OpenRouterOAuthSessionError
           ? 400
           : 500;
 
