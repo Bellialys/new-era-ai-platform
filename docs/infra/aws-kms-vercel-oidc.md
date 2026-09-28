@@ -91,6 +91,14 @@ Do not configure `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, or `AWS_SESSION_T
 
 Vercel OIDC must be enabled for the project so deployments receive a short-lived OIDC token. The IAM role then uses `sts:AssumeRoleWithWebIdentity`.
 
+## Environment readiness check
+
+After mapping the CloudFormation outputs into the target Vercel environment and before invoking the canary, run:
+
+`npm run env:check -- --mode=kms`
+
+The KMS mode requires `AWS_REGION`, `AWS_ROLE_ARN` and `AI_CREDENTIAL_KMS_KEY_ID`. It fails with the security exit code if `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` or `AWS_SESSION_TOKEN` is present, because the provider-credential KMS path is Vercel OIDC-only.
+
 ## Required live verification
 
 Before enabling provider credential persistence:
