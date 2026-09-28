@@ -1,0 +1,44 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-14",
+  "title": "Bind Vercel AWS OIDC to AWS-Specific Audience",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-14.json",
+    "src/lib/server/aws-kms-data-key-provider.ts",
+    "src/lib/server/aws-kms-data-key-provider.test.ts",
+    "infra/aws-kms-vercel-oidc.yaml"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:oidc-audience-unit",
+    "cfn:contract-review",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T23:48:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T23:48:00+03:00",
+      "note": "Created after reviewing Vercel custom OIDC audience support introduced in 2026."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T23:48:00+03:00",
+      "note": "Use provider-specific audience sts.amazonaws.com in both runtime token exchange and CloudFormation OIDC trust before any live AWS deployment."
+    }
+  ],
+  "notes": "No AWS resource exists yet, so this hardening changes only pre-deployment code/IaC contract. No env, credential, DB, route or paid traffic mutation."
+}
