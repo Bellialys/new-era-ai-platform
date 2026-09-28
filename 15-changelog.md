@@ -16,14 +16,22 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
-## Stage 3.2 Vercel OIDC STS region hardening - 2026-09-28
+## Stage 3.2 KMS extra-context policy canary - 2026-09-28
 
-### Hardened
+### Added
 
-- `awsCredentialsProvider` now receives `clientConfig.region` from the validated `AWS_REGION` value used by the KMS client.
-- STS/OIDC credential resolution no longer relies only on the ambient AWS SDK region chain.
-- Added a regression test that captures the Vercel credential-provider options and verifies the explicit role ARN + region contract.
-- No AWS resource, environment value, credential, database row, route or paid traffic is changed by this patch.
+- Added reusable `runAwsKmsExtraContextPolicyCanary` / `runAwsKmsExtraContextPolicyCanaryFromEnv`.
+- The probe sends one intentional `GenerateDataKey(AES_256)` request with the required `credential_id/provider/origin` context plus one unexpected `policy_probe_extra` key.
+- Only AWS `AccessDeniedException` counts as proof that the IAM/KMS `kms:EncryptionContextKeys` allowlist rejected the extra key.
+- Timeout, throttling, disabled key, expired credentials and other operational failures fail closed instead of being misclassified as a security pass.
+- If AWS unexpectedly accepts the request, any returned plaintext data-key bytes are zeroed before the canary fails.
+- Unit tests cover the expected denial, inconclusive operational failure and unexpected-acceptance zeroization paths.
+- Post-merge CI and production Vercel deployment are green.
+
+### Remaining live gate
+
+- This canary is prepared but has not been invoked against the user's real AWS account.
+- Stage 3.2 still requires AWS stack deployment, Vercel OIDC/env mapping, `--mode=kms` readiness success, round-trip/context-mismatch canary success and extra-context policy canary success before provider credential persistence is enabled.
 
 ## Stage 3.2 KMS environment readiness gate - 2026-09-28
 

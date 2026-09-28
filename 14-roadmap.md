@@ -89,7 +89,9 @@ v2.0.0-alpha.1 - AI Team Mode
 # Stage 3.2 AWS IaC ✅: reviewed CloudFormation stack creates project-scoped Vercel OIDC trust, separate preview/production IAM roles and rotated symmetric KMS key; cfn-lint passed
 # Live Vercel probe: AWS_REGION present; AWS_ROLE_ARN / AI_CREDENTIAL_KMS_KEY_ID / VERCEL_OIDC_TOKEN absent; static AWS access keys absent ✅
 # Stage 3.2 KMS canary foundation ✅: reusable server-only round-trip verifier merged; directly requires AWS KMS InvalidCiphertextException for mismatched credential_id and fails closed on operational errors
-# Stage 3.2 remaining external blocker: deploy infra/aws-kms-vercel-oidc.yaml in AWS, enable Vercel OIDC, map stack outputs to Vercel env, then invoke the prepared preview live KMS canary before credential persistence activation
+# Stage 3.2 KMS env-readiness ✅: npm run env:check -- --mode=kms requires AWS_REGION/AWS_ROLE_ARN/AI_CREDENTIAL_KMS_KEY_ID and fails closed if any static AWS credential variable is present
+# Stage 3.2 IAM/KMS policy canary ✅: reusable raw GenerateDataKey probe with an extra encryption-context key merged; only AWS AccessDeniedException counts as proof, and any unexpectedly returned plaintext DEK is wiped
+# Stage 3.2 remaining external blocker: deploy infra/aws-kms-vercel-oidc.yaml in AWS, enable Vercel OIDC in Team Issuer mode, map stack outputs to Vercel env, run the KMS env-readiness check, then invoke both prepared preview canaries before credential persistence activation
 # Separate operational issue remains: GitHub Actions OPENROUTER_API_KEY secret must be restored for scheduled live models:verify
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
 # scheduled live models:verify считается operational после первого подтверждённого live run
