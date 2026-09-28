@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-14",
   "title": "Bind Vercel AWS OIDC to AWS-Specific Audience",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -23,9 +23,20 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T23:48:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:oidc-audience-unit",
+    "cfn:contract-review",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T23:50:00+03:00",
+  "commitHash": "92c1187933a14dca69c964a05ec851bf3307d7fa",
   "transitions": [
     {
       "from": null,
@@ -38,7 +49,19 @@
       "to": "in_progress",
       "at": "2026-09-28T23:48:00+03:00",
       "note": "Use provider-specific audience sts.amazonaws.com in both runtime token exchange and CloudFormation OIDC trust before any live AWS deployment."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T23:49:30+03:00",
+      "note": "Runtime now requests Vercel OIDC audience sts.amazonaws.com; CloudFormation IAM OIDC client-id and both role trust aud conditions match. cfn-lint passed and unit test asserts audience + region contract."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T23:50:00+03:00",
+      "note": "AWS-specific OIDC audience hardening completed before live AWS deployment. No AWS resource, env, credential, database, route or paid traffic mutation."
     }
   ],
-  "notes": "No AWS resource exists yet, so this hardening changes only pre-deployment code/IaC contract. No env, credential, DB, route or paid traffic mutation."
+  "notes": "Completed pre-deployment security hardening. Vercel custom OIDC audience is now provider-specific (sts.amazonaws.com), reducing cross-service token replay risk."
 }
