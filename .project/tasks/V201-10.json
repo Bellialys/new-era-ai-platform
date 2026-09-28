@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-10",
   "title": "KMS Live Canary Foundation",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -21,9 +21,19 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T22:11:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:canary-unit",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T22:13:00+03:00",
+  "commitHash": "05bcb72ca302e601c1278c6a28db857852b2c23a",
   "transitions": [
     {
       "from": null,
@@ -54,7 +64,19 @@
       "to": "in_progress",
       "at": "2026-09-28T22:11:00+03:00",
       "note": "Reopened after PR review correctly identified that any negative-check error was being treated as proof of context enforcement and that the exported security-sensitive canary contract needed JSDoc."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T22:12:30+03:00",
+      "note": "Review hardening passed full CI. Negative context verification now accepts only AWS KMS InvalidCiphertextException; operational errors fail closed. Exported canary contract is documented with live side effects and error codes."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T22:13:00+03:00",
+      "note": "Both security review threads resolved with regression coverage and AWS-documented error semantics. No live AWS invocation or runtime activation occurred."
     }
   ],
-  "notes": "Review hardening in progress. Only AWS KMS InvalidCiphertextException may prove mismatched encryption-context rejection; operational failures must fail the canary."
+  "notes": "Review-hardened KMS canary foundation is ready for later live invocation after AWS/Vercel OIDC setup. No route or persistence activation."
 }
