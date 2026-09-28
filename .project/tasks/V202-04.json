@@ -1,0 +1,45 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V202-04",
+  "title": "Stage 3.3 Usage Events Schema Foundation",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V202-04.json",
+    "supabase/migrations/<cli-generated>_stage3_usage_metadata.sql",
+    "scripts/check-schema-sync.mjs",
+    "35-database-schema-sync.md"
+  ],
+  "checksRequired": [
+    "migration:cli-generated",
+    "migration:review",
+    "schema:contract-review",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T02:25:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T02:25:00+03:00",
+      "note": "Production preflight confirmed repository/remote migration history is aligned and usage_events currently has zero rows."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T02:25:00+03:00",
+      "note": "Prepare an additive migration and schema-check contract only. Do not apply production DDL in this task."
+    }
+  ],
+  "notes": "Stage 3.3 schema preparation only. Production apply remains a separate protected gate. Existing usage_events RLS/grants must be preserved."
+}
