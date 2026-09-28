@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-15",
   "title": "Fail-Closed Paid Image Arena Kill Switch",
-  "status": "done",
+  "status": "in_progress",
   "priority": "critical",
   "files": [
     ".project/state.json",
@@ -21,19 +21,9 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [
-    "typecheck",
-    "lint",
-    "test",
-    "build",
-    "state:check",
-    "docs:check",
-    "image:paid-kill-switch-unit",
-    "diff:check",
-    "audit"
-  ],
-  "lastUpdated": "2026-09-29T00:10:00+03:00",
-  "commitHash": "02f53780ccbc4523cdd43cbdee7b8e05e6226a0e",
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T00:18:00+03:00",
+  "commitHash": null,
   "transitions": [
     {
       "from": null,
@@ -58,6 +48,12 @@
       "to": "done",
       "at": "2026-09-29T00:10:00+03:00",
       "note": "P0 runtime hardening is code-complete and verified. PR merge remains externally blocked by required Vercel status failing only on plan build-rate-limit; production behavior is unchanged until merge."
+    },
+    {
+      "from": "done",
+      "to": "in_progress",
+      "at": "2026-09-29T00:18:00+03:00",
+      "note": "Reopened after PR review correctly required environment-catalog registration and canonical API-contract documentation for the new paid-generation kill switch."
     }
   ],
   "notes": "Issue #95 implementation prepared. Missing ENABLE_PAID_IMAGE_ARENA fails closed. Full GitHub CI green; Vercel required check blocked by account build-rate quota, not code. Env catalog/docs follow-up is intentionally separate after runtime PR merge."
