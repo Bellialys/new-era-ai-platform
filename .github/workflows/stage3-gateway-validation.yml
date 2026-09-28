@@ -19,6 +19,13 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+      SUPABASE_SERVICE_ROLE_KEY: sb_secret_placeholder
+      OPENROUTER_API_KEY: sk-or-v1-placeholder
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      ENV_CHECK_CI_ALLOW_IN_MEMORY_RATE_LIMIT: "1"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
