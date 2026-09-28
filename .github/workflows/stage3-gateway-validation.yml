@@ -50,4 +50,20 @@ jobs:
           npm run state:check
           npm run docs:check
       - name: Smoke
-        run: npm run smoke
+        env:
+          ALLOW_DEGRADED: "1"
+          SMOKE_BASE_URL: http://127.0.0.1:3000
+        run: |
+          # Match the canonical CI smoke procedure: start the built app first.
+          npm run start > /tmp/new-era-next.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl -sS http://127.0.0.1:3000/api/health > /tmp/new-era-health.json; then
+              break
+            fi
+            sleep 2
+          done
+
+          npm run smoke
