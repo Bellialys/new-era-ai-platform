@@ -1,12 +1,20 @@
 {
   "description": "Single source of truth for environment variables checked by scripts/check-env.mjs. Never contains real values — only names, validation rules and safe placeholder examples.",
-  "groups": ["basic", "migrations", "full"],
+  "groups": [
+    "basic",
+    "migrations",
+    "full",
+    "kms"
+  ],
   "variables": [
     {
       "name": "NEXT_PUBLIC_SUPABASE_URL",
       "required": true,
       "category": "public",
-      "groups": ["basic", "full"],
+      "groups": [
+        "basic",
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^https://.+\\.supabase\\.co$",
@@ -16,10 +24,15 @@
     },
     {
       "name": "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-      "aliases": ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+      "aliases": [
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      ],
       "required": true,
       "category": "public",
-      "groups": ["basic", "full"],
+      "groups": [
+        "basic",
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^(eyJ|sb_publishable_)",
@@ -31,7 +44,10 @@
       "name": "SUPABASE_SERVICE_ROLE_KEY",
       "required": true,
       "category": "secret",
-      "groups": ["basic", "full"],
+      "groups": [
+        "basic",
+        "full"
+      ],
       "validation": {
         "type": "supabaseServiceRoleJwt",
         "message": "must be a Supabase service_role key, not the anon key"
@@ -42,7 +58,10 @@
       "name": "OPENROUTER_API_KEY",
       "required": true,
       "category": "secret",
-      "groups": ["basic", "full"],
+      "groups": [
+        "basic",
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^sk-or-v1-",
@@ -54,7 +73,10 @@
       "name": "NEXT_PUBLIC_SITE_URL",
       "required": false,
       "category": "public",
-      "groups": ["basic", "full"],
+      "groups": [
+        "basic",
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^https?://.+",
@@ -66,7 +88,10 @@
       "name": "NEXT_PUBLIC_ENABLE_TEAM_MODE",
       "required": false,
       "category": "config",
-      "groups": ["basic", "full"],
+      "groups": [
+        "basic",
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^(true|false)$",
@@ -76,10 +101,15 @@
     },
     {
       "name": "SUPABASE_DB_URL",
-      "aliases": ["DATABASE_URL"],
+      "aliases": [
+        "DATABASE_URL"
+      ],
       "required": true,
       "category": "secret",
-      "groups": ["migrations", "full"],
+      "groups": [
+        "migrations",
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^postgresql://",
@@ -91,7 +121,10 @@
       "name": "SUPABASE_ACCESS_TOKEN",
       "required": true,
       "category": "secret",
-      "groups": ["migrations", "full"],
+      "groups": [
+        "migrations",
+        "full"
+      ],
       "validation": {
         "type": "nonEmptyString",
         "message": "must be a Supabase CLI / account access token"
@@ -100,10 +133,14 @@
     },
     {
       "name": "UPSTASH_REDIS_REST_URL",
-      "aliases": ["KV_REST_API_URL"],
+      "aliases": [
+        "KV_REST_API_URL"
+      ],
       "required": false,
       "category": "secret",
-      "groups": ["full"],
+      "groups": [
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^https://",
@@ -113,10 +150,14 @@
     },
     {
       "name": "UPSTASH_REDIS_REST_TOKEN",
-      "aliases": ["KV_REST_API_TOKEN"],
+      "aliases": [
+        "KV_REST_API_TOKEN"
+      ],
       "required": false,
       "category": "secret",
-      "groups": ["full"],
+      "groups": [
+        "full"
+      ],
       "validation": {
         "type": "nonEmptyString",
         "message": "must be an Upstash REST token"
@@ -127,7 +168,9 @@
       "name": "VERCEL_AUTOMATION_BYPASS_SECRET",
       "required": false,
       "category": "secret",
-      "groups": ["full"],
+      "groups": [
+        "full"
+      ],
       "validation": {
         "type": "nonEmptyString",
         "message": "optional Vercel Deployment Protection bypass secret for automated smoke checks"
@@ -138,7 +181,9 @@
       "name": "APP_ENV",
       "required": false,
       "category": "config",
-      "groups": ["full"],
+      "groups": [
+        "full"
+      ],
       "validation": {
         "type": "nonEmptyString",
         "message": "optional app environment label"
@@ -149,7 +194,9 @@
       "name": "APP_URL",
       "required": false,
       "category": "config",
-      "groups": ["full"],
+      "groups": [
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^https?://.+",
@@ -161,7 +208,9 @@
       "name": "MODEL_TIMEOUT_MS",
       "required": false,
       "category": "config",
-      "groups": ["full"],
+      "groups": [
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^[0-9]+$",
@@ -173,13 +222,56 @@
       "name": "OPENROUTER_MAX_TOKENS",
       "required": false,
       "category": "config",
-      "groups": ["full"],
+      "groups": [
+        "full"
+      ],
       "validation": {
         "type": "regex",
         "pattern": "^[0-9]+$",
         "message": "must be a positive integer"
       },
       "example": "1000"
+    },
+    {
+      "name": "AWS_REGION",
+      "required": true,
+      "category": "config",
+      "groups": [
+        "kms"
+      ],
+      "validation": {
+        "type": "regex",
+        "pattern": "^[a-z]{2}(?:-[a-z0-9]+)+-[0-9]+$",
+        "message": "must look like a valid AWS region (for example eu-west-1)"
+      },
+      "example": "eu-west-1"
+    },
+    {
+      "name": "AWS_ROLE_ARN",
+      "required": true,
+      "category": "config",
+      "groups": [
+        "kms"
+      ],
+      "validation": {
+        "type": "regex",
+        "pattern": "^arn:(aws|aws-us-gov|aws-cn):iam::[0-9]{12}:role\\/.+$",
+        "message": "must be an IAM role ARN"
+      },
+      "example": "arn:aws:iam::123456789012:role/new-era-vercel-kms"
+    },
+    {
+      "name": "AI_CREDENTIAL_KMS_KEY_ID",
+      "required": true,
+      "category": "config",
+      "groups": [
+        "kms"
+      ],
+      "validation": {
+        "type": "nonEmptyString",
+        "message": "must be the credential-encryption KMS key ARN or key id"
+      },
+      "example": "arn:aws:kms:eu-west-1:123456789012:key/00000000-0000-0000-0000-000000000000"
     }
   ]
 }
