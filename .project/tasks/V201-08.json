@@ -1,0 +1,64 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-08",
+  "title": "Fix KMS Decrypt Plaintext DEK Zeroization",
+  "status": "done",
+  "priority": "critical",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-08.json",
+    "src/lib/server/aws-kms-data-key-provider.ts",
+    "src/lib/server/aws-kms-data-key-provider.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:unit",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:unit",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T09:32:30+03:00",
+  "commitHash": "941185d734b971d107da930308de5aaf3d35c8cf",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T09:29:00+03:00",
+      "note": "Created from unresolved PR #78 review finding."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T09:29:00+03:00",
+      "note": "Ensure AWS SDK Decrypt plaintext buffer is wiped immediately after copying, matching GenerateDataKey handling."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T09:31:00+03:00",
+      "note": "Initial CI passed all required checks and regression test confirmed SDK plaintext zeroization."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T09:32:30+03:00",
+      "note": "Branch rebuilt on current main after infrastructure merge; same minimal security fix reapplied cleanly."
+    }
+  ],
+  "notes": "Critical memory-lifetime hardening. Decrypt now uses copyAndWipeSensitiveBytes; no env, AWS resource, database, route or traffic changes."
+}
