@@ -74,10 +74,11 @@ export async function runCredentialKmsCanary(
     credentialId: randomUUID(),
   };
 
+  let unexpectedPlaintextKey: Uint8Array | null = null;
   try {
-    await decryptCredentialSecret(
-      envelope,
-      dataKeyProvider,
+    unexpectedPlaintextKey = await dataKeyProvider.decryptDataKey(
+      envelope.encryptedDek,
+      envelope.kmsKeyId,
       mismatchedContext
     );
   } catch {
@@ -86,6 +87,8 @@ export async function runCredentialKmsCanary(
       roundTrip: true,
       contextMismatchRejected: true,
     };
+  } finally {
+    unexpectedPlaintextKey?.fill(0);
   }
 
   throw new CredentialKmsCanaryError(
