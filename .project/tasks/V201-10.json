@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-10",
   "title": "KMS Live Canary Foundation",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -21,9 +21,19 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T21:58:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:canary-unit",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T22:06:00+03:00",
+  "commitHash": "cf7f7d75d675ca6f1f109672ca0638d0aee10398",
   "transitions": [
     {
       "from": null,
@@ -36,7 +46,19 @@
       "to": "in_progress",
       "at": "2026-09-28T21:58:00+03:00",
       "note": "Add a server-only reusable canary with no route, no persistence, no AWS call until explicitly invoked with a configured data-key provider."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T22:05:30+03:00",
+      "note": "Full PR CI passed audit, typecheck, lint, unit tests, env/model-verifier tests, build, state/docs checks and smoke; Vercel preview succeeded. Canary directly verifies provider-layer encryption-context rejection rather than relying only on AES-GCM AAD."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T22:06:00+03:00",
+      "note": "Reusable server-only KMS canary foundation completed with no route, persistence, AWS resource, env, OpenRouter or paid-traffic activation."
     }
   ],
-  "notes": "No AWS resource, env, DB, OpenRouter, persistence or paid traffic changes. Canary output must contain only safe pass/fail metadata."
+  "notes": "Ready for later live invocation after AWS CloudFormation/Vercel OIDC setup. Output is safe pass metadata only; no ciphertext, DEK, token or provider secret is returned."
 }
