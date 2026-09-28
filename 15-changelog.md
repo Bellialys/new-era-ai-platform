@@ -33,6 +33,15 @@ v2.0.0-alpha.1 - AI Team Mode
 - This canary is prepared but has not been invoked against the user's real AWS account.
 - Stage 3.2 still requires AWS stack deployment, Vercel OIDC/env mapping, `--mode=kms` readiness success, round-trip/context-mismatch canary success and extra-context policy canary success before provider credential persistence is enabled.
 
+## Stage 3.2 Vercel OIDC STS region hardening - 2026-09-28
+
+### Hardened
+
+- `awsCredentialsProvider` now receives `clientConfig.region` from the validated `AWS_REGION` value used by the KMS client.
+- STS/OIDC credential resolution no longer relies only on the ambient AWS SDK region chain.
+- Added a regression test that captures the Vercel credential-provider options and verifies the explicit role ARN + region contract.
+- No AWS resource, environment value, credential, database row, route or paid traffic is changed by this patch.
+
 ## Stage 3.2 KMS environment readiness gate - 2026-09-28
 
 ### Added
