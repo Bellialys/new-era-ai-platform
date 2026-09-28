@@ -30,6 +30,10 @@ const PROVIDER_IMAGE_CONTENT_TYPES = new Map([
   ["image/webp", "webp"],
 ]);
 
+function isPaidImageArenaEnabled(): boolean {
+  return process.env.ENABLE_PAID_IMAGE_ARENA === "true";
+}
+
 interface ImageGenerationResult {
   data?: { b64_json?: unknown; media_type?: unknown }[];
 }
@@ -314,6 +318,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       { error: "IMAGE_AUTH_REQUIRED", message: "Image Arena требует аккаунт" },
       { status: 401 }
+    );
+  }
+
+  // All currently allowlisted image providers are paid. Keep provider fan-out
+  // fail-closed until an explicit platform budget/cost-control rollout enables it.
+  if (!isPaidImageArenaEnabled()) {
+    logApiRequest("POST", "/api/image-compare", 503, Date.now() - startTime, requestId);
+    return NextResponse.json(
+      {
+        error: "IMAGE_PAID_GENERATION_DISABLED",
+        message: "Image generation is temporarily unavailable.",
+      },
+      { status: 503 }
     );
   }
 
