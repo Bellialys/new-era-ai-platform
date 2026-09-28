@@ -51,11 +51,25 @@ export async function POST(request: NextRequest) {
       CONNECT_WINDOW_MS
     );
     if (limit.limited) {
-      throw new ApiError(
+      const rateLimitError = new ApiError(
         429,
         "RATE_LIMITED",
         "Too many OpenRouter connection attempts. Try again later."
       );
+      logApiRequest(
+        "POST",
+        "/api/integrations/openrouter/connect",
+        429,
+        Date.now() - startTime
+      );
+      return NextResponse.json(createErrorResponse(rateLimitError), {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1000))
+          ),
+        },
+      });
     }
 
     const supabase = getSupabaseServerClient();
