@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-12",
   "title": "KMS Extra-Context Policy Canary",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -22,9 +22,19 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T23:08:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:policy-canary-unit",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T23:10:00+03:00",
+  "commitHash": "fc3bdb94c8a2ef1af505ef2b0909bd2b3e34072c",
   "transitions": [
     {
       "from": null,
@@ -37,7 +47,19 @@
       "to": "in_progress",
       "at": "2026-09-28T23:07:00+03:00",
       "note": "Add reusable raw-KMS negative canary proving IAM/KMS denies an unexpected encryption-context key. No live AWS call or route activation."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T23:09:30+03:00",
+      "note": "PR CI passed audit, typecheck, lint, unit tests, env/model verifier tests, build, state/docs checks and smoke; Vercel preview passed. Unit tests prove only AccessDeniedException counts as extra-context policy rejection, operational errors fail closed, and unexpected plaintext is wiped."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T23:10:00+03:00",
+      "note": "Reusable extra-context policy canary completed with no route, live AWS invocation, env mutation, database change, OpenRouter traffic or paid usage."
     }
   ],
-  "notes": "Security-preparation only. Expected live rejection is AccessDeniedException; operational failures fail closed."
+  "notes": "Ready for later live preview invocation after AWS/Vercel OIDC setup. Expected negative proof is AccessDeniedException from GenerateDataKey with an extra policy_probe_extra encryption-context key."
 }
