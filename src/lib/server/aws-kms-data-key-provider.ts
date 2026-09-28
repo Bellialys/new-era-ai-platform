@@ -85,6 +85,7 @@ function kmsRuntimeFromEnv(env: AwsKmsEnvironment): {
     region,
     credentials: awsCredentialsProvider({
       roleArn,
+      audience: "sts.amazonaws.com",
       clientConfig: {
         region,
       },
