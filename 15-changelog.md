@@ -16,6 +16,32 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.2 AWS KMS infrastructure IaC - 2026-09-28
+
+### Added
+
+- Added `infra/aws-kms-vercel-oidc.yaml` as the reproducible AWS infrastructure source of truth.
+- CloudFormation defines the Vercel team OIDC provider, one symmetric credential-encryption KMS key with annual rotation, and separate preview/production IAM roles.
+- Trust is scoped to `bellial-s-projects/new-era-ai-platform` and the matching Vercel environment.
+- IAM role permissions are limited to `kms:GenerateDataKey` and `kms:Decrypt` on the credential key.
+- KMS permissions require the governed `credential_id/provider/origin` encryption-context key set.
+- KMS key uses Retain protection and a 30-day deletion pending window.
+
+### Verified
+
+- Template passed `cfn-lint`.
+- Vercel preview readiness probe confirmed `AWS_REGION` is present.
+- `AWS_ROLE_ARN`, `AI_CREDENTIAL_KMS_KEY_ID` and `VERCEL_OIDC_TOKEN` are not yet present in the probed preview runtime.
+- Static `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` are absent.
+- Temporary readiness endpoint was removed after the probe and returns 404.
+- PR #81 fixed the remaining KMS Decrypt plaintext-DEK lifetime issue: the AWS SDK-owned plaintext buffer is now zeroed immediately after copying and regression-tested.
+
+### Remaining external gate
+
+- The CloudFormation stack still needs to be deployed inside the user's AWS account.
+- Vercel project OIDC then needs to be enabled and the generated preview/production role ARN plus KMS key ARN mapped to the relevant environments.
+- A live preview KMS round-trip canary must pass before encrypted OpenRouter credential persistence is activated.
+
 ## Stage 3.2 AWS KMS adapter - 2026-09-28
 
 ### Implemented
