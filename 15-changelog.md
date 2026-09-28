@@ -24,7 +24,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - Production Vercel deployment for the same SHA is `READY`; canonical production alias `/api/health` returns HTTP 200 and Vercel reports no grouped runtime errors in the last 7 days.
 - Repository and production Supabase migration histories match through `20260927212853_stage3_provider_credentials`.
 - Production model catalog contains 31 historical rows and exactly 8 active/public rows; the active set matches the eight-item runtime fallback catalog and current Team/Judge defaults remain inside that governed set.
-- All required public tables currently have RLS enabled.
+- All 17 required public tables currently have RLS enabled, including `audit_log`.
 - Stage 3 credential/funding tables are empty, have no orphan user references, and expose no direct `anon`/`authenticated` table grants.
 - Auth users and profile rows are in sync. One preserved Prompt Arena task predates creation of `anonymous_sessions` and therefore has a historical guest identifier without a matching session row; it is retained because its three model responses are still valid historical data.
 - Storage configuration matches the current product contracts: private 2 MiB `avatars` and public 5 MiB `images`, both limited to PNG/JPEG/WebP. Avatar object policies remain owner-scoped.
@@ -33,8 +33,8 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ### Hardened
 
-- `schema:check` now includes `provider_credentials` and `ai_funding_preferences`, their critical columns and Stage 3 CHECK constraints.
-- The checker now fails if RLS is disabled on any required public table.
+- `schema:check` now includes `audit_log`, `provider_credentials` and `ai_funding_preferences`, their critical columns and Stage 3 CHECK constraints.
+- The checker now fails if RLS is disabled on any required public table and validates the full active-credential envelope requirements (non-null/non-empty ciphertext, wrapped DEK and KMS key id).
 - The checker now verifies the `images` bucket alongside `avatars`.
 - Stage 3 credential/funding browser grants must remain fully denied while required service-role DML grants remain present.
 - `35-database-schema-sync.md` is updated to match the actual v2 + Stage 3 database contract.
