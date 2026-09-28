@@ -50,6 +50,7 @@ const SENSITIVE_INHERITED = [
   "NEXT_PUBLIC_SITE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "OPENROUTER_API_KEY",
+  "OPENROUTER_OAUTH_COOKIE_SECRET",
   "DATABASE_URL",
   "SUPABASE_ACCESS_TOKEN",
   "UPSTASH_REDIS_REST_URL",
@@ -328,6 +329,21 @@ describe("check-env.mjs", { concurrency: true }, () => {
       });
       assert.strictEqual(code, 1);
       assert.ok(stdout.includes("EMPTY    OPENROUTER_API_KEY: is required but empty"));
+    }));
+
+    it("accepts a valid OpenRouter OAuth cookie signing secret in full mode", withRunner((r) => {
+      const oauthCookieSecret = "oauth-cookie-secret-0123456789abcdef0123456789";
+      const { code, stdout, stderr } = r.run(["--mode=full"], {
+        ...TEST_VALUES,
+        SUPABASE_DB_URL: "postgresql://postgres:synthetic@example.supabase.co:5432/postgres",
+        SUPABASE_ACCESS_TOKEN: "sbp_synthetic_access_token",
+        OPENROUTER_OAUTH_COOKIE_SECRET: oauthCookieSecret,
+      });
+
+      assert.strictEqual(code, 0, `Expected valid OAuth signing secret to pass. stderr:\n${stderr}`);
+      assert.ok(stdout.includes("OPENROUTER_OAUTH_COOKIE_SECRET"));
+      assert.ok(!stdout.includes(oauthCookieSecret));
+      assert.ok(!stderr.includes(oauthCookieSecret));
     }));
 
     it("never prints secret values — only variable names and statuses", withRunner((r) => {
