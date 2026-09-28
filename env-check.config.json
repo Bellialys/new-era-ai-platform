@@ -312,8 +312,8 @@
       ],
       "validation": {
         "type": "regex",
-        "pattern": "^.{32,}$",
-        "message": "must be at least 32 characters when configured"
+        "pattern": "^\\\\S{32,}$",
+        "message": "must be at least 32 non-whitespace characters when configured"
       },
       "example": "replace-with-at-least-32-random-characters"
     }
