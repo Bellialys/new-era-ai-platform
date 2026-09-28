@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V202-03",
   "title": "Stage 3.3 Usage Event Mapping Contract",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -22,9 +22,20 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-29T02:13:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "usage:no-secret-contract",
+    "usage:actual-cost-contract",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-29T02:18:00+03:00",
+  "commitHash": "0a43b72e3e396c688d649e5a81502eba9047a858",
   "transitions": [
     {
       "from": null,
@@ -55,7 +66,19 @@
       "to": "in_progress",
       "at": "2026-09-29T02:13:00+03:00",
       "note": "Reopened after schema preflight showed actual provider model must be retained through provider_usage JSONB because the planned usage_events extension has no dedicated provider_model_id column."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-29T02:17:30+03:00",
+      "note": "Revalidation passed audit, typecheck, lint, full tests, production build, state/docs and smoke with actual provider model retained inside normalized provider_usage."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-29T02:18:00+03:00",
+      "note": "Usage mapping contract is aligned with the planned usage_events extension without inventing a new provider_model_id column."
     }
   ],
-  "notes": "Revalidating after adding providerModelId to normalized providerUsage. No DB persistence or schema mutation."
+  "notes": "Completed and revalidated after schema preflight. Actual provider model is retained in normalized providerUsage JSON, while requested model remains modelKey. No database mutation."
 }
