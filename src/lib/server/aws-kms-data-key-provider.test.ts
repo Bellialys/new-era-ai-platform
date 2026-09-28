@@ -196,6 +196,7 @@ describe("AWS KMS data-key provider", () => {
     expect(oidcProviderCalls).toHaveLength(1);
     expect(oidcProviderCalls[0]).toMatchObject({
       roleArn: "arn:aws:iam::123456789012:role/new-era-vercel-kms",
+      audience: "sts.amazonaws.com",
       clientConfig: {
         region: "eu-west-1",
       },

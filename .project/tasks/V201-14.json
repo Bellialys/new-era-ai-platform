@@ -1,0 +1,62 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-14",
+  "title": "Bind Vercel AWS OIDC to AWS-Specific Audience",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-14.json",
+    "src/lib/server/aws-kms-data-key-provider.ts",
+    "src/lib/server/aws-kms-data-key-provider.test.ts",
+    "infra/aws-kms-vercel-oidc.yaml"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:oidc-audience-unit",
+    "cfn:contract-review",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T00:15:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T23:48:00+03:00",
+      "note": "Created after reviewing Vercel custom OIDC audience support introduced in 2026."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T23:48:00+03:00",
+      "note": "Use provider-specific audience sts.amazonaws.com in both runtime token exchange and CloudFormation OIDC trust before any live AWS deployment."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T23:49:30+03:00",
+      "note": "Runtime now requests Vercel OIDC audience sts.amazonaws.com; CloudFormation IAM OIDC client-id and both role trust aud conditions match. cfn-lint passed and unit test asserts audience + region contract."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T23:50:00+03:00",
+      "note": "AWS-specific OIDC audience hardening completed before live AWS deployment. No AWS resource, env, credential, database, route or paid traffic mutation."
+    },
+    {
+      "from": "done",
+      "to": "in_progress",
+      "at": "2026-09-29T00:15:00+03:00",
+      "note": "Reopened after PR review correctly found that an existing reused OIDC provider could lack the new sts.amazonaws.com client ID."
+    }
+  ],
+  "notes": "Completed pre-deployment security hardening. Vercel custom OIDC audience is now provider-specific (sts.amazonaws.com), reducing cross-service token replay risk."
+}
