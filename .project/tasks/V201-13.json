@@ -1,0 +1,43 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-13",
+  "title": "Bind Vercel AWS OIDC Provider to Explicit Region",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-13.json",
+    "src/lib/server/aws-kms-data-key-provider.ts",
+    "src/lib/server/aws-kms-data-key-provider.test.ts",
+    "15-changelog.md"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:oidc-region-unit",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T23:13:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T23:13:00+03:00",
+      "note": "Created during pre-AWS runtime audit after confirming V201-12 is already allocated to the KMS extra-context policy canary."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T23:13:00+03:00",
+      "note": "Pass AWS_REGION explicitly to the Vercel AWS OIDC credential provider so STS resolution does not depend on the ambient AWS SDK region chain."
+    }
+  ],
+  "notes": "No AWS resource, env, credential, database or route mutation. Small runtime hardening before live canary."
+}
