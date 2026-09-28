@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-09",
   "title": "Expand Schema Sync Coverage for Stage 3",
-  "status": "done",
+  "status": "in_progress",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -24,21 +24,9 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [
-    "syntax",
-    "schema:contract-review",
-    "supabase:live-readonly-verify",
-    "typecheck",
-    "lint",
-    "test",
-    "build",
-    "state:check",
-    "docs:check",
-    "diff:check",
-    "audit"
-  ],
-  "lastUpdated": "2026-09-28T19:15:00+03:00",
-  "commitHash": "66d645d0a06440c891a546a575465f5e741ae38c",
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T19:18:00+03:00",
+  "commitHash": null,
   "transitions": [
     {
       "from": null,
@@ -63,7 +51,13 @@
       "to": "done",
       "at": "2026-09-28T19:15:00+03:00",
       "note": "Schema sync checker and documentation now cover the current v2 + Stage 3 production contract. No production DDL/data mutation was required."
+    },
+    {
+      "from": "done",
+      "to": "in_progress",
+      "at": "2026-09-28T19:18:00+03:00",
+      "note": "Reopened after PR review found two valid coverage gaps: audit_log was missing from required RLS scope and active credential envelope validation was too fragmentary."
     }
   ],
-  "notes": "Completed full synchronization audit hardening. One preserved legacy Prompt Arena guest task predates anonymous_sessions and is intentionally not mutated. OpenRouter scheduled live verifier remains blocked only by absent GitHub Actions OPENROUTER_API_KEY secret. AWS live KMS/OIDC canary remains deferred."
+  "notes": "Review hardening in progress. Production read-only verification confirms 17/17 required tables have RLS and the active credential constraint includes non-null/non-empty ciphertext, wrapped DEK and KMS key id requirements."
 }
