@@ -208,46 +208,22 @@ export async function persistOpenRouterOAuthCredential(input: {
       }
     );
 
-    const { data: activated, error: activationError } = await input.supabase
-      .from("provider_credentials")
-      .update({
-        status: "active",
-        secret_ciphertext: byteaHex(envelope.secretCiphertext),
-        encrypted_dek: byteaHex(envelope.encryptedDek),
-        kms_key_id: envelope.kmsKeyId,
-        encryption_version: envelope.encryptionVersion,
-        last_verified_at: new Date().toISOString(),
-        reconcile_after: null,
-        last_error_code: null,
-      })
-      .eq("id", credentialId)
-      .eq("user_id", input.userId)
-      .eq("status", "pending")
-      .select("id")
-      .maybeSingle();
+    const activatedAt = new Date().toISOString();
+    const { data: activatedCredentialId, error: activationError } =
+      await input.supabase.rpc("activate_openrouter_oauth_credential", {
+        p_credential_id: credentialId,
+        p_user_id: input.userId,
+        p_secret_ciphertext: byteaHex(envelope.secretCiphertext),
+        p_encrypted_dek: byteaHex(envelope.encryptedDek),
+        p_kms_key_id: envelope.kmsKeyId,
+        p_encryption_version: envelope.encryptionVersion,
+        p_last_verified_at: activatedAt,
+      });
 
-    if (activationError || activated?.id !== credentialId) {
+    if (activationError || activatedCredentialId !== credentialId) {
       throw new OpenRouterCredentialError(
         "OPENROUTER_CREDENTIAL_STORE_FAILED",
-        "Could not activate encrypted OpenRouter credential."
-      );
-    }
-
-    const { error: fundingError } = await input.supabase
-      .from("ai_funding_preferences")
-      .upsert(
-        {
-          user_id: input.userId,
-          funding_source: "user_openrouter",
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-
-    if (fundingError) {
-      throw new OpenRouterCredentialError(
-        "OPENROUTER_CREDENTIAL_STORE_FAILED",
-        "Could not switch AI funding to the connected OpenRouter account."
+        "Could not atomically activate the OpenRouter credential and funding source."
       );
     }
 
