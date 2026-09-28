@@ -80,7 +80,8 @@ describe("OpenRouter credential lifecycle races", () => {
       activationAfterDisconnect,
       pendingCleanup,
     ];
-    const from = vi.fn(() => {
+    const from = vi.fn((table: string) => {
+      void table;
       const next = queries.shift();
       if (!next) throw new Error("unexpected Supabase query");
       return next;
@@ -122,10 +123,13 @@ describe("OpenRouter credential lifecycle races", () => {
   it("revokes the credential before resetting funding during disconnect", async () => {
     const revoke = chain({ error: null });
     const fundingReset = chain({ error: null });
-    const from = vi
-      .fn()
-      .mockReturnValueOnce(revoke)
-      .mockReturnValueOnce(fundingReset);
+    const disconnectQueries = [revoke, fundingReset];
+    const from = vi.fn((table: string) => {
+      void table;
+      const next = disconnectQueries.shift();
+      if (!next) throw new Error("unexpected Supabase query");
+      return next;
+    });
 
     await disconnectOpenRouterCredential({
       supabase: { from } as unknown as SupabaseClient,
