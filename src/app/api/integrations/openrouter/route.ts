@@ -38,12 +38,57 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const enabled = isOpenRouterOAuthBetaAvailable();
     const supabase = getSupabaseServerClient();
     if (!supabase) {
+      if (!enabled) {
+        logApiRequest(
+          "GET",
+          "/api/integrations/openrouter",
+          200,
+          Date.now() - startTime
+        );
+        return NextResponse.json({
+          status: "success",
+          enabled: false,
+          integration: {
+            connected: false,
+            safeFingerprint: null,
+            lastVerifiedAt: null,
+            fundingSource: "platform",
+          },
+        });
+      }
       throw new ApiError(503, "PERSISTENCE_UNAVAILABLE", "Database is unavailable.");
     }
 
-    const integration = await getOpenRouterIntegrationStatus(supabase, userId);
+    let integration;
+    try {
+      integration = await getOpenRouterIntegrationStatus(supabase, userId);
+    } catch (error) {
+      // Before the Stage 3.4 schema is applied, persistence must remain disabled.
+      // Keep the profile fail-closed and quiet instead of surfacing a rollout-time
+      // 500. Once the feature is enabled, persistence failures remain visible.
+      if (!enabled && error instanceof OpenRouterCredentialError) {
+        logApiRequest(
+          "GET",
+          "/api/integrations/openrouter",
+          200,
+          Date.now() - startTime
+        );
+        return NextResponse.json({
+          status: "success",
+          enabled: false,
+          integration: {
+            connected: false,
+            safeFingerprint: null,
+            lastVerifiedAt: null,
+            fundingSource: "platform",
+          },
+        });
+      }
+      throw error;
+    }
 
     logApiRequest(
       "GET",
@@ -53,7 +98,7 @@ export async function GET(request: NextRequest) {
     );
     return NextResponse.json({
       status: "success",
-      enabled: isOpenRouterOAuthBetaAvailable(),
+      enabled,
       integration: {
         connected: integration.connected,
         safeFingerprint: integration.safeFingerprint,

@@ -106,7 +106,7 @@ Stage 3.4 добавляет authenticated OAuth/funding control-plane, но н�
 }
 ```
 
-Raw API key, credential UUID, внутренний lifecycle status, ciphertext, wrapped DEK и KMS key id в браузерный ответ не включаются.
+Raw API key, credential UUID, внутренний lifecycle status, ciphertext, wrapped DEK и KMS key id в браузерный ответ не включаются. Пока Stage 3.4 flags выключены, отсутствие ещё не применённой credential schema деградирует в безопасный disabled/disconnected ответ вместо rollout-time `500`; после включения feature persistence errors снова являются явными ошибками.
 
 ### `POST /api/integrations/openrouter/connect`
 

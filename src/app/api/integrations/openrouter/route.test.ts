@@ -21,7 +21,14 @@ vi.mock("@/lib/server", async (importOriginal) => {
 });
 
 vi.mock("@/lib/server/openrouter-credentials", () => {
-  class OpenRouterCredentialError extends Error {}
+  class OpenRouterCredentialError extends Error {
+    constructor(
+      public readonly code: string,
+      message: string
+    ) {
+      super(message);
+    }
+  }
   return {
     OpenRouterCredentialError,
     getOpenRouterIntegrationStatus: getIntegrationStatusMock,
@@ -60,6 +67,32 @@ beforeEach(() => {
 });
 
 describe("GET /api/integrations/openrouter", () => {
+  it("returns a safe disabled response when pre-rollout persistence is unavailable", async () => {
+    isOAuthBetaAvailableMock.mockReturnValue(false);
+    getIntegrationStatusMock.mockRejectedValue(
+      new (await import("@/lib/server/openrouter-credentials")).OpenRouterCredentialError(
+        "OPENROUTER_CREDENTIAL_STORE_FAILED",
+        "provider_credentials is not available yet"
+      )
+    );
+
+    const response = await GET(
+      new NextRequest("https://new-era.example/api/integrations/openrouter")
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      status: "success",
+      enabled: false,
+      integration: {
+        connected: false,
+        safeFingerprint: null,
+        lastVerifiedAt: null,
+        fundingSource: "platform",
+      },
+    });
+  });
+
   it("returns only safe browser-facing integration metadata", async () => {
     const response = await GET(
       new NextRequest("https://new-era.example/api/integrations/openrouter")

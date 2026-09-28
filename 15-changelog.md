@@ -29,6 +29,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - Added profile UI that exposes only safe connection metadata/fingerprint.
 - Hardened the browser status DTO so internal credential UUID and lifecycle status remain server-only; the client receives only connected state, safe fingerprint, last verification time and funding source.
 - Clarified the profile beta state: a connected OpenRouter account is prepared in the control-plane, while current Arena inference remains on the existing server-side gateway until Stage 3.3.
+- Added a pre-rollout safe status fallback: while Stage 3.4 flags are disabled, a not-yet-applied credential schema no longer creates profile-time `500` errors; enabled deployments still fail visibly on persistence faults.
 - Disconnect now moves funding back to `platform` and clears the live ciphertext, wrapped DEK and KMS key id while retaining only safe non-secret status.
 - Added fail-closed rollout flags `ENABLE_OPENROUTER_USER_OAUTH=false` and `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false`.
 - Added regression coverage for signed flow integrity/expiry/user binding, rollout gates and same-origin mutation protection.
