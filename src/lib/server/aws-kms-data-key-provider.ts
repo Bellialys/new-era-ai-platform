@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   DecryptCommand,
   type DecryptCommandOutput,
@@ -65,6 +66,36 @@ function assertNoStaticAwsCredentials(env: AwsKmsEnvironment): void {
       "Static AWS credentials are not allowed for the provider-credential KMS path."
     );
   }
+}
+
+function kmsRuntimeFromEnv(env: AwsKmsEnvironment): {
+  client: KmsClientLike;
+  keyId: string;
+} {
+  assertNoStaticAwsCredentials(env);
+
+  const region = requireNonEmpty(env.AWS_REGION, "AWS_REGION");
+  const roleArn = requireNonEmpty(env.AWS_ROLE_ARN, "AWS_ROLE_ARN");
+  const keyId = requireNonEmpty(
+    env.AI_CREDENTIAL_KMS_KEY_ID,
+    "AI_CREDENTIAL_KMS_KEY_ID"
+  );
+
+  const client = new KMSClient({
+    region,
+    credentials: awsCredentialsProvider({
+      roleArn,
+    }),
+  });
+
+  return {
+    client: client as KmsClientLike,
+    keyId,
+  };
+}
+
+function isAwsAccessDenied(error: unknown): boolean {
+  return error instanceof Error && error.name === "AccessDeniedException";
 }
 
 function copyRequiredBytes(
@@ -175,21 +206,63 @@ export function createAwsKmsDataKeyProviderFromEnv(
     AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
   }
 ): AwsKmsDataKeyProvider {
-  assertNoStaticAwsCredentials(env);
+  const { client, keyId } = kmsRuntimeFromEnv(env);
+  return new AwsKmsDataKeyProvider(client, keyId);
+}
 
-  const region = requireNonEmpty(env.AWS_REGION, "AWS_REGION");
-  const roleArn = requireNonEmpty(env.AWS_ROLE_ARN, "AWS_ROLE_ARN");
-  const keyId = requireNonEmpty(
-    env.AI_CREDENTIAL_KMS_KEY_ID,
-    "AI_CREDENTIAL_KMS_KEY_ID"
-  );
+export interface AwsKmsExtraContextCanaryResult {
+  status: "pass";
+  extraContextRejected: true;
+}
 
-  const client = new KMSClient({
-    region,
-    credentials: awsCredentialsProvider({
-      roleArn,
-    }),
-  });
+/**
+ * Proves that the configured IAM/KMS policy rejects an unexpected encryption
+ * context key. The only accepted proof is AWS AccessDeniedException.
+ *
+ * The request intentionally uses GenerateDataKey with one extra context key.
+ * If AWS unexpectedly accepts it, any returned plaintext data key is wiped and
+ * the canary fails closed.
+ */
+export async function runAwsKmsExtraContextPolicyCanary(
+  env: AwsKmsEnvironment = {
+    AWS_REGION: process.env.AWS_REGION,
+    AWS_ROLE_ARN: process.env.AWS_ROLE_ARN,
+    AI_CREDENTIAL_KMS_KEY_ID: process.env.AI_CREDENTIAL_KMS_KEY_ID,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
+  }
+): Promise<AwsKmsExtraContextCanaryResult> {
+  const { client, keyId } = kmsRuntimeFromEnv(env);
+  let plaintext: Uint8Array | undefined;
 
-  return new AwsKmsDataKeyProvider(client as KmsClientLike, keyId);
+  try {
+    const output = (await client.send(
+      new GenerateDataKeyCommand({
+        KeyId: keyId,
+        KeySpec: "AES_256",
+        EncryptionContext: {
+          credential_id: randomUUID(),
+          provider: "openrouter",
+          origin: "user_oauth",
+          policy_probe_extra: "must_be_denied",
+        },
+      })
+    )) as GenerateDataKeyCommandOutput;
+
+    plaintext = output.Plaintext;
+  } catch (error) {
+    if (isAwsAccessDenied(error)) {
+      return {
+        status: "pass",
+        extraContextRejected: true,
+      };
+    }
+
+    throw new Error("AWS KMS extra-context policy canary could not be proven.");
+  } finally {
+    plaintext?.fill(0);
+  }
+
+  throw new Error("AWS KMS accepted an unexpected encryption-context key.");
 }
