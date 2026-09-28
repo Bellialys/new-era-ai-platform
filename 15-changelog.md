@@ -33,6 +33,20 @@ v2.0.0-alpha.1 - AI Team Mode
 - This canary is prepared but has not been invoked against the user's real AWS account.
 - Stage 3.2 still requires AWS stack deployment, Vercel OIDC/env mapping, `--mode=kms` readiness success, round-trip/context-mismatch canary success and extra-context policy canary success before provider credential persistence is enabled.
 
+## Stage 3.2 KMS environment-isolation review - 2026-09-28
+
+### Finding
+
+- Current MVP CloudFormation intentionally scopes preview and production to separate IAM roles but one shared symmetric KMS key.
+- The separate trust subjects prevent preview from assuming the production role, but both roles can use the same KMS key with the same credential encryption-context contract.
+- Therefore IAM-role separation alone is not a cryptographic preview/production boundary if preview can obtain production ciphertext/wrapped-DEK/context.
+
+### Gate added
+
+- Real provider credential persistence remains disabled.
+- Before persistence activation, choose and implement either separate KMS keys per environment (preferred) or a reviewed environment-bound encryption-context/IAM design.
+- No AWS resource was changed by this documentation/security review.
+
 ## Stage 3.2 Vercel OIDC STS region hardening - 2026-09-28
 
 ### Hardened
