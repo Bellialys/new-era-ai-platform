@@ -1,0 +1,42 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-10",
+  "title": "KMS Live Canary Foundation",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-10.json",
+    "src/lib/server/credential-kms-canary.ts",
+    "src/lib/server/credential-kms-canary.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:canary-unit",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T21:58:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T21:58:00+03:00",
+      "note": "Created while AWS account setup is deferred so the live KMS verification path can be prepared safely in advance."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T21:58:00+03:00",
+      "note": "Add a server-only reusable canary with no route, no persistence, no AWS call until explicitly invoked with a configured data-key provider."
+    }
+  ],
+  "notes": "No AWS resource, env, DB, OpenRouter, persistence or paid traffic changes. Canary output must contain only safe pass/fail metadata."
+}
