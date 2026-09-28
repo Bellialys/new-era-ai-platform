@@ -189,7 +189,22 @@ export async function fetchOpenRouterResponse(
   modelId: string,
   options?: { systemPrompt?: string }
 ): Promise<OpenRouterCallResult> {
-  const apiKey = getApiKey();
+  return fetchOpenRouterResponseWithApiKey(getApiKey(), prompt, modelId, options);
+}
+
+export async function fetchOpenRouterResponseWithApiKey(
+  apiKey: string,
+  prompt: string,
+  modelId: string,
+  options?: { systemPrompt?: string }
+): Promise<OpenRouterCallResult> {
+  if (!apiKey.trim()) {
+    throw new ApiError(
+      503,
+      "AI_CREDENTIAL_UNAVAILABLE",
+      "AI provider credential is unavailable."
+    );
+  }
 
   const messages: OpenRouterRequest["messages"] = [];
   if (options?.systemPrompt) {
@@ -353,7 +368,30 @@ export async function streamOpenRouterResponse(
   onToken: (token: string) => void | Promise<void>,
   options?: { systemPrompt?: string }
 ): Promise<OpenRouterCallResult> {
-  const apiKey = getApiKey();
+  return streamOpenRouterResponseWithApiKey(
+    getApiKey(),
+    prompt,
+    modelId,
+    onToken,
+    options
+  );
+}
+
+export async function streamOpenRouterResponseWithApiKey(
+  apiKey: string,
+  prompt: string,
+  modelId: string,
+  onToken: (token: string) => void | Promise<void>,
+  options?: { systemPrompt?: string }
+): Promise<OpenRouterCallResult> {
+  if (!apiKey.trim()) {
+    throw new ApiError(
+      503,
+      "AI_CREDENTIAL_UNAVAILABLE",
+      "AI provider credential is unavailable."
+    );
+  }
+
   const request = buildOpenRouterRequest(prompt, modelId, {
     systemPrompt: options?.systemPrompt,
     stream: true,
