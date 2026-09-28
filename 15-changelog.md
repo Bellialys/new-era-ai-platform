@@ -16,6 +16,21 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Image Arena paid-generation kill-switch contract - 2026-09-29
+
+### Prepared
+
+- Registered server-only `ENABLE_PAID_IMAGE_ARENA` as an optional boolean config variable with safe default/example `false`.
+- Synced `.env.example` and generated `.env.local.example` so operators can discover the gate without exposing any secret.
+- Canonical API contract now documents the default `503 IMAGE_PAID_GENERATION_DISABLED` behavior for authenticated requests when the flag is not exactly `true`.
+- The contract requires the kill-switch check to occur before rate limiting, Storage initialization, OpenRouter-key access or paid provider generation.
+
+### Safety
+
+- This support package does not enable paid Image Arena.
+- No Vercel environment value, OpenRouter call, database row, Storage object or paid traffic is changed.
+- Runtime enforcement remains in PR #97 and must stay fail-closed until explicit paid-image approval.
+
 ## Stage 3.2 KMS environment-isolation cost decision - 2026-09-28
 
 ### Proposed
