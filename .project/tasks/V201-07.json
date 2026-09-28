@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-07",
   "title": "AWS KMS and Vercel OIDC Infrastructure Template",
-  "status": "in_progress",
+  "status": "done",
   "priority": "critical",
   "files": [
     ".project/state.json",
@@ -19,9 +19,17 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T09:24:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "template:review",
+    "iam:least-privilege",
+    "kms:policy-review",
+    "docs:check",
+    "state:check",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T09:27:30+03:00",
+  "commitHash": "2f06d2e13437827f63e0f2e6c852961702514de6",
   "transitions": [
     {
       "from": null,
@@ -34,7 +42,19 @@
       "to": "in_progress",
       "at": "2026-09-28T09:24:00+03:00",
       "note": "Prepare reproducible CloudFormation infrastructure only; no AWS account mutation is possible through connected tools."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T09:27:00+03:00",
+      "note": "CloudFormation template passed cfn-lint. IAM/KMS policy review confirmed project-specific Vercel trust, separate preview/production roles, exact KMS resource scope, encryption-context constraints and no static AWS credentials."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T09:27:30+03:00",
+      "note": "Reproducible AWS KMS/Vercel OIDC infrastructure definition completed. Live AWS deployment remains external because no AWS mutation connector is available."
     }
   ],
-  "notes": "Infrastructure-as-code only. Separate preview/production Vercel roles, one symmetric KMS key, no static AWS credentials. Live deployment remains external because no AWS connector is installed."
+  "notes": "Completed IaC and deployment runbook. Vercel readiness probe showed AWS_REGION present while AWS_ROLE_ARN, AI_CREDENTIAL_KMS_KEY_ID and VERCEL_OIDC_TOKEN were absent; static AWS credentials were also absent. Template validation passed cfn-lint."
 }
