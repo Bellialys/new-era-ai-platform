@@ -1,0 +1,28 @@
+name: Stage 3 CloudFormation lint
+
+on:
+  push:
+    branches:
+      - infra/stage3-aws-kms-vercel-oidc
+    paths:
+      - "infra/aws-kms-vercel-oidc.yaml"
+      - ".github/workflows/stage3-cfn-lint.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Validate CloudFormation template
+        run: |
+          # cfn-lint validates CloudFormation resource schemas and intrinsic functions.
+          python -m pip install --disable-pip-version-check cfn-lint
+          cfn-lint infra/aws-kms-vercel-oidc.yaml
