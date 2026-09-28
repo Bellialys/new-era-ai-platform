@@ -1,0 +1,42 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-15",
+  "title": "Fail-Closed Paid Image Arena Kill Switch",
+  "status": "in_progress",
+  "priority": "critical",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-15.json",
+    "src/app/api/image-compare/route.ts",
+    "src/app/api/image-compare/route.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "image:paid-kill-switch-unit",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T00:05:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T00:05:00+03:00",
+      "note": "Created after pricing re-audit confirmed every current Image Arena model is paid while platform paid allowance is $0."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T00:05:00+03:00",
+      "note": "Add a server-only fail-closed kill switch before any rate-limit, Storage or OpenRouter work. Production remains disabled unless explicitly enabled later."
+    }
+  ],
+  "notes": "P0 cost containment. Does not enable any paid traffic. Env-catalog/docs synchronization is intentionally a separate <=5-file follow-up after this runtime change merges."
+}
