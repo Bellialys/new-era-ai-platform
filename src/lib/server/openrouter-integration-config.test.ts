@@ -7,7 +7,7 @@ import {
 
 describe("OpenRouter integration rollout gates", () => {
   it("defaults both security-sensitive gates to disabled", () => {
-    const env = {} as NodeJS.ProcessEnv;
+    const env = {};
     expect(isOpenRouterUserOAuthEnabled(env)).toBe(false);
     expect(isProviderCredentialPersistenceEnabled(env)).toBe(false);
     expect(isOpenRouterOAuthBetaAvailable(env)).toBe(false);
@@ -17,20 +17,20 @@ describe("OpenRouter integration rollout gates", () => {
     expect(
       isOpenRouterOAuthBetaAvailable({
         ENABLE_OPENROUTER_USER_OAUTH: "true",
-      } as NodeJS.ProcessEnv)
+      })
     ).toBe(false);
 
     expect(
       isOpenRouterOAuthBetaAvailable({
         ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE: "true",
-      } as NodeJS.ProcessEnv)
+      })
     ).toBe(false);
 
     expect(
       isOpenRouterOAuthBetaAvailable({
         ENABLE_OPENROUTER_USER_OAUTH: "true",
         ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE: "true",
-      } as NodeJS.ProcessEnv)
+      })
     ).toBe(true);
   });
 });
