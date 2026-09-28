@@ -1,0 +1,69 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-11",
+  "title": "KMS Environment Readiness Checker",
+  "status": "done",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-11.json",
+    "env-check.config.json",
+    "scripts/check-env.mjs",
+    "scripts/check-env.test.mjs"
+  ],
+  "checksRequired": [
+    "env:kms",
+    "env:security",
+    "test:env-check",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [
+    "env:kms",
+    "env:security",
+    "test:env-check",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T22:38:00+03:00",
+  "commitHash": "7cd835e89cbd243d6554d11eb8f2e90736d3c09e",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T22:32:00+03:00",
+      "note": "Created after operational audit found the generic env checker did not cover the prepared Stage 3 KMS runtime contract."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T22:32:00+03:00",
+      "note": "Add a dedicated kms mode requiring region, role ARN and KMS key id while rejecting static AWS credentials. Keep basic/full CI behavior unchanged until the live AWS gate is enabled."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T22:37:30+03:00",
+      "note": "PR CI and Vercel preview passed. Dedicated kms mode requires AWS_REGION/AWS_ROLE_ARN/AI_CREDENTIAL_KMS_KEY_ID and rejects static AWS credentials with fatal exit code."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T22:38:00+03:00",
+      "note": "KMS env readiness gate completed without AWS calls, env mutation, database changes, provider traffic or paid usage."
+    }
+  ],
+  "notes": "Ready for later live AWS/Vercel setup. Run `npm run env:check -- --mode=kms` before invoking the prepared KMS canary. Example/reference env files are synchronized in a follow-up docs-only PR."
+}

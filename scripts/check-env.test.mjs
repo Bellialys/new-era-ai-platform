@@ -60,6 +60,13 @@ const SENSITIVE_INHERITED = [
   "CI",
   "VERCEL",
   "VERCEL_ENV",
+  "VERCEL_OIDC_TOKEN",
+  "AWS_REGION",
+  "AWS_ROLE_ARN",
+  "AI_CREDENTIAL_KMS_KEY_ID",
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
   "NODE_ENV",
 ];
 
@@ -75,7 +82,17 @@ const TEST_VALUES = {
   NEXT_PUBLIC_SITE_URL:                 "http://localhost:3000",
 };
 
-const ALL_TEST_VALUES = Object.values(TEST_VALUES);
+const KMS_TEST_VALUES = {
+  AWS_REGION: "eu-west-1",
+  AWS_ROLE_ARN: "arn:aws:iam::123456789012:role/new-era-vercel-kms",
+  AI_CREDENTIAL_KMS_KEY_ID:
+    "arn:aws:kms:eu-west-1:123456789012:key/00000000-0000-0000-0000-000000000000",
+};
+
+const ALL_TEST_VALUES = [
+  ...Object.values(TEST_VALUES),
+  ...Object.values(KMS_TEST_VALUES),
+];
 
 // ---------------------------------------------------------------------------
 // CheckEnvRunner
@@ -265,6 +282,12 @@ describe("check-env.mjs", { concurrency: true }, () => {
       assert.strictEqual(code, 0);
       assert.ok(stdout.includes("ENV CHECK PASSED"));
     }));
+
+    it("--help documents the kms readiness mode", withRunner((r) => {
+      const { code, stdout } = r.run(["--help"]);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes("kms"));
+    }));
   });
 
   // ---- Required variables --------------------------------------------------
@@ -331,6 +354,62 @@ describe("check-env.mjs", { concurrency: true }, () => {
         "The missing variable name must appear in the output",
       );
     }));
+  });
+
+  // ---- Stage 3 KMS readiness ------------------------------------------------
+
+  describe("kms mode", () => {
+    it("passes with OIDC role, region and KMS key id configured", withRunner((r) => {
+      const { code, stdout, stderr } = r.run(["--mode=kms"], KMS_TEST_VALUES);
+      assertNoLeaks("stdout", stdout);
+      assertNoLeaks("stderr", stderr);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes("OK       AWS_REGION: exists"));
+      assert.ok(stdout.includes("OK       AWS_ROLE_ARN: exists"));
+      assert.ok(stdout.includes("OK       AI_CREDENTIAL_KMS_KEY_ID: exists"));
+      assert.ok(stdout.includes("ENV CHECK PASSED"));
+    }));
+
+    it("fails when a required KMS variable is missing", withRunner((r) => {
+      const env = { ...KMS_TEST_VALUES };
+      delete env.AWS_ROLE_ARN;
+      const { code, stdout, stderr } = r.run(["--mode=kms"], env);
+      assertNoLeaks("stdout", stdout);
+      assertNoLeaks("stderr", stderr);
+      assert.strictEqual(code, 1);
+      assert.ok(stdout.includes("MISSING  AWS_ROLE_ARN: is required"));
+    }));
+
+    it("rejects a malformed AWS role ARN", withRunner((r) => {
+      const { code, stdout, stderr } = r.run(["--mode=kms"], {
+        ...KMS_TEST_VALUES,
+        AWS_ROLE_ARN: "not-an-iam-role",
+      });
+      assertNoLeaks("stdout", stdout);
+      assertNoLeaks("stderr", stderr);
+      assert.strictEqual(code, 1);
+      assert.ok(stdout.includes("INVALID  AWS_ROLE_ARN: must be an IAM role ARN"));
+    }));
+
+    for (const staticCredential of [
+      "AWS_ACCESS_KEY_ID",
+      "AWS_SECRET_ACCESS_KEY",
+      "AWS_SESSION_TOKEN",
+    ]) {
+      it(`fails closed when ${staticCredential} is present`, withRunner((r) => {
+        const sentinel = `STATIC_AWS_SENTINEL_${staticCredential}`;
+        const { code, stdout, stderr } = r.run(["--mode=kms"], {
+          ...KMS_TEST_VALUES,
+          [staticCredential]: sentinel,
+        });
+        assert.ok(!stdout.includes(sentinel));
+        assert.ok(!stderr.includes(sentinel));
+        assert.strictEqual(code, 3);
+        assert.ok(stdout.includes(
+          `FATAL    ${staticCredential}: static AWS credentials are not allowed for the Stage 3 KMS path`
+        ));
+      }));
+    }
   });
 
   // ---- Basic build observability -------------------------------------------
