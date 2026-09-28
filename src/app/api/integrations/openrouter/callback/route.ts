@@ -23,6 +23,8 @@ import {
 } from "@/lib/server";
 import { getSupabaseServerClient } from "@/lib/server/supabase";
 
+const OAUTH_EXCHANGE_TIMEOUT_MS = 15_000;
+
 function profileRedirect(
   request: NextRequest,
   result: "connected" | "error",
@@ -106,6 +108,7 @@ export async function GET(request: NextRequest) {
     const apiKey = await exchangeOpenRouterAuthorizationCode({
       code,
       codeVerifier: flow.codeVerifier,
+      signal: AbortSignal.timeout(OAUTH_EXCHANGE_TIMEOUT_MS),
     });
 
     const supabase = getSupabaseServerClient();
