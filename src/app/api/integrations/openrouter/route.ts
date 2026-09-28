@@ -92,11 +92,25 @@ export async function DELETE(request: NextRequest) {
       MUTATION_WINDOW_MS
     );
     if (limit.limited) {
-      throw new ApiError(
+      const rateLimitError = new ApiError(
         429,
         "RATE_LIMITED",
         "Too many OpenRouter account changes. Try again later."
       );
+      logApiRequest(
+        "DELETE",
+        "/api/integrations/openrouter",
+        429,
+        Date.now() - startTime
+      );
+      return NextResponse.json(createErrorResponse(rateLimitError), {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1000))
+          ),
+        },
+      });
     }
 
     const supabase = getSupabaseServerClient();
