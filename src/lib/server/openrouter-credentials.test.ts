@@ -69,7 +69,6 @@ describe("OpenRouter credential lifecycle races", () => {
       error: null,
     });
     const pendingInsert = chain({ error: null });
-    const activationAfterDisconnect = chain({ data: null, error: null });
     const pendingCleanup = chain({ error: null });
 
     const queries = [
@@ -77,7 +76,6 @@ describe("OpenRouter credential lifecycle races", () => {
       statusQuery,
       fundingQuery,
       pendingInsert,
-      activationAfterDisconnect,
       pendingCleanup,
     ];
     const from = vi.fn((table: string) => {
@@ -87,7 +85,8 @@ describe("OpenRouter credential lifecycle races", () => {
       return next;
     });
 
-    const supabase = { from } as unknown as SupabaseClient;
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    const supabase = { from, rpc } as unknown as SupabaseClient;
 
     await expect(
       persistOpenRouterOAuthCredential({
@@ -100,9 +99,14 @@ describe("OpenRouter credential lifecycle races", () => {
       code: "OPENROUTER_CREDENTIAL_STORE_FAILED",
     });
 
-    expect(activationAfterDisconnect.eq).toHaveBeenCalledWith(
-      "status",
-      "pending"
+    expect(rpc).toHaveBeenCalledWith(
+      "activate_openrouter_oauth_credential",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_secret_ciphertext: expect.stringMatching(/^\\x/),
+        p_encrypted_dek: expect.stringMatching(/^\\x/),
+        p_kms_key_id: "kms-test-key",
+      })
     );
     expect(pendingCleanup.eq).toHaveBeenCalledWith("status", "pending");
 
@@ -113,8 +117,8 @@ describe("OpenRouter credential lifecycle races", () => {
       })
     );
 
-    // The only funding query is the initial read. A failed conditional
-    // activation must never switch funding back to user_openrouter.
+    // The application does not perform a second funding write. Credential
+    // activation and user_openrouter selection happen inside one DB transaction.
     expect(
       from.mock.calls.filter(([table]) => table === "ai_funding_preferences")
     ).toHaveLength(1);
