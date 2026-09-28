@@ -95,7 +95,8 @@ v2.0.0-alpha.1 - AI Team Mode
 # Pre-persistence security gate: current MVP IaC shares one KMS key between preview/production; DEC-022 proposes separate preview/production KMS keys as preferred isolation, but recurring AWS key cost requires explicit approval before IaC switches from one key to two
 # Stage 3.3 remains intentionally skipped for now; open PRs #101/#102 are not dependencies of the Stage 3.4 branch
 # Stage 3.4 OAuth beta foundation 🟡: auth-only connect/callback/status/disconnect, signed short-lived PKCE flow state, encrypted credential lifecycle, server-side funding resolver and profile UI are implemented behind fail-closed flags in PR #104
-# Stage 3.4 activation gate: ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE stays false until Stage 3.2 live KMS/OIDC + environment-isolation gates pass; ENABLE_OPENROUTER_USER_OAUTH also defaults false
+# Stage 3.4 atomic activation ✅ in PR #104: encrypted credential activation + funding_source=user_openrouter commit through one service-role PostgreSQL RPC; disconnect/callback races cannot leave an active/funding split-brain state
+# Stage 3.4 activation gate: migration 20260929022500_stage34_atomic_openrouter_activation.sql must be applied, and ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE stays false until Stage 3.2 live KMS/OIDC + environment-isolation gates pass; ENABLE_OPENROUTER_USER_OAUTH also defaults false
 # Because Stage 3.3 inference gateway cutover is intentionally skipped, current Arena requests still use the legacy platform credential path; Stage 3.4 does not silently route inference through the connected user credential
 # Separate operational issue remains: GitHub Actions OPENROUTER_API_KEY secret must be restored for scheduled live models:verify
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
