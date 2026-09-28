@@ -1,0 +1,87 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-09",
+  "title": "Expand Schema Sync Coverage for Stage 3",
+  "status": "done",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-09.json",
+    "scripts/check-schema-sync.mjs",
+    "35-database-schema-sync.md",
+    "15-changelog.md"
+  ],
+  "checksRequired": [
+    "syntax",
+    "schema:contract-review",
+    "supabase:live-readonly-verify",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [
+    "syntax",
+    "schema:contract-review",
+    "supabase:live-readonly-verify",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T19:21:00+03:00",
+  "commitHash": "bb99ec720f9f3140b69d0e05ae8741b1399b30aa",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T19:05:00+03:00",
+      "note": "Created during full GitHub/Supabase/Vercel synchronization audit after Stage 3.2 groundwork."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T19:05:00+03:00",
+      "note": "Extend schema:check to Stage 3 credential/funding tables, RLS, constraints, grants, and Image Storage bucket. No production DDL."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T19:14:30+03:00",
+      "note": "Clean runner passed script syntax/CLI checks; live read-only Supabase verification confirmed migration sync, 16/16 required tables with RLS, zero Stage 3 browser grants, eight required service-role DML grants, governed constraints and both Storage bucket contracts. Standard PR CI and Vercel preview passed."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T19:15:00+03:00",
+      "note": "Schema sync checker and documentation now cover the current v2 + Stage 3 production contract. No production DDL/data mutation was required."
+    },
+    {
+      "from": "done",
+      "to": "in_progress",
+      "at": "2026-09-28T19:18:00+03:00",
+      "note": "Reopened after PR review found two valid coverage gaps: audit_log was missing from required RLS scope and active credential envelope validation was too fragmentary."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T19:20:30+03:00",
+      "note": "Review fixes validated: audit_log added to required table/RLS/column coverage; active credential envelope check now requires non-null/non-empty ciphertext, wrapped DEK and KMS key id and rejects inverted predicates. Clean syntax/CLI validation, live Supabase read-only checks, PR CI and Vercel preview passed."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T19:21:00+03:00",
+      "note": "Both PR review threads resolved with evidence. Final contract covers 17 required RLS-enabled public tables and current Stage 3 credential/storage boundaries."
+    }
+  ],
+  "notes": "Completed and review-hardened. No production DDL/data mutation. One historical pre-anonymous_sessions guest task remains intentionally preserved. OpenRouter scheduled live verifier still needs repository secret; AWS live KMS/OIDC canary remains deferred."
+}

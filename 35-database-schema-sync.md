@@ -13,12 +13,30 @@
 
 **Таблицы (`public`):**
 
+Core:
 - `profiles`
 - `models`
 - `tasks`
 - `model_responses`
 - `votes`
 - `anonymous_sessions`
+- `audit_log`
+
+v2 analytics/history:
+- `usage_events`
+- `team_runs`
+- `team_run_steps`
+- `code_runs`
+- `leaderboard_snapshots`
+- `artifacts`
+- `model_price_history`
+- `cleanup_log`
+
+Stage 3 provider funding/security:
+- `provider_credentials`
+- `ai_funding_preferences`
+
+Для всех обязательных public-таблиц `schema:check` также проверяет, что RLS действительно включён.
 
 **Колонки:**
 
@@ -84,6 +102,30 @@
 - `anonymous_sessions.created_at`
 - `anonymous_sessions.last_seen_at`
 - `anonymous_sessions.converted_user_id`
+- `audit_log.id/actor_id/action/target_type/target_id/payload/created_at`
+
+**v2 analytics/history — обязательные ключевые колонки:**
+
+- `usage_events.id/user_id/mode_slug/model_key/latency_ms/cost_usd/created_at`
+- `team_runs.id/task_id/user_id/model_key/status/final_answer/created_at`
+- `team_run_steps.id/team_run_id/role_id/role_label/prompt/response/created_at`
+- `code_runs.id/user_id/language/code/stdout/stderr/exit_code/created_at`
+- `leaderboard_snapshots.id/snapshot_date/model_key/model_display_name/win_rate/created_at`
+- `artifacts.id/user_id/artifact_type/storage_path/mime_type/created_at`
+- `model_price_history.id/model_key/input_price_per_million/effective_from/created_at`
+- `cleanup_log.id/cleanup_type/rows_deleted/created_at`
+
+**Stage 3 credential/funding — обязательные колонки:**
+
+- `provider_credentials.id/user_id/provider/origin/status`
+- `provider_credentials.provider_key_hash/safe_fingerprint`
+- `provider_credentials.secret_ciphertext/encrypted_dek/kms_key_id/encryption_version`
+- `provider_credentials.limit_usd/limit_reset/expires_at`
+- `provider_credentials.last_verified_at/last_used_at/reconcile_after/revoked_at/last_error_code`
+- `provider_credentials.created_at/updated_at`
+- `ai_funding_preferences.user_id/funding_source/created_at/updated_at`
+
+Для Stage 3 дополнительно проверяются CHECK constraints: OpenRouter-only provider, governed credential origins/statuses, positive encryption version, non-negative optional limit, allowed reset periods, обязательный encrypted envelope для `active` credentials и допустимые funding sources `platform | user_openrouter`.
 
 **RPC-функции (`public`):**
 
@@ -91,10 +133,17 @@
 
 **Supabase Storage:**
 
-- bucket `avatars`
+Bucket `avatars`:
 - `public = false`
 - `file_size_limit = 2097152` (2 MB)
 - `allowed_mime_types = image/jpeg, image/png, image/webp`
+
+Bucket `images`:
+- `public = true`
+- `file_size_limit = 5242880` (5 MiB)
+- `allowed_mime_types = image/jpeg, image/png, image/webp`
+
+`images` остаётся public по текущему Image Arena alpha-контракту: backend возвращает только Supabase Storage URL после обязательной server-side raster/MIME/size validation и успешного upload.
 
 **Security grants:**
 
@@ -102,6 +151,9 @@
 - `authenticated` cannot `UPDATE` `profiles.id`, `profiles.email`, `profiles.role`, `profiles.plan`, `profiles.created_at`, `profiles.updated_at`.
 - `authenticated` must not have table-level `UPDATE` on `profiles`.
 - `anon` and `authenticated` must not have legacy `TRUNCATE`, `REFERENCES`, or `TRIGGER` grants on public Arena tables: `profiles`, `tasks`, `model_responses`, `models`, `votes`.
+- `provider_credentials` and `ai_funding_preferences` are server-only: `anon`/`authenticated` must have none of `SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER`.
+- `service_role` must retain `SELECT/INSERT/UPDATE/DELETE` on both Stage 3 tables.
+- RLS must remain enabled on every table in the required public schema set.
 
 `models.status` добавлен миграцией `20260610061249_add_models_status_column.sql`
 как generated stored column, производная от `models.is_active`:
@@ -180,7 +232,10 @@ ops/dev-проверка, которую запускают вручную пр�
 
 ## Как добавить новый schema object в проверку
 
-Отредактируйте массивы `REQUIRED_TABLES`, `REQUIRED_COLUMNS`,
-`REQUIRED_GENERATED_COLUMNS`, `REQUIRED_FUNCTIONS` или
-`REQUIRED_STORAGE_BUCKETS` в `scripts/check-schema-sync.mjs`. Список намеренно
-держится в одном месте.
+Отредактируйте соответствующие contract-массивы в `scripts/check-schema-sync.mjs`:
+`REQUIRED_TABLES`, `REQUIRED_RLS_ENABLED_TABLES`, `REQUIRED_COLUMNS`,
+`REQUIRED_GENERATED_COLUMNS`, `REQUIRED_FUNCTIONS`,
+`REQUIRED_CHECK_CONSTRAINTS`, `REQUIRED_RLS_POLICIES`,
+`REQUIRED_STORAGE_BUCKETS` или `REQUIRED_GRANT_CHECKS`.
+
+После каждой новой migration нужно одновременно обновлять этот checker и данный документ, чтобы production schema и автоматизированный contract не расходились.

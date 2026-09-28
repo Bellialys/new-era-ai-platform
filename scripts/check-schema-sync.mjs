@@ -62,6 +62,7 @@ const REQUIRED_TABLES = [
   "model_responses",
   "votes",
   "anonymous_sessions",
+  "audit_log",
   // v2.0 analytics and history tables (added in 20260628031516_database_v2_foundation.sql)
   "usage_events",
   "team_runs",
@@ -71,7 +72,12 @@ const REQUIRED_TABLES = [
   "artifacts",
   "model_price_history",
   "cleanup_log",
+  // Stage 3 provider funding / credential security foundation.
+  "provider_credentials",
+  "ai_funding_preferences",
 ];
+
+const REQUIRED_RLS_ENABLED_TABLES = [...REQUIRED_TABLES];
 
 const REQUIRED_COLUMNS = [
   { table: "profiles",           column: "id" },
@@ -136,6 +142,13 @@ const REQUIRED_COLUMNS = [
   { table: "anonymous_sessions", column: "created_at" },
   { table: "anonymous_sessions", column: "last_seen_at" },
   { table: "anonymous_sessions", column: "converted_user_id" },
+  { table: "audit_log",          column: "id" },
+  { table: "audit_log",          column: "actor_id" },
+  { table: "audit_log",          column: "action" },
+  { table: "audit_log",          column: "target_type" },
+  { table: "audit_log",          column: "target_id" },
+  { table: "audit_log",          column: "payload" },
+  { table: "audit_log",          column: "created_at" },
   // v2.0 analytics and history tables (added in 20260628031516_database_v2_foundation.sql)
   { table: "usage_events",            column: "id" },
   { table: "usage_events",            column: "user_id" },
@@ -187,6 +200,33 @@ const REQUIRED_COLUMNS = [
   { table: "cleanup_log",             column: "cleanup_type" },
   { table: "cleanup_log",             column: "rows_deleted" },
   { table: "cleanup_log",             column: "created_at" },
+
+  // Stage 3 provider credential encryption + funding selection.
+  { table: "provider_credentials",     column: "id" },
+  { table: "provider_credentials",     column: "user_id" },
+  { table: "provider_credentials",     column: "provider" },
+  { table: "provider_credentials",     column: "origin" },
+  { table: "provider_credentials",     column: "status" },
+  { table: "provider_credentials",     column: "provider_key_hash" },
+  { table: "provider_credentials",     column: "safe_fingerprint" },
+  { table: "provider_credentials",     column: "secret_ciphertext" },
+  { table: "provider_credentials",     column: "encrypted_dek" },
+  { table: "provider_credentials",     column: "kms_key_id" },
+  { table: "provider_credentials",     column: "encryption_version" },
+  { table: "provider_credentials",     column: "limit_usd" },
+  { table: "provider_credentials",     column: "limit_reset" },
+  { table: "provider_credentials",     column: "expires_at" },
+  { table: "provider_credentials",     column: "last_verified_at" },
+  { table: "provider_credentials",     column: "last_used_at" },
+  { table: "provider_credentials",     column: "reconcile_after" },
+  { table: "provider_credentials",     column: "revoked_at" },
+  { table: "provider_credentials",     column: "last_error_code" },
+  { table: "provider_credentials",     column: "created_at" },
+  { table: "provider_credentials",     column: "updated_at" },
+  { table: "ai_funding_preferences",   column: "user_id" },
+  { table: "ai_funding_preferences",   column: "funding_source" },
+  { table: "ai_funding_preferences",   column: "created_at" },
+  { table: "ai_funding_preferences",   column: "updated_at" },
 ];
 
 /**
@@ -224,6 +264,75 @@ const REQUIRED_CHECK_CONSTRAINTS = [
     definitionIncludes: ["'free'::text", "'pro'::text"],
     definitionExcludes: ["'premium'::text"],
   },
+  {
+    id:                 "provider_credentials_provider_openrouter",
+    table:              "provider_credentials",
+    name:               "provider_credentials_provider_check",
+    definitionIncludes: ["provider", "openrouter"],
+    definitionExcludes: [],
+  },
+  {
+    id:                 "provider_credentials_origin_governed",
+    table:              "provider_credentials",
+    name:               "provider_credentials_origin_check",
+    definitionIncludes: ["origin", "user_oauth", "user_manual", "platform_managed"],
+    definitionExcludes: [],
+  },
+  {
+    id:                 "provider_credentials_status_governed",
+    table:              "provider_credentials",
+    name:               "provider_credentials_status_check",
+    definitionIncludes: ["pending", "active", "revoking", "revoked", "orphaned", "error"],
+    definitionExcludes: [],
+  },
+  {
+    id:                 "provider_credentials_encryption_version_positive",
+    table:              "provider_credentials",
+    name:               "provider_credentials_encryption_version_check",
+    definitionIncludes: ["encryption_version", "> 0"],
+    definitionExcludes: [],
+  },
+  {
+    id:                 "provider_credentials_limit_nonnegative",
+    table:              "provider_credentials",
+    name:               "provider_credentials_limit_check",
+    definitionIncludes: ["limit_usd", "is null", ">="],
+    definitionExcludes: [],
+  },
+  {
+    id:                 "provider_credentials_limit_reset_governed",
+    table:              "provider_credentials",
+    name:               "provider_credentials_limit_reset_check",
+    definitionIncludes: ["daily", "weekly", "monthly"],
+    definitionExcludes: [],
+  },
+  {
+    id:                 "provider_credentials_active_requires_envelope",
+    table:              "provider_credentials",
+    name:               "provider_credentials_active_secret_check",
+    definitionIncludes: [
+      "status <> 'active'",
+      "secret_ciphertext is not null",
+      "octet_length(secret_ciphertext) > 0",
+      "encrypted_dek is not null",
+      "octet_length(encrypted_dek) > 0",
+      "kms_key_id is not null",
+      "btrim(kms_key_id) <> ''",
+    ],
+    definitionExcludes: [
+      "status = 'active'",
+      "secret_ciphertext is null",
+      "encrypted_dek is null",
+      "kms_key_id is null",
+    ],
+  },
+  {
+    id:                 "ai_funding_preferences_source_governed",
+    table:              "ai_funding_preferences",
+    name:               "ai_funding_preferences_source_check",
+    definitionIncludes: ["funding_source", "platform", "user_openrouter"],
+    definitionExcludes: [],
+  },
 ];
 
 const REQUIRED_RLS_POLICIES = [
@@ -252,6 +361,12 @@ const REQUIRED_STORAGE_BUCKETS = [
     id:               "avatars",
     public:           false,
     fileSizeLimit:    2_097_152,
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+  },
+  {
+    id:               "images",
+    public:           true,
+    fileSizeLimit:    5_242_880,
     allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
   },
 ];
@@ -288,6 +403,29 @@ const SERVICE_ROLE_REQUIRED_TABLE_GRANTS = [
   { table: "votes", privilege: "INSERT" },
   { table: "votes", privilege: "UPDATE" },
   { table: "votes", privilege: "DELETE" },
+  { table: "provider_credentials", privilege: "SELECT" },
+  { table: "provider_credentials", privilege: "INSERT" },
+  { table: "provider_credentials", privilege: "UPDATE" },
+  { table: "provider_credentials", privilege: "DELETE" },
+  { table: "ai_funding_preferences", privilege: "SELECT" },
+  { table: "ai_funding_preferences", privilege: "INSERT" },
+  { table: "ai_funding_preferences", privilege: "UPDATE" },
+  { table: "ai_funding_preferences", privilege: "DELETE" },
+];
+
+const STAGE3_SERVER_ONLY_TABLES = [
+  "provider_credentials",
+  "ai_funding_preferences",
+];
+
+const DATA_API_TABLE_PRIVILEGES = [
+  "SELECT",
+  "INSERT",
+  "UPDATE",
+  "DELETE",
+  "TRUNCATE",
+  "REFERENCES",
+  "TRIGGER",
 ];
 
 const MODELS_DATA_API_SELECT_GRANTS = [
@@ -342,6 +480,18 @@ const REQUIRED_GRANT_CHECKS = [
     privilege,
     expected:  true,
   })),
+  ...STAGE3_SERVER_ONLY_TABLES.flatMap((table) =>
+    ["anon", "authenticated"].flatMap((grantee) =>
+      DATA_API_TABLE_PRIVILEGES.map((privilege) => ({
+        id: `${grantee}_${table}_${privilege.toLowerCase()}_denied`,
+        kind: "table",
+        grantee,
+        table,
+        privilege,
+        expected: false,
+      })),
+    ),
+  ),
   ...MODELS_DATA_API_SELECT_GRANTS.map(({ grantee, table, privilege }) => ({
     id:        `${grantee}_${table}_${privilege.toLowerCase()}_allowed`,
     kind:      "table",
@@ -545,6 +695,7 @@ async function queryWithRetry(client, query, maxAttempts = 3) {
  * @param {string} schemaName
  * @returns {Promise<{
  *   tables: Set<string>;
+ *   rlsEnabledTables: Set<string>;
  *   columns: Map<string, Map<string, ColumnInfo>>;
  *   functions: Map<string, FunctionInfo[]>;
  *   storageBuckets: Map<string, StorageBucketInfo>;
@@ -561,6 +712,17 @@ async function introspect(client, schemaName) {
             WHERE table_schema = $1
               AND table_type   = 'BASE TABLE'`,
     values: [schemaName],
+  });
+
+  const rlsResult = await queryWithRetry(client, {
+    text: `SELECT c.relname AS table_name,
+                  c.relrowsecurity AS rls_enabled
+             FROM pg_catalog.pg_class c
+             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = $1
+              AND c.relkind = 'r'
+              AND c.relname = ANY($2::text[])`,
+    values: [schemaName, REQUIRED_RLS_ENABLED_TABLES],
   });
 
   const columnsResult = await queryWithRetry(client, {
@@ -585,6 +747,11 @@ async function introspect(client, schemaName) {
   const tables = new Set();
   for (const row of tablesResult.rows) {
     tables.add(row.table_name);
+  }
+
+  const rlsEnabledTables = new Set();
+  for (const row of rlsResult.rows) {
+    if (row.rls_enabled) rlsEnabledTables.add(row.table_name);
   }
 
   // table -> column -> { isGenerated, generationExpression }
@@ -614,6 +781,7 @@ async function introspect(client, schemaName) {
 
   return {
     tables,
+    rlsEnabledTables,
     columns,
     functions,
     storageBuckets,
@@ -866,6 +1034,7 @@ function sortedUniqueStrings(values) {
  */
 function validateSchema({
   tables,
+  rlsEnabledTables,
   columns,
   functions,
   storageBuckets,
@@ -879,6 +1048,12 @@ function validateSchema({
   for (const table of REQUIRED_TABLES) {
     if (!tables.has(table)) {
       errors.push({ type: "TABLE_MISSING", table });
+    }
+  }
+
+  for (const table of REQUIRED_RLS_ENABLED_TABLES) {
+    if (tables.has(table) && !rlsEnabledTables.has(table)) {
+      errors.push({ type: "RLS_DISABLED", table });
     }
   }
 
@@ -1104,6 +1279,8 @@ function describeError(err) {
   switch (err.type) {
     case "TABLE_MISSING":
       return `Missing table: "${err.table}"`;
+    case "RLS_DISABLED":
+      return `RLS must be enabled on table: "${err.table}"`;
     case "COLUMN_MISSING":
       return `Missing column: "${err.table}"."${err.column}"`;
     case "GENERATED_COLUMN_MISSING":
