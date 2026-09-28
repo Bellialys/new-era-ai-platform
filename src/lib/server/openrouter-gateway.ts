@@ -1,5 +1,7 @@
-import type { AiFundingSource } from "./provider-credentials";
-import { isAiFundingSource } from "./provider-credentials";
+import {
+  isAiFundingSource,
+  type AiFundingSource,
+} from "./provider-credentials";
 import {
   fetchOpenRouterResponseWithApiKey,
   streamOpenRouterResponseWithApiKey,
