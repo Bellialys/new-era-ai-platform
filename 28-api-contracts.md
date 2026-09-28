@@ -38,6 +38,8 @@ Frontend вызывает только backend route handlers.
 | `POST /api/compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/vote` | 30 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/profile/email` | 3 req | 3600 сек | user UUID |
+| `POST /api/integrations/openrouter/connect` | 6 req | 10 min | user UUID |
+| `DELETE /api/integrations/openrouter` | 12 req | 10 min | user UUID |
 | `GET /api/code-models` | 60 req | 60 сек | IP-адрес |
 | `POST /api/code-compare` | 8 req / 3 guest req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/judge` | 3 req / 1 guest req | 60 сек | user UUID или guest cookie `na_guest` |
@@ -82,6 +84,49 @@ Release-gate note: `POST /api/guest` создаёт anonymous session и дол�
 Для mutating API routes, которые читают JSON body, верхний уровень запроса должен быть JSON-объектом. Синтаксически валидные, но неподходящие значения `null`, массив, строка, число или boolean завершаются controlled `400 INVALID_BODY`, а не `500`.
 
 Эта policy покрыта общим regression test для Prompt/Stream/Code/Image/Team/Vote/Profile/Judge и admin PATCH routes.
+
+## OpenRouter OAuth integration (Stage 3.4 beta control-plane)
+
+Stage 3.4 добавляет authenticated OAuth/funding control-plane, но не переключает текущие Arena inference routes на пользовательский OpenRouter credential. Inference cutover остаётся частью Stage 3.3 unified gateway.
+
+### `GET /api/integrations/openrouter`
+
+Возвращает только browser-safe статус:
+
+```json
+{
+  "status": "success",
+  "enabled": false,
+  "integration": {
+    "connected": false,
+    "safeFingerprint": null,
+    "lastVerifiedAt": null,
+    "fundingSource": "platform"
+  }
+}
+```
+
+Raw API key, credential UUID, внутренний lifecycle status, ciphertext, wrapped DEK и KMS key id в браузерный ответ не включаются.
+
+### `POST /api/integrations/openrouter/connect`
+
+Требует same-origin request, auth и включённых Stage 3.4 flags. Создаёт PKCE S256 flow, сохраняет verifier/state в короткоживущем signed httpOnly cookie и возвращает provider authorization URL. При `429` возвращает `Retry-After`.
+
+### `GET /api/integrations/openrouter/callback`
+
+Проверяет user-bound signed flow cookie, TTL и state, обменивает authorization code только server-side с bounded timeout и не возвращает полученный provider key браузеру. Encrypted credential activation и `funding_source=user_openrouter` фиксируются одной service-role PostgreSQL RPC-транзакцией. Callback завершает flow контролируемым `303` redirect на профиль.
+
+### `DELETE /api/integrations/openrouter`
+
+Требует same-origin request и auth. Сначала отзывает live user OAuth credential и очищает ciphertext/wrapped DEK/KMS reference, затем возвращает funding preference на `platform`. При `429` возвращает `Retry-After`.
+
+Rollout boundary:
+
+- `ENABLE_OPENROUTER_USER_OAUTH=false` по умолчанию;
+- `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false` до Stage 3.2 live AWS/Vercel KMS + environment-isolation gate;
+- migration `20260929022500_stage34_atomic_openrouter_activation.sql` должна быть применена до включения persistence;
+- internal credential id и provider secret остаются server-only;
+- Stage 3.3 PRs #101/#102 не являются зависимостью текущего control-plane PR.
 
 ## `GET /api/models`
 

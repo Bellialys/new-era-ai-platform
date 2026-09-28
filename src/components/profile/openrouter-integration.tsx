@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 
 type IntegrationStatus = {
   connected: boolean;
-  credentialId: string | null;
-  credentialStatus: string | null;
   safeFingerprint: string | null;
   lastVerifiedAt: string | null;
   fundingSource: "platform" | "user_openrouter";
@@ -55,7 +53,8 @@ export function OpenRouterIntegration() {
       if (result === "connected") {
         setMessage({
           kind: "success",
-          text: "OpenRouter подключён. Для AI-запросов выбран ваш OpenRouter аккаунт.",
+          text:
+            "OpenRouter подключён, ключ сохранён в зашифрованном виде. Маршрутизация текущих AI-запросов через этот ключ пока не активирована.",
         });
       } else if (result === "error") {
         setMessage({
@@ -120,7 +119,6 @@ export function OpenRouterIntegration() {
           ? {
               ...current,
               connected: false,
-              credentialStatus: "revoked",
               fundingSource: "platform",
             }
           : current
@@ -172,8 +170,12 @@ export function OpenRouterIntegration() {
       {integration?.connected && (
         <dl className="mb-4 grid gap-2 text-sm">
           <div className="flex justify-between gap-4">
-            <dt className="text-slate-400">Источник оплаты</dt>
-            <dd className="text-right text-slate-200">Ваш OpenRouter</dd>
+            <dt className="text-slate-400">Funding preference</dt>
+            <dd className="text-right text-slate-200">
+              {integration.fundingSource === "user_openrouter"
+                ? "Ваш OpenRouter (подготовлен)"
+                : "Платформа"}
+            </dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-slate-400">Безопасный отпечаток</dt>
@@ -181,6 +183,18 @@ export function OpenRouterIntegration() {
               {integration.safeFingerprint ?? "—"}
             </dd>
           </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-400">Последняя проверка</dt>
+            <dd className="text-right text-xs text-slate-300">
+              {integration.lastVerifiedAt
+                ? new Date(integration.lastVerifiedAt).toLocaleString("ru-RU")
+                : "—"}
+            </dd>
+          </div>
+          <p className="mt-2 rounded-xl border border-sky-400/20 bg-sky-500/10 px-4 py-2.5 text-sm text-sky-200">
+            OAuth и funding control-plane подготовлены. Текущие Arena-запросы пока
+            используют существующий server-side gateway.
+          </p>
         </dl>
       )}
 

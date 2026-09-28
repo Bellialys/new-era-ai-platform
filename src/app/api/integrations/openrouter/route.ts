@@ -54,7 +54,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       status: "success",
       enabled: isOpenRouterOAuthBetaAvailable(),
-      integration,
+      integration: {
+        connected: integration.connected,
+        safeFingerprint: integration.safeFingerprint,
+        lastVerifiedAt: integration.lastVerifiedAt,
+        fundingSource: integration.fundingSource,
+      },
     });
   } catch (error) {
     const safeError = mapCredentialError(error);
