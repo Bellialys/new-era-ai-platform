@@ -20,6 +20,7 @@ Core:
 - `model_responses`
 - `votes`
 - `anonymous_sessions`
+- `audit_log`
 
 v2 analytics/history:
 - `usage_events`
@@ -101,6 +102,7 @@ Stage 3 provider funding/security:
 - `anonymous_sessions.created_at`
 - `anonymous_sessions.last_seen_at`
 - `anonymous_sessions.converted_user_id`
+- `audit_log.id/actor_id/action/target_type/target_id/payload/created_at`
 
 **v2 analytics/history — обязательные ключевые колонки:**
 
