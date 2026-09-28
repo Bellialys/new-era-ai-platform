@@ -1,0 +1,82 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-10",
+  "title": "KMS Live Canary Foundation",
+  "status": "done",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-10.json",
+    "src/lib/server/credential-kms-canary.ts",
+    "src/lib/server/credential-kms-canary.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:canary-unit",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:canary-unit",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T22:13:00+03:00",
+  "commitHash": "05bcb72ca302e601c1278c6a28db857852b2c23a",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T21:58:00+03:00",
+      "note": "Created while AWS account setup is deferred so the live KMS verification path can be prepared safely in advance."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T21:58:00+03:00",
+      "note": "Add a server-only reusable canary with no route, no persistence, no AWS call until explicitly invoked with a configured data-key provider."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T22:05:30+03:00",
+      "note": "Full PR CI passed audit, typecheck, lint, unit tests, env/model-verifier tests, build, state/docs checks and smoke; Vercel preview succeeded. Canary directly verifies provider-layer encryption-context rejection rather than relying only on AES-GCM AAD."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T22:06:00+03:00",
+      "note": "Reusable server-only KMS canary foundation completed with no route, persistence, AWS resource, env, OpenRouter or paid-traffic activation."
+    },
+    {
+      "from": "done",
+      "to": "in_progress",
+      "at": "2026-09-28T22:11:00+03:00",
+      "note": "Reopened after PR review correctly identified that any negative-check error was being treated as proof of context enforcement and that the exported security-sensitive canary contract needed JSDoc."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T22:12:30+03:00",
+      "note": "Review hardening passed full CI. Negative context verification now accepts only AWS KMS InvalidCiphertextException; operational errors fail closed. Exported canary contract is documented with live side effects and error codes."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T22:13:00+03:00",
+      "note": "Both security review threads resolved with regression coverage and AWS-documented error semantics. No live AWS invocation or runtime activation occurred."
+    }
+  ],
+  "notes": "Review-hardened KMS canary foundation is ready for later live invocation after AWS/Vercel OIDC setup. No route or persistence activation."
+}
