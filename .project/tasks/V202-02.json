@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V202-02",
   "title": "Stage 3.3 Unified OpenRouter Gateway Foundation",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -22,9 +22,19 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-29T01:50:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "gateway:credential-contract",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-29T01:58:00+03:00",
+  "commitHash": "6e69f351300ab2ac3b07df2694941faf6a459b77",
   "transitions": [
     {
       "from": null,
@@ -37,7 +47,19 @@
       "to": "in_progress",
       "at": "2026-09-29T01:50:00+03:00",
       "note": "Introduce a server-only unified gateway with explicit in-memory credential/funding context. Existing API routes remain on legacy helpers until a separate cutover."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-29T01:57:30+03:00",
+      "note": "Dedicated stacked validation passed audit, typecheck, lint, full tests, production build, project state/docs checks and local production smoke."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-29T01:58:00+03:00",
+      "note": "Unified gateway foundation completed without database, KMS or route cutover."
     }
   ],
-  "notes": "No database read/write, no KMS/decryption, no route cutover, no user credential persistence. Gateway accepts an already-resolved server-side credential context and delegates to OpenRouter transport."
+  "notes": "Completed as a stacked Stage 3.3 slice on V202-01. Existing routes still use the legacy shared provider path. No persistence, funding resolver, database mutation, paid traffic or Stage 3.2 file change."
 }
