@@ -1,0 +1,195 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  New Era AI Platform Stage 3 credential encryption infrastructure:
+  Vercel OIDC trust, least-privilege IAM roles, and a symmetric AWS KMS key.
+
+Parameters:
+  ExistingVercelOidcProviderArn:
+    Type: String
+    Default: ""
+    Description: >
+      Optional existing IAM OIDC provider ARN for
+      https://oidc.vercel.com/bellial-s-projects. Leave empty to create it.
+
+Conditions:
+  CreateVercelOidcProvider: !Equals [!Ref ExistingVercelOidcProviderArn, ""]
+
+Resources:
+  VercelOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateVercelOidcProvider
+    Properties:
+      Url: https://oidc.vercel.com/bellial-s-projects
+      ClientIdList:
+        - https://vercel.com/bellial-s-projects
+      Tags:
+        - Key: Project
+          Value: new-era-ai-platform
+        - Key: Purpose
+          Value: vercel-oidc
+
+  CredentialKmsKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: New Era AI Platform provider credential envelope-encryption key
+      Enabled: true
+      EnableKeyRotation: true
+      RotationPeriodInDays: 365
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      MultiRegion: false
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnableAccountAdministration
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+      Tags:
+        - Key: Project
+          Value: new-era-ai-platform
+        - Key: Purpose
+          Value: provider-credential-encryption
+        - Key: Environment
+          Value: shared-preview-production
+
+  CredentialKmsAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/new-era-ai-provider-credentials
+      TargetKeyId: !Ref CredentialKmsKey
+
+  VercelProductionKmsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: New Era production Vercel role for provider credential KMS operations
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: TrustNewEraProductionVercelOidc
+            Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateVercelOidcProvider
+                - !Ref VercelOidcProvider
+                - !Ref ExistingVercelOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                oidc.vercel.com/bellial-s-projects:aud: https://vercel.com/bellial-s-projects
+                oidc.vercel.com/bellial-s-projects:sub: owner:bellial-s-projects:project:new-era-ai-platform:environment:production
+      Policies:
+        - PolicyName: NewEraProviderCredentialKms
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: UseCredentialEncryptionKey
+                Effect: Allow
+                Action:
+                  - kms:GenerateDataKey
+                  - kms:Decrypt
+                Resource: !GetAtt CredentialKmsKey.Arn
+                Condition:
+                  StringEquals:
+                    kms:EncryptionContext:provider: openrouter
+                    kms:EncryptionContext:origin:
+                      - user_oauth
+                      - user_manual
+                      - platform_managed
+                  StringLike:
+                    kms:EncryptionContext:credential_id: "?*"
+                  "ForAllValues:StringEquals":
+                    kms:EncryptionContextKeys:
+                      - credential_id
+                      - provider
+                      - origin
+      Tags:
+        - Key: Project
+          Value: new-era-ai-platform
+        - Key: Environment
+          Value: production
+
+  VercelPreviewKmsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: New Era preview Vercel role for provider credential KMS smoke tests
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: TrustNewEraPreviewVercelOidc
+            Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateVercelOidcProvider
+                - !Ref VercelOidcProvider
+                - !Ref ExistingVercelOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                oidc.vercel.com/bellial-s-projects:aud: https://vercel.com/bellial-s-projects
+                oidc.vercel.com/bellial-s-projects:sub: owner:bellial-s-projects:project:new-era-ai-platform:environment:preview
+      Policies:
+        - PolicyName: NewEraProviderCredentialKms
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: UseCredentialEncryptionKey
+                Effect: Allow
+                Action:
+                  - kms:GenerateDataKey
+                  - kms:Decrypt
+                Resource: !GetAtt CredentialKmsKey.Arn
+                Condition:
+                  StringEquals:
+                    kms:EncryptionContext:provider: openrouter
+                    kms:EncryptionContext:origin:
+                      - user_oauth
+                      - user_manual
+                      - platform_managed
+                  StringLike:
+                    kms:EncryptionContext:credential_id: "?*"
+                  "ForAllValues:StringEquals":
+                    kms:EncryptionContextKeys:
+                      - credential_id
+                      - provider
+                      - origin
+      Tags:
+        - Key: Project
+          Value: new-era-ai-platform
+        - Key: Environment
+          Value: preview
+
+Outputs:
+  AwsRegion:
+    Description: Value for AWS_REGION in Vercel.
+    Value: !Ref AWS::Region
+
+  CredentialKmsKeyArn:
+    Description: KMS key ARN. May be used as AI_CREDENTIAL_KMS_KEY_ID.
+    Value: !GetAtt CredentialKmsKey.Arn
+
+  CredentialKmsKeyId:
+    Description: KMS key ID.
+    Value: !Ref CredentialKmsKey
+
+  ProductionRoleArn:
+    Description: Value for AWS_ROLE_ARN in the Vercel production environment.
+    Value: !GetAtt VercelProductionKmsRole.Arn
+
+  PreviewRoleArn:
+    Description: Value for AWS_ROLE_ARN in the Vercel preview environment.
+    Value: !GetAtt VercelPreviewKmsRole.Arn
+
+  VercelOidcProviderArn:
+    Description: IAM OIDC provider ARN used by the roles.
+    Value: !If
+      - CreateVercelOidcProvider
+      - !Ref VercelOidcProvider
+      - !Ref ExistingVercelOidcProviderArn
