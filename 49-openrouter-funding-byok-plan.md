@@ -882,7 +882,7 @@ Implementation begins only when:
 - acceptable key cardinality/provisioning scale is confirmed;
 - first implementation PR does not enable paid traffic.
 
-**Current gate:** Stage 3.0 and the Free-first Stage 3.1 readiness are complete. **Stage 3.2 is now allowed.** Runtime user-key persistence remains disabled until the credential schema + encryption boundary are implemented and verified. Management API, Guardrail, platform-paid budget and key-cardinality evidence are deferred to the future platform-funded Stage 3.5 and no longer block OAuth PKCE groundwork.
+**Current gate:** Stage 3.0 and the Free-first Stage 3.1 readiness are complete. Stage 3.2 code/data/crypto/KMS/IaC/readiness-canary foundations are implemented. Runtime user-key persistence remains disabled until the real AWS/Vercel OIDC infrastructure is deployed and both preview live KMS canaries pass. Management API, Guardrail, platform-paid budget and key-cardinality evidence are deferred to the future platform-funded Stage 3.5 and no longer block OAuth PKCE groundwork.
 
 Recommended first implementation PR:
 
