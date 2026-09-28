@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-13",
   "title": "Bind Vercel AWS OIDC Provider to Explicit Region",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -22,9 +22,19 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T23:13:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:oidc-region-unit",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T23:18:00+03:00",
+  "commitHash": "8860091bb74866021780608a77802185abe0e12f",
   "transitions": [
     {
       "from": null,
@@ -37,7 +47,19 @@
       "to": "in_progress",
       "at": "2026-09-28T23:13:00+03:00",
       "note": "Pass AWS_REGION explicitly to the Vercel AWS OIDC credential provider so STS resolution does not depend on the ambient AWS SDK region chain."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T23:17:30+03:00",
+      "note": "PR CI passed audit, typecheck, lint, unit tests, env/model verifier tests, build, state/docs checks and smoke; Vercel preview passed. Regression test confirms roleArn and clientConfig.region are supplied to the Vercel AWS OIDC credential provider."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T23:18:00+03:00",
+      "note": "Explicit STS/OIDC region hardening completed with no AWS resource, env, credential, database, route or paid-traffic mutation."
     }
   ],
-  "notes": "No AWS resource, env, credential, database or route mutation. Small runtime hardening before live canary."
+  "notes": "Completed. The KMS client and Vercel AWS OIDC credential provider now both use the validated AWS_REGION explicitly. Live AWS canaries remain pending external infrastructure deployment."
 }
