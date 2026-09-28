@@ -817,6 +817,8 @@ Rules:
 
 Требует авторизованного пользователя. Гости получают `401 IMAGE_AUTH_REQUIRED`.
 
+По умолчанию платная генерация **выключена**. Для выполнения provider generation server-only переменная `ENABLE_PAID_IMAGE_ARENA` должна быть явно равна `true`. При отсутствующем, пустом или `false` значении аутентифицированный запрос завершается controlled `503 IMAGE_PAID_GENERATION_DISABLED` до rate limit, Storage initialization, чтения OpenRouter API key и provider fetch.
+
 > **Alpha endpoint.** API может измениться до стабильного v2.0 release. Frontend вызывает этот backend route; прямой вызов OpenRouter из браузера запрещён.
 
 Минимальный запрос:
@@ -855,6 +857,7 @@ Rules:
 Rules:
 
 - requires a real Supabase authenticated user; guest or unauthenticated → `401 IMAGE_AUTH_REQUIRED`;
+- после успешной auth-проверки server-only kill switch `ENABLE_PAID_IMAGE_ARENA` должен быть ровно `true`; иначе → `503 IMAGE_PAID_GENERATION_DISABLED`, причём платные/ресурсные downstream operations не запускаются;
 - `prompt` обязателен, после `trim()` не должен быть пустым и ограничен 1000 символами;
 - `modelIds` содержит 1–3 уникальные выбранные клиентом записи из registered-only `IMAGE_MODELS`; дубликат или произвольный provider key отклоняется до provider calls;
 - до provider fan-out backend инициализирует Storage client/bucket; недоступная конфигурация → `503 IMAGE_STORAGE_UNAVAILABLE` и ноль платных generation calls;
@@ -865,7 +868,7 @@ Rules:
 - если генерация или Storage upload одной модели не удались, её result содержит `imageUrl: null` и controlled `error`, а результаты остальных моделей сохраняются;
 - frontend does NOT call image providers directly — only `POST /api/image-compare`;
 - response contains image URLs/metadata, not binary image data or provider secrets;
-- safe top-level errors include `IMAGE_AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `IMAGE_STORAGE_UNAVAILABLE`; generation и transient upload failures остаются per-model errors при HTTP `200`.
+- safe top-level errors include `IMAGE_AUTH_REQUIRED`, `IMAGE_PAID_GENERATION_DISABLED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `IMAGE_STORAGE_UNAVAILABLE`; generation и transient upload failures остаются per-model errors при HTTP `200`.
 
 ## `GET /api/profile`
 
