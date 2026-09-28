@@ -119,7 +119,7 @@ export function OpenRouterIntegration() {
       setMessage({
         kind: "success",
         text:
-          "OpenRouter отключён. Зашифрованная копия ключа New Era удалена; сам ключ остаётся под вашим контролем в OpenRouter.",
+          "OpenRouter отключён. Активная зашифрованная копия ключа New Era удалена; сам ключ остаётся под вашим контролем в OpenRouter.",
       });
     } catch (error) {
       setMessage({
