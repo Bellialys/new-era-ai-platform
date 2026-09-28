@@ -11,7 +11,7 @@
  * Output is limited to variable NAMES and statuses, which is safe to share.
  *
  * Usage:
- *   node scripts/check-env.mjs [--mode=basic|migrations|full] [--json] [--ci] [--strict]
+ *   node scripts/check-env.mjs [--mode=basic|migrations|full|kms] [--json] [--ci] [--strict]
  *   node scripts/check-env.mjs --generate-example
  *   node scripts/check-env.mjs --help | --version
  *
@@ -53,7 +53,7 @@ const EXIT_CODES = {
   SECURITY_ERROR:   3,
 };
 
-const VALID_MODES = new Set(["basic", "migrations", "full"]);
+const VALID_MODES = new Set(["basic", "migrations", "full", "kms"]);
 
 // Words that must never appear in a NEXT_PUBLIC_* (client-exposed) variable name.
 const DANGEROUS_WORDS = [
@@ -120,7 +120,7 @@ function showHelp() {
 Usage: node scripts/check-env.mjs [options]
 
 Options:
-  --mode=<mode>       Check mode: basic | migrations | full  (default: basic)
+  --mode=<mode>       Check mode: basic | migrations | full | kms  (default: basic)
   --mode <mode>       Alternative mode syntax
   --json              Output results as JSON
   --ci                Emit GitHub Actions ::error:: / ::warning:: annotations
@@ -309,6 +309,28 @@ function detectLeaks() {
   return fatals;
 }
 
+/** KMS path must use Vercel OIDC only; static AWS credentials are forbidden. */
+function detectStaticAwsCredentials() {
+  const forbidden = [
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+  ];
+
+  return forbidden
+    .filter((name) => {
+      const value = process.env[name];
+      return typeof value === "string" && value.trim() !== "";
+    })
+    .map((name) => ({
+      name,
+      status: STATUS.FATAL,
+      required: false,
+      category: "security",
+      message: "static AWS credentials are not allowed for the Stage 3 KMS path",
+    }));
+}
+
 /** Verify .env.local is covered by an ignore-file pattern. */
 function ignoreFileCoversEnvLocal(path) {
   if (!existsSync(path)) return false;
@@ -493,6 +515,9 @@ function run() {
 
   // 1. Security checks first — FATAL causes exit 3.
   details.push(...detectLeaks());
+  if (flags.mode === "kms") {
+    details.push(...detectStaticAwsCredentials());
+  }
   if (!isEnvLocalIgnored({ allowVercelignore: isVercel })) {
     details.push({
       name:     ".env.local",
