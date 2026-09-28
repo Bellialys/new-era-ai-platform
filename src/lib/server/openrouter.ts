@@ -19,6 +19,9 @@ interface OpenRouterRequest {
   temperature?: number;
   max_tokens?: number;
   stream?: boolean;
+  usage?: {
+    include: true;
+  };
 }
 
 interface OpenRouterResponse {
@@ -34,10 +37,12 @@ interface OpenRouterResponse {
     };
     finish_reason: string;
   }[];
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    cost?: number;
+    is_byok?: boolean;
   };
 }
 
@@ -50,6 +55,8 @@ interface OpenRouterErrorResponse {
 }
 
 interface OpenRouterStreamChunk {
+  id?: string;
+  model?: string;
   choices?: {
     delta?: {
       content?: string;
@@ -62,6 +69,8 @@ interface OpenRouterStreamChunk {
     prompt_tokens?: number;
     completion_tokens?: number;
     total_tokens?: number;
+    cost?: number;
+    is_byok?: boolean;
   };
 }
 
@@ -152,21 +161,34 @@ function logOpenRouterDiagnostic({
   });
 }
 
+export type ModelCostSource = "provider_usage" | "unknown";
+
 export type ModelUsage = {
   inputTokens: number | null;
   outputTokens: number | null;
   totalTokens: number | null;
+  costUsd: number | null;
+  costSource: ModelCostSource;
+  providerIsByok: boolean | null;
+};
+
+export type OpenRouterCallResult = {
+  text: string;
+  latencyMs: number;
+  usage: ModelUsage;
+  providerRequestId: string | null;
+  providerModelId: string | null;
 };
 
 export type ModelResult =
-  | { success: true; text: string; latencyMs: number; usage: ModelUsage }
+  | ({ success: true } & OpenRouterCallResult)
   | { success: false; errorCode: string; errorMessage: string };
 
 export async function fetchOpenRouterResponse(
   prompt: string,
   modelId: string,
   options?: { systemPrompt?: string }
-): Promise<{ text: string; latencyMs: number; usage: ModelUsage }> {
+): Promise<OpenRouterCallResult> {
   const apiKey = getApiKey();
 
   const messages: OpenRouterRequest["messages"] = [];
@@ -180,6 +202,7 @@ export async function fetchOpenRouterResponse(
     messages,
     temperature: 0.7,
     max_tokens: getOpenRouterMaxTokens(),
+    usage: { include: true },
   };
 
   const controller = new AbortController();
@@ -249,11 +272,15 @@ export async function fetchOpenRouterResponse(
     return {
       text: content,
       latencyMs,
-      usage: {
-        inputTokens: responseData.usage?.prompt_tokens ?? null,
-        outputTokens: responseData.usage?.completion_tokens ?? null,
-        totalTokens: responseData.usage?.total_tokens ?? null,
-      },
+      usage: toModelUsage(responseData.usage),
+      providerRequestId:
+        typeof responseData.id === "string" && responseData.id.trim()
+          ? responseData.id
+          : null,
+      providerModelId:
+        typeof responseData.model === "string" && responseData.model.trim()
+          ? responseData.model
+          : null,
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -286,6 +313,7 @@ function buildOpenRouterRequest(
     temperature: 0.7,
     max_tokens: getOpenRouterMaxTokens(),
     stream: options?.stream,
+    usage: { include: true },
   };
 }
 
@@ -299,11 +327,23 @@ function parseSseDataLines(rawEvent: string): string | null {
   return dataLines.length > 0 ? dataLines.join("\n") : null;
 }
 
-function toModelUsage(usage: OpenRouterStreamChunk["usage"]): ModelUsage {
+function toModelUsage(
+  usage: OpenRouterResponse["usage"] | OpenRouterStreamChunk["usage"]
+): ModelUsage {
+  const rawCost = usage?.cost;
+  const costUsd =
+    typeof rawCost === "number" && Number.isFinite(rawCost) && rawCost >= 0
+      ? rawCost
+      : null;
+
   return {
     inputTokens: usage?.prompt_tokens ?? null,
     outputTokens: usage?.completion_tokens ?? null,
     totalTokens: usage?.total_tokens ?? null,
+    costUsd,
+    costSource: costUsd === null ? "unknown" : "provider_usage",
+    providerIsByok:
+      typeof usage?.is_byok === "boolean" ? usage.is_byok : null,
   };
 }
 
@@ -312,7 +352,7 @@ export async function streamOpenRouterResponse(
   modelId: string,
   onToken: (token: string) => void | Promise<void>,
   options?: { systemPrompt?: string }
-): Promise<{ text: string; latencyMs: number; usage: ModelUsage }> {
+): Promise<OpenRouterCallResult> {
   const apiKey = getApiKey();
   const request = buildOpenRouterRequest(prompt, modelId, {
     systemPrompt: options?.systemPrompt,
@@ -378,11 +418,9 @@ export async function streamOpenRouterResponse(
     const decoder = new TextDecoder();
     let buffer = "";
     let text = "";
-    let usage: ModelUsage = {
-      inputTokens: null,
-      outputTokens: null,
-      totalTokens: null,
-    };
+    let usage: ModelUsage = toModelUsage(undefined);
+    let providerRequestId: string | null = null;
+    let providerModelId: string | null = null;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -409,6 +447,12 @@ export async function streamOpenRouterResponse(
           continue;
         }
 
+        if (typeof chunk.id === "string" && chunk.id.trim()) {
+          providerRequestId = chunk.id;
+        }
+        if (typeof chunk.model === "string" && chunk.model.trim()) {
+          providerModelId = chunk.model;
+        }
         if (chunk.usage) {
           usage = toModelUsage(chunk.usage);
         }
@@ -431,7 +475,13 @@ export async function streamOpenRouterResponse(
       throw new ApiError(502, "INVALID_RESPONSE", "AI provider returned an empty response.");
     }
 
-    return { text: trimmedText, latencyMs, usage };
+    return {
+      text: trimmedText,
+      latencyMs,
+      usage,
+      providerRequestId,
+      providerModelId,
+    };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new ApiError(504, "TIMEOUT", `AI provider request timed out after ${timeoutMs}ms.`);
@@ -453,8 +503,21 @@ export async function fetchMultipleResponses(
 ): Promise<ModelResult[]> {
   const promises = modelIds.map(async (modelId): Promise<ModelResult> => {
     try {
-      const { text, latencyMs, usage } = await fetchOpenRouterResponse(prompt, modelId, options);
-      return { success: true, text, latencyMs, usage };
+      const {
+        text,
+        latencyMs,
+        usage,
+        providerRequestId,
+        providerModelId,
+      } = await fetchOpenRouterResponse(prompt, modelId, options);
+      return {
+        success: true,
+        text,
+        latencyMs,
+        usage,
+        providerRequestId,
+        providerModelId,
+      };
     } catch (error) {
       const errorCode = error instanceof ApiError ? error.errorCode : "UNKNOWN_ERROR";
       const errorMessage = error instanceof ApiError
