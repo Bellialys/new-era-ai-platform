@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
+import { OpenRouterIntegration } from "@/components/profile/openrouter-integration";
 
 interface ArenaStats {
   totalComparisons: number;
@@ -402,6 +403,8 @@ export default function ProfilePage() {
           </button>
         </form>
       </section>
+
+      <OpenRouterIntegration />
 
       {/* Security section */}
       <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
