@@ -1,0 +1,43 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V202-02",
+  "title": "Stage 3.3 Unified OpenRouter Gateway Foundation",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V202-02.json",
+    "src/lib/server/openrouter.ts",
+    "src/lib/server/openrouter-gateway.ts",
+    "src/lib/server/openrouter-gateway.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "gateway:credential-contract",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T01:50:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T01:50:00+03:00",
+      "note": "Stacked on V202-01 while Vercel preview is externally rate-limited."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T01:50:00+03:00",
+      "note": "Introduce a server-only unified gateway with explicit in-memory credential/funding context. Existing API routes remain on legacy helpers until a separate cutover."
+    }
+  ],
+  "notes": "No database read/write, no KMS/decryption, no route cutover, no user credential persistence. Gateway accepts an already-resolved server-side credential context and delegates to OpenRouter transport."
+}
