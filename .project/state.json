@@ -4,7 +4,9 @@
   "currentVersion": "2.0.0-alpha.1",
   "currentPhase": "v2.0 - AI Team Mode",
   "status": "in_development",
-  "activeTaskIds": [],
-  "lastSyncedAt": "2026-09-28T23:18:00+03:00",
+  "activeTaskIds": [
+    "V201-15"
+  ],
+  "lastSyncedAt": "2026-09-29T00:05:00+03:00",
   "baseBranch": "main"
 }
