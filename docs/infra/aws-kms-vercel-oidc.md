@@ -6,9 +6,11 @@ Prepared for Stage 3.2. The application adapter exists in
 `src/lib/server/aws-kms-data-key-provider.ts`, and the reusable live verifier
 exists in `src/lib/server/credential-kms-canary.ts`.
 
-The canary has no route and is not invoked automatically. After AWS/Vercel setup,
-a preview-only invocation must use `createAwsKmsDataKeyProviderFromEnv()` and
-pass that provider to `runCredentialKmsCanary()`.
+The canaries have no route and are not invoked automatically. After AWS/Vercel setup,
+a preview-only invocation must first use `createAwsKmsDataKeyProviderFromEnv()`
+and pass that provider to `runCredentialKmsCanary()`, then run
+`runAwsKmsExtraContextPolicyCanaryFromEnv()` to prove the IAM/KMS context-key allowlist
+rejects unexpected context keys.
 
 Live Vercel readiness probe on 2026-09-28:
 
@@ -109,7 +111,7 @@ Before enabling provider credential persistence:
 4. The plaintext DEK is used locally and wiped.
 5. `runCredentialKmsCanary()` verifies that `Decrypt` with the identical encryption context succeeds.
 6. The canary directly calls the data-key provider with a changed `credential_id`; only AWS KMS `InvalidCiphertextException` counts as a successful context-rejection proof. Timeout, throttling, credential or network errors fail the canary.
-7. Separately verify with a raw KMS negative request that an extra encryption-context key is denied by the IAM/KMS policy; the typed application provider intentionally cannot construct extra context keys.
+7. Run `runAwsKmsExtraContextPolicyCanaryFromEnv()`. It sends one intentional `GenerateDataKey` request with an extra `policy_probe_extra` encryption-context key. Only AWS `AccessDeniedException` counts as proof that the IAM/KMS allow statement rejected the extra key; timeout, disabled key, expired credentials or any other operational error fails closed. If AWS unexpectedly accepts the request, returned plaintext key material is wiped before the canary fails.
 8. Static AWS credential variables remain absent.
 9. No provider credential, DEK, ciphertext or AWS token appears in logs.
 10. Remove any temporary preview-only invocation route/workflow after the canary.

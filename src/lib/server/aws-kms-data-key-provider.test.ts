@@ -8,6 +8,7 @@ import {
   AwsKmsConfigurationError,
   AwsKmsDataKeyProvider,
   createAwsKmsDataKeyProviderFromEnv,
+  runAwsKmsExtraContextPolicyCanary,
   type KmsClientLike,
 } from "./aws-kms-data-key-provider";
 
@@ -102,6 +103,70 @@ describe("AWS KMS data-key provider", () => {
     await expect(provider.generateDataKey(context)).rejects.toThrow(
       "plaintext data key"
     );
+  });
+
+  it("passes only when AWS denies an unexpected encryption-context key", async () => {
+    const commands: unknown[] = [];
+    const client: KmsClientLike = {
+      async send(command) {
+        commands.push(command);
+        const error = new Error("denied by policy");
+        error.name = "AccessDeniedException";
+        throw error;
+      },
+    };
+
+    await expect(
+      runAwsKmsExtraContextPolicyCanary(client, "kms-key-ref")
+    ).resolves.toEqual({
+      status: "pass",
+      extraContextRejected: true,
+    });
+
+    expect(commands[0]).toBeInstanceOf(GenerateDataKeyCommand);
+    expect((commands[0] as GenerateDataKeyCommand).input).toMatchObject({
+      KeyId: "kms-key-ref",
+      KeySpec: "AES_256",
+      EncryptionContext: {
+        provider: "openrouter",
+        origin: "user_oauth",
+        policy_probe_extra: "must_be_denied",
+      },
+    });
+  });
+
+  it("fails closed when the extra-context check is operationally inconclusive", async () => {
+    const client: KmsClientLike = {
+      async send() {
+        const error = new Error("kms timeout");
+        error.name = "DependencyTimeoutException";
+        throw error;
+      },
+    };
+
+    await expect(
+      runAwsKmsExtraContextPolicyCanary(client, "kms-key-ref")
+    ).rejects.toThrow("could not be proven");
+  });
+
+  it("wipes unexpected plaintext if AWS accepts the extra context", async () => {
+    const sdkPlaintext = new Uint8Array(32).fill(7);
+    const client: KmsClientLike = {
+      async send() {
+        return {
+          Plaintext: sdkPlaintext,
+          CiphertextBlob: new Uint8Array([1, 2, 3]),
+          KeyId: "kms-key-ref",
+          $metadata: {},
+        };
+      },
+    };
+
+    await expect(
+      runAwsKmsExtraContextPolicyCanary(client, "kms-key-ref")
+    ).rejects.toThrow("accepted an unexpected encryption-context key");
+
+    expect([...sdkPlaintext]).toEqual(new Array(32).fill(0));
   });
 
   it("requires the documented KMS id and rejects static AWS credentials", () => {
