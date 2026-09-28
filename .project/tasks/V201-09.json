@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V201-09",
   "title": "Expand Schema Sync Coverage for Stage 3",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -24,9 +24,21 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-28T19:05:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "syntax",
+    "schema:contract-review",
+    "supabase:live-readonly-verify",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-28T19:15:00+03:00",
+  "commitHash": "66d645d0a06440c891a546a575465f5e741ae38c",
   "transitions": [
     {
       "from": null,
@@ -39,7 +51,19 @@
       "to": "in_progress",
       "at": "2026-09-28T19:05:00+03:00",
       "note": "Extend schema:check to Stage 3 credential/funding tables, RLS, constraints, grants, and Image Storage bucket. No production DDL."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-28T19:14:30+03:00",
+      "note": "Clean runner passed script syntax/CLI checks; live read-only Supabase verification confirmed migration sync, 16/16 required tables with RLS, zero Stage 3 browser grants, eight required service-role DML grants, governed constraints and both Storage bucket contracts. Standard PR CI and Vercel preview passed."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-28T19:15:00+03:00",
+      "note": "Schema sync checker and documentation now cover the current v2 + Stage 3 production contract. No production DDL/data mutation was required."
     }
   ],
-  "notes": "Audit-only hardening of the checker and docs. Production migration history already matches repository through 20260927212853."
+  "notes": "Completed full synchronization audit hardening. One preserved legacy Prompt Arena guest task predates anonymous_sessions and is intentionally not mutated. OpenRouter scheduled live verifier remains blocked only by absent GitHub Actions OPENROUTER_API_KEY secret. AWS live KMS/OIDC canary remains deferred."
 }
