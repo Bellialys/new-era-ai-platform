@@ -18,6 +18,7 @@ export class OpenRouterCredentialError extends Error {
   constructor(
     public readonly code:
       | "OPENROUTER_ALREADY_CONNECTED"
+      | "OPENROUTER_CONNECTION_IN_PROGRESS"
       | "OPENROUTER_CREDENTIAL_STORE_FAILED"
       | "OPENROUTER_CONNECTION_REQUIRED",
     message: string
@@ -27,8 +28,40 @@ export class OpenRouterCredentialError extends Error {
   }
 }
 
+const OAUTH_PENDING_TTL_MS = 15 * 60 * 1000;
+
 function byteaHex(value: Uint8Array): string {
   return "\\x" + Buffer.from(value).toString("hex");
+}
+
+async function expireStaleOpenRouterOAuthPendingCredential(
+  supabase: SupabaseClient,
+  userId: string,
+  nowIso: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("provider_credentials")
+    .update({
+      status: "error",
+      secret_ciphertext: null,
+      encrypted_dek: null,
+      kms_key_id: null,
+      reconcile_after: null,
+      last_error_code: "OAUTH_PENDING_EXPIRED",
+      updated_at: nowIso,
+    })
+    .eq("user_id", userId)
+    .eq("provider", "openrouter")
+    .eq("origin", "user_oauth")
+    .eq("status", "pending")
+    .lte("reconcile_after", nowIso);
+
+  if (error) {
+    throw new OpenRouterCredentialError(
+      "OPENROUTER_CREDENTIAL_STORE_FAILED",
+      "Could not reconcile an unfinished OpenRouter connection."
+    );
+  }
 }
 
 export function hashOpenRouterKey(apiKey: string): {
@@ -119,11 +152,25 @@ export async function persistOpenRouterOAuthCredential(input: {
     );
   }
 
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  await expireStaleOpenRouterOAuthPendingCredential(
+    input.supabase,
+    input.userId,
+    nowIso
+  );
+
   const existing = await getOpenRouterIntegrationStatus(input.supabase, input.userId);
   if (existing.connected) {
     throw new OpenRouterCredentialError(
       "OPENROUTER_ALREADY_CONNECTED",
       "OpenRouter is already connected."
+    );
+  }
+  if (existing.credentialStatus === "pending") {
+    throw new OpenRouterCredentialError(
+      "OPENROUTER_CONNECTION_IN_PROGRESS",
+      "An OpenRouter connection is already being finalized."
     );
   }
 
@@ -140,6 +187,7 @@ export async function persistOpenRouterOAuthCredential(input: {
       status: "pending",
       provider_key_hash: providerKeyHash,
       safe_fingerprint: safeFingerprint,
+      reconcile_after: new Date(nowMs + OAUTH_PENDING_TTL_MS).toISOString(),
     });
 
   if (pendingError) {
@@ -160,7 +208,7 @@ export async function persistOpenRouterOAuthCredential(input: {
       }
     );
 
-    const { error: activationError } = await input.supabase
+    const { data: activated, error: activationError } = await input.supabase
       .from("provider_credentials")
       .update({
         status: "active",
@@ -169,12 +217,16 @@ export async function persistOpenRouterOAuthCredential(input: {
         kms_key_id: envelope.kmsKeyId,
         encryption_version: envelope.encryptionVersion,
         last_verified_at: new Date().toISOString(),
+        reconcile_after: null,
         last_error_code: null,
       })
       .eq("id", credentialId)
-      .eq("user_id", input.userId);
+      .eq("user_id", input.userId)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
 
-    if (activationError) {
+    if (activationError || activated?.id !== credentialId) {
       throw new OpenRouterCredentialError(
         "OPENROUTER_CREDENTIAL_STORE_FAILED",
         "Could not activate encrypted OpenRouter credential."
@@ -209,7 +261,8 @@ export async function persistOpenRouterOAuthCredential(input: {
       .from("provider_credentials")
       .delete()
       .eq("id", credentialId)
-      .eq("user_id", input.userId);
+      .eq("user_id", input.userId)
+      .eq("status", "pending");
 
     if (error instanceof OpenRouterCredentialError) {
       throw error;
@@ -228,6 +281,31 @@ export async function disconnectOpenRouterCredential(input: {
 }): Promise<void> {
   const now = new Date().toISOString();
 
+  // Revoke/clear the credential first. Activation only matches status=pending,
+  // so a concurrent callback cannot resurrect a credential after disconnect.
+  const { error: disconnectError } = await input.supabase
+    .from("provider_credentials")
+    .update({
+      status: "revoked",
+      secret_ciphertext: null,
+      encrypted_dek: null,
+      kms_key_id: null,
+      reconcile_after: null,
+      revoked_at: now,
+      updated_at: now,
+    })
+    .eq("user_id", input.userId)
+    .eq("provider", "openrouter")
+    .eq("origin", "user_oauth")
+    .in("status", ["pending", "active", "error"]);
+
+  if (disconnectError) {
+    throw new OpenRouterCredentialError(
+      "OPENROUTER_CREDENTIAL_STORE_FAILED",
+      "Could not disconnect OpenRouter."
+    );
+  }
+
   const { error: fundingError } = await input.supabase
     .from("ai_funding_preferences")
     .upsert(
@@ -242,29 +320,7 @@ export async function disconnectOpenRouterCredential(input: {
   if (fundingError) {
     throw new OpenRouterCredentialError(
       "OPENROUTER_CREDENTIAL_STORE_FAILED",
-      "Could not switch AI funding away from OpenRouter."
-    );
-  }
-
-  const { error: disconnectError } = await input.supabase
-    .from("provider_credentials")
-    .update({
-      status: "revoked",
-      secret_ciphertext: null,
-      encrypted_dek: null,
-      kms_key_id: null,
-      revoked_at: now,
-      updated_at: now,
-    })
-    .eq("user_id", input.userId)
-    .eq("provider", "openrouter")
-    .eq("origin", "user_oauth")
-    .in("status", ["pending", "active", "error"]);
-
-  if (disconnectError) {
-    throw new OpenRouterCredentialError(
-      "OPENROUTER_CREDENTIAL_STORE_FAILED",
-      "Could not disconnect OpenRouter."
+      "OpenRouter was disconnected but AI funding preference could not be reset."
     );
   }
 }
