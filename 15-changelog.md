@@ -16,6 +16,16 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.2 KMS environment readiness gate - 2026-09-28
+
+### Added
+
+- Added dedicated `npm run env:check -- --mode=kms` readiness validation.
+- Requires `AWS_REGION`, `AWS_ROLE_ARN` and `AI_CREDENTIAL_KMS_KEY_ID`.
+- Static `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` are fatal in KMS mode.
+- Synced both environment example files and the AWS/Vercel OIDC runbook.
+- This does not enable AWS, mutate Vercel environment variables, persist provider credentials or send paid traffic.
+
 ## Stage 3.2 KMS live-canary foundation - 2026-09-28
 
 ### Added
