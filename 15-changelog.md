@@ -16,6 +16,15 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.2 Vercel OIDC STS region hardening - 2026-09-28
+
+### Hardened
+
+- `awsCredentialsProvider` now receives `clientConfig.region` from the validated `AWS_REGION` value used by the KMS client.
+- STS/OIDC credential resolution no longer relies only on the ambient AWS SDK region chain.
+- Added a regression test that captures the Vercel credential-provider options and verifies the explicit role ARN + region contract.
+- No AWS resource, environment value, credential, database row, route or paid traffic is changed by this patch.
+
 ## Stage 3.2 KMS environment readiness gate - 2026-09-28
 
 ### Added
