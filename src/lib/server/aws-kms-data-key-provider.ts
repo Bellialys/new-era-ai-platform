@@ -224,22 +224,16 @@ export interface AwsKmsExtraContextCanaryResult {
  * the canary fails closed.
  */
 export async function runAwsKmsExtraContextPolicyCanary(
-  env: AwsKmsEnvironment = {
-    AWS_REGION: process.env.AWS_REGION,
-    AWS_ROLE_ARN: process.env.AWS_ROLE_ARN,
-    AI_CREDENTIAL_KMS_KEY_ID: process.env.AI_CREDENTIAL_KMS_KEY_ID,
-    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
-    AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
-  }
+  client: KmsClientLike,
+  keyId: string
 ): Promise<AwsKmsExtraContextCanaryResult> {
-  const { client, keyId } = kmsRuntimeFromEnv(env);
+  const normalizedKeyId = requireNonEmpty(keyId, "AWS KMS key id");
   let plaintext: Uint8Array | undefined;
 
   try {
     const output = (await client.send(
       new GenerateDataKeyCommand({
-        KeyId: keyId,
+        KeyId: normalizedKeyId,
         KeySpec: "AES_256",
         EncryptionContext: {
           credential_id: randomUUID(),
@@ -265,4 +259,18 @@ export async function runAwsKmsExtraContextPolicyCanary(
   }
 
   throw new Error("AWS KMS accepted an unexpected encryption-context key.");
+}
+
+export async function runAwsKmsExtraContextPolicyCanaryFromEnv(
+  env: AwsKmsEnvironment = {
+    AWS_REGION: process.env.AWS_REGION,
+    AWS_ROLE_ARN: process.env.AWS_ROLE_ARN,
+    AI_CREDENTIAL_KMS_KEY_ID: process.env.AI_CREDENTIAL_KMS_KEY_ID,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
+  }
+): Promise<AwsKmsExtraContextCanaryResult> {
+  const { client, keyId } = kmsRuntimeFromEnv(env);
+  return runAwsKmsExtraContextPolicyCanary(client, keyId);
 }
