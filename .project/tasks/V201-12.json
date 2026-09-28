@@ -1,0 +1,43 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-12",
+  "title": "KMS Extra-Context Policy Canary",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-12.json",
+    "src/lib/server/credential-kms-canary.ts",
+    "src/lib/server/credential-kms-canary.test.ts",
+    "docs/infra/aws-kms-vercel-oidc.md"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:policy-canary-unit",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T23:07:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T23:07:00+03:00",
+      "note": "Created after V201-11 was found already allocated to the KMS environment readiness checker."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T23:07:00+03:00",
+      "note": "Add reusable raw-KMS negative canary proving IAM/KMS denies an unexpected encryption-context key. No live AWS call or route activation."
+    }
+  ],
+  "notes": "Security-preparation only. Expected live rejection is AccessDeniedException; operational failures fail closed."
+}
