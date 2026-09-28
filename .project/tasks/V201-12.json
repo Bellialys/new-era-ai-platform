@@ -7,8 +7,8 @@
   "files": [
     ".project/state.json",
     ".project/tasks/V201-12.json",
-    "src/lib/server/credential-kms-canary.ts",
-    "src/lib/server/credential-kms-canary.test.ts",
+    "src/lib/server/aws-kms-data-key-provider.ts",
+    "src/lib/server/aws-kms-data-key-provider.test.ts",
     "docs/infra/aws-kms-vercel-oidc.md"
   ],
   "checksRequired": [
@@ -23,7 +23,7 @@
     "audit"
   ],
   "checksPassed": [],
-  "lastUpdated": "2026-09-28T23:07:00+03:00",
+  "lastUpdated": "2026-09-28T23:08:00+03:00",
   "commitHash": null,
   "transitions": [
     {
