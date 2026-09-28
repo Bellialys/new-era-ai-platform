@@ -1,0 +1,28 @@
+name: Stage 3 OIDC audience CloudFormation lint
+
+on:
+  push:
+    branches:
+      - fix/stage3-kms-oidc-audience
+    paths:
+      - "infra/aws-kms-vercel-oidc.yaml"
+      - ".github/workflows/stage3-oidc-audience-cfn-lint.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Validate CloudFormation template
+        run: |
+          # Validate resource schema and intrinsic functions after OIDC audience hardening.
+          python -m pip install --disable-pip-version-check cfn-lint
+          cfn-lint infra/aws-kms-vercel-oidc.yaml
