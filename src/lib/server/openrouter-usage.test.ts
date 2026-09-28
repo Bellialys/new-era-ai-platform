@@ -55,6 +55,7 @@ describe("OpenRouter usage event contract", () => {
         costUsd: 0.0015,
         costSource: "provider_usage",
         providerIsByok: false,
+        providerModelId: "provider/actual-model",
       },
       providerIsByok: false,
       costSource: "provider_usage",
