@@ -1,0 +1,45 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-11",
+  "title": "KMS Environment Readiness Checker",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-11.json",
+    "env-check.config.json",
+    "scripts/check-env.mjs",
+    "scripts/check-env.test.mjs"
+  ],
+  "checksRequired": [
+    "env:kms",
+    "env:security",
+    "test:env-check",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T22:32:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T22:32:00+03:00",
+      "note": "Created after operational audit found the generic env checker did not cover the prepared Stage 3 KMS runtime contract."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T22:32:00+03:00",
+      "note": "Add a dedicated kms mode requiring region, role ARN and KMS key id while rejecting static AWS credentials. Keep basic/full CI behavior unchanged until the live AWS gate is enabled."
+    }
+  ],
+  "notes": "No AWS, Vercel env, database, OpenRouter or paid-traffic mutation. Checker-only readiness hardening."
+}
