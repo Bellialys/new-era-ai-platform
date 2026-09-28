@@ -2,8 +2,13 @@
 
 ## Status
 
-Prepared for Stage 3.2. The application adapter already exists in
-`src/lib/server/aws-kms-data-key-provider.ts`.
+Prepared for Stage 3.2. The application adapter exists in
+`src/lib/server/aws-kms-data-key-provider.ts`, and the reusable live verifier
+exists in `src/lib/server/credential-kms-canary.ts`.
+
+The canary has no route and is not invoked automatically. After AWS/Vercel setup,
+a preview-only invocation must use `createAwsKmsDataKeyProviderFromEnv()` and
+pass that provider to `runCredentialKmsCanary()`.
 
 Live Vercel readiness probe on 2026-09-28:
 
@@ -94,12 +99,13 @@ Before enabling provider credential persistence:
 2. Preview assumes only the preview IAM role.
 3. `GenerateDataKey(AES_256)` succeeds with the governed encryption context.
 4. The plaintext DEK is used locally and wiped.
-5. `Decrypt` with the identical encryption context succeeds.
-6. Decrypt with a changed `credential_id` fails.
-7. A request with an extra encryption-context key is denied.
+5. `runCredentialKmsCanary()` verifies that `Decrypt` with the identical encryption context succeeds.
+6. The canary directly calls the data-key provider with a changed `credential_id`; only AWS KMS `InvalidCiphertextException` counts as a successful context-rejection proof. Timeout, throttling, credential or network errors fail the canary.
+7. Separately verify with a raw KMS negative request that an extra encryption-context key is denied by the IAM/KMS policy; the typed application provider intentionally cannot construct extra context keys.
 8. Static AWS credential variables remain absent.
 9. No provider credential, DEK, ciphertext or AWS token appears in logs.
-10. Only after preview smoke passes are production role/env values enabled.
+10. Remove any temporary preview-only invocation route/workflow after the canary.
+11. Only after preview smoke passes are production role/env values enabled.
 
 ## Rollback and containment
 
