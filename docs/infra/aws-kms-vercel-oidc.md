@@ -62,7 +62,9 @@ Until that review is closed:
 - provider credential persistence remains disabled;
 - preview must not be granted production credential-row access as part of the canary workflow.
 
-Using separate customer-managed KMS keys may increase KMS key cost, so this remains an explicit pre-persistence security/cost decision rather than a silent architecture change.
+Using separate customer-managed KMS keys increases key-storage cost. Current AWS KMS pricing is $1/month per customer-managed key, prorated hourly, before request charges; the first and second automatic/on-demand rotations add another $1/month per key for retained rotated key material. AWS currently includes 20,000 KMS API requests/month in the free tier. Re-check https://aws.amazon.com/kms/pricing/ immediately before deployment.
+
+For New Era this means the preferred two-key isolation starts at roughly $2/month for key storage, versus roughly $1/month for the current single-key canary design. Because this is a real recurring-cost choice, DEC-022 remains Proposed and the current IaC is not silently changed to create a second billable key.
 
 ## Deployment
 

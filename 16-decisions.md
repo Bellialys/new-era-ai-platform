@@ -1112,3 +1112,66 @@ Management API, Guardrails, per-user platform keys и положительный
 ## Причина
 
 Free-first OAuth позволяет каждому пользователю использовать собственную OpenRouter quota без попытки искусственно делить или умножать лимит одного New Era Free account и без финансового риска для New Era.
+
+---
+
+# DEC-022 - Isolate preview and production KMS boundaries before credential persistence
+
+## Статус
+
+```text
+Proposed
+# preferred design selected technically; implementation waits for explicit cost approval
+```
+
+## Решение
+
+До включения persistent OpenRouter credentials preview и production не должны делить один customer-managed KMS key как окончательную production architecture.
+
+**Preferred design:** два отдельных symmetric customer-managed KMS keys:
+
+- preview IAM role -> только preview KMS key;
+- production IAM role -> только production KMS key;
+- preview env получает только preview key ARN;
+- production env получает только production key ARN;
+- ciphertext/DEK, созданные одним environment key, не считаются переносимыми в другой environment без явной migration/re-encryption procedure.
+
+Альтернатива с одним KMS key + обязательным `environment` в encryption context остаётся возможной только после отдельного schema/restore review, потому что environment value должна быть детерминированно доступна при decrypt, backup restore и migration.
+
+## Контекст
+
+Текущий Stage 3.2 CloudFormation использует отдельные Vercel OIDC trust subjects и отдельные IAM roles, но один KMS key. Это ограничивает identity blast radius, но не даёт отдельной cryptographic boundary, если preview каким-либо образом получит production ciphertext + wrapped DEK + encryption context.
+
+## Причина
+
+Separate keys:
+
+- дают независимый cryptographic blast radius;
+- не требуют добавлять environment в credential encryption-context persistence contract;
+- проще для incident response, key disablement и future restore rules;
+- предотвращают cross-environment decrypt на уровне самого key resource, а не только IAM conditions.
+
+## Стоимость и ограничение
+
+По AWS KMS pricing, customer-managed KMS key стоит **$1/month per key**, prorated hourly. Поэтому два environment keys начинают примерно с **$2/month** key-storage cost до request charges.
+
+Для automatically/on-demand rotated KMS keys первая и вторая rotation key-material versions добавляют ещё по **$1/month per key**; дальнейшие rotations после второй не увеличивают эту часть цены. KMS free tier включает 20,000 API requests/month across supported Regions.
+
+Источник цены перед фактическим deploy нужно перепроверить:
+https://aws.amazon.com/kms/pricing/
+
+Из-за реальной стоимости это решение не переводится из `Proposed` в `Accepted` и IaC не меняется на два ключа без явного подтверждения пользователя.
+
+## Последствия
+
+Пока решение не принято и не реализовано:
+
+- текущий shared-key stack допустим только для canary/readiness;
+- provider credential persistence остаётся disabled;
+- preview не получает production credential rows;
+- Stage 3.3 не стартует как credential-using runtime cutover.
+
+## Когда пересмотреть
+
+Перед первым сохранением реального OpenRouter user credential или при изменении AWS KMS pricing/security requirements.
+

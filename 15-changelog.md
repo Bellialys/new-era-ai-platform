@@ -16,6 +16,26 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Stage 3.2 KMS environment-isolation cost decision - 2026-09-28
+
+### Proposed
+
+- Added DEC-022: separate preview and production customer-managed KMS keys are the preferred pre-persistence isolation design.
+- The alternative one-key + environment-bound encryption-context design remains possible but would require a reviewed persistence/restore contract.
+- No IaC resource count was changed by this decision package.
+
+### Current AWS pricing evidence
+
+- Customer-managed KMS key storage: $1/month per key, prorated hourly.
+- Two separate environment keys therefore start at about $2/month before request charges.
+- AWS KMS currently includes 20,000 API requests/month in its free tier.
+- The first and second automatic/on-demand rotations add $1/month per key for retained rotated key material; pricing must be re-checked immediately before actual AWS deployment.
+
+### Gate
+
+- DEC-022 remains `Proposed`, not `Accepted`, until the recurring-cost choice is explicitly approved.
+- Shared-key IaC remains canary-only; provider credential persistence stays disabled.
+
 ## Stage 3.2 KMS extra-context policy canary - 2026-09-28
 
 ### Added
