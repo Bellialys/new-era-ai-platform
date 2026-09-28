@@ -13,6 +13,26 @@ Parameters:
       already include sts.amazonaws.com in its ClientIDList. Leave empty to
       create a provider with the required AWS STS audience.
 
+  ExistingVercelOidcProviderHasStsAudience:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: >
+      Set to true only after verifying that a reused ExistingVercelOidcProviderArn
+      contains sts.amazonaws.com in ClientIDList. Ignored when no existing
+      provider ARN is supplied.
+
+Rules:
+  ReusedVercelOidcProviderRequiresStsAudience:
+    RuleCondition: !Not [!Equals [!Ref ExistingVercelOidcProviderArn, ""]]
+    Assertions:
+      - Assert: !Equals [!Ref ExistingVercelOidcProviderHasStsAudience, "true"]
+        AssertDescription: >
+          A reused Vercel OIDC provider must be verified to include
+          sts.amazonaws.com in ClientIDList before deployment.
+
 Conditions:
   CreateVercelOidcProvider: !Equals [!Ref ExistingVercelOidcProviderArn, ""]
 
