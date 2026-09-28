@@ -1,0 +1,45 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-09",
+  "title": "Expand Schema Sync Coverage for Stage 3",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-09.json",
+    "scripts/check-schema-sync.mjs",
+    "35-database-schema-sync.md",
+    "15-changelog.md"
+  ],
+  "checksRequired": [
+    "syntax",
+    "schema:contract-review",
+    "supabase:live-readonly-verify",
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-28T19:05:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-28T19:05:00+03:00",
+      "note": "Created during full GitHub/Supabase/Vercel synchronization audit after Stage 3.2 groundwork."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-28T19:05:00+03:00",
+      "note": "Extend schema:check to Stage 3 credential/funding tables, RLS, constraints, grants, and Image Storage bucket. No production DDL."
+    }
+  ],
+  "notes": "Audit-only hardening of the checker and docs. Production migration history already matches repository through 20260927212853."
+}
