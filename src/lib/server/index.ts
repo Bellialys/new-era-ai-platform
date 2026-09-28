@@ -16,3 +16,6 @@ export * from "./votes";
 export * from "./admin";
 export * from "./usage-limits";
 export * from "./audit";
+export * from "./funding-resolver";
+export * from "./openrouter-credentials";
+export * from "./openrouter-integration-config";
