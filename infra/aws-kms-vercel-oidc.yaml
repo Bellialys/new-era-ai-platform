@@ -21,7 +21,7 @@ Resources:
     Properties:
       Url: https://oidc.vercel.com/bellial-s-projects
       ClientIdList:
-        - https://vercel.com/bellial-s-projects
+        - sts.amazonaws.com
       Tags:
         - Key: Project
           Value: new-era-ai-platform
@@ -82,7 +82,7 @@ Resources:
             Action: sts:AssumeRoleWithWebIdentity
             Condition:
               StringEquals:
-                oidc.vercel.com/bellial-s-projects:aud: https://vercel.com/bellial-s-projects
+                oidc.vercel.com/bellial-s-projects:aud: sts.amazonaws.com
                 oidc.vercel.com/bellial-s-projects:sub: owner:bellial-s-projects:project:new-era-ai-platform:environment:production
       Policies:
         - PolicyName: NewEraProviderCredentialKms
@@ -133,7 +133,7 @@ Resources:
             Action: sts:AssumeRoleWithWebIdentity
             Condition:
               StringEquals:
-                oidc.vercel.com/bellial-s-projects:aud: https://vercel.com/bellial-s-projects
+                oidc.vercel.com/bellial-s-projects:aud: sts.amazonaws.com
                 oidc.vercel.com/bellial-s-projects:sub: owner:bellial-s-projects:project:new-era-ai-platform:environment:preview
       Policies:
         - PolicyName: NewEraProviderCredentialKms
