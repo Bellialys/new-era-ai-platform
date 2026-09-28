@@ -24,6 +24,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - Added a signed, user-bound, httpOnly OAuth flow cookie with a 10-minute verifier/state lifetime and dedicated server-only signing secret.
 - Added same-origin mutation protection and per-user rate limits for connection operations.
 - Added encrypted `user_oauth` credential persistence through the existing AES-256-GCM + AWS KMS boundary.
+- Added service-role-only `activate_openrouter_oauth_credential` PostgreSQL RPC so credential activation and `funding_source=user_openrouter` commit atomically; concurrent disconnect cannot be overwritten by a late callback.
 - Added a server-only funding resolver that returns only billing source + opaque credential id and never the provider secret.
 - Added profile UI that exposes only safe connection metadata/fingerprint.
 - Disconnect now moves funding back to `platform` and clears the live ciphertext, wrapped DEK and KMS key id while retaining only safe non-secret status.
@@ -34,6 +35,7 @@ v2.0.0-alpha.1 - AI Team Mode
 
 - Stage 3.3 remains intentionally skipped; PRs #101/#102 are not dependencies of the Stage 3.4 branch.
 - Current Arena inference is not switched to the connected user credential in this slice because that routing cutover belongs to the Stage 3.3 unified gateway.
+- Migration `20260929022500_stage34_atomic_openrouter_activation.sql` must be applied before OAuth persistence can be enabled.
 - `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` must stay false until Stage 3.2 live AWS/Vercel KMS canaries and the preview/production KMS isolation gate are complete.
 - No Vercel flag is enabled, no real user OpenRouter credential is persisted, no paid-model catalog is expanded and no platform-paid traffic is enabled by this change.
 
