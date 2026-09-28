@@ -664,17 +664,28 @@ Before persistent provider credentials are activated, there is one additional en
 - safe price/status API;
 - no paid-model expansion.
 
-### Stage 3.4 — OpenRouter OAuth user beta
+### Stage 3.4 — OpenRouter OAuth user beta — FOUNDATION IN PR #104
 
-- auth-only `Connect OpenRouter` using OAuth PKCE S256;
-- CSRF-safe state + short-lived verifier lifecycle;
-- callback code exchange through server-side OpenRouter auth endpoint;
-- encrypted credential persistence only after Stage 3.2 crypto foundation is operational;
-- funding resolver selects `user_openrouter`;
-- same governed catalog initially;
-- strict secret-redaction tests;
-- disconnect deletes New Era copy; user retains control of their OpenRouter account/key;
-- feature flag / controlled rollout.
+Implemented in the isolated Stage 3.4 branch:
+
+- authenticated-only `Connect OpenRouter` using OAuth PKCE S256;
+- signed, user-bound, httpOnly flow state/verifier lifecycle with a 10-minute TTL;
+- explicit same-origin mutation protection and per-user connection/mutation rate limits;
+- callback code exchange through the server-side OpenRouter auth endpoint;
+- encrypted `user_oauth` credential persistence wired to the existing AES-256-GCM + AWS KMS boundary;
+- server-only funding resolver selects `user_openrouter` only when an active encrypted credential exists;
+- safe status API + profile UI expose only connection metadata/safe fingerprint, never the raw key;
+- disconnect switches funding back to `platform`, clears the live ciphertext/wrapped DEK/KMS id, and preserves only safe non-secret state;
+- `ENABLE_OPENROUTER_USER_OAUTH=false` and `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false` are fail-closed rollout gates;
+- dedicated `OPENROUTER_OAUTH_COOKIE_SECRET` signs the short-lived flow cookie;
+- regression tests cover flow signing/tamper/expiry/user binding, rollout gates and same-origin protection.
+
+Intentional sequencing boundary:
+
+- Stage 3.2 live AWS/Vercel KMS canaries and environment isolation still block real credential-persistence activation, so `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` remains false;
+- Stage 3.3 is intentionally skipped for now and PRs #101/#102 are not dependencies of this Stage 3.4 branch;
+- therefore current Arena inference is **not** switched to the connected user credential in this slice. That cutover remains a Stage 3.3 gateway concern;
+- the governed model catalog is unchanged and no paid-model expansion is enabled.
 
 ### Stage 3.5 — Future platform-funded per-user keys
 
