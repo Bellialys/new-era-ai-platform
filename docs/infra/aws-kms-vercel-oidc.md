@@ -85,16 +85,33 @@ aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs'
 ```
 
-If an IAM OIDC provider for `https://oidc.vercel.com/bellial-s-projects` already exists:
+If an IAM OIDC provider for `https://oidc.vercel.com/bellial-s-projects` already exists, do **not** pass it to CloudFormation until its client-id list includes the AWS-specific audience `sts.amazonaws.com`.
 
 ```bash
-# Reuse the existing provider instead of creating a duplicate.
+# Inspect the existing provider first. Its ClientIDList must include sts.amazonaws.com.
+aws iam get-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects \
+  --query 'ClientIDList'
+
+# Add the AWS STS audience when it is missing. AWS documents this operation as idempotent.
+aws iam add-client-id-to-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects \
+  --client-id sts.amazonaws.com
+
+# Re-read the provider and confirm sts.amazonaws.com is present before deployment.
+aws iam get-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects \
+  --query 'ClientIDList'
+
+# Only after that verification, reuse the provider instead of creating a duplicate.
 aws cloudformation deploy \
   --stack-name new-era-ai-credential-kms \
   --template-file infra/aws-kms-vercel-oidc.yaml \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides ExistingVercelOidcProviderArn=arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects
 ```
+
+The existing-provider path is a precondition, not a fallback that bypasses audience validation: the runtime requests `aud=sts.amazonaws.com`, and both IAM role trust policies require that same value.
 
 ## Vercel environment mapping
 
