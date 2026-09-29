@@ -190,13 +190,14 @@ Vercel Preview quota hygiene остаётся отдельной задачей:
 
 Критичные или значимые открытые задачи на момент синхронизации:
 
-- #95 - P0 monetary fail-closed guard для paid Image Arena shared-key generation.
 - #96 - DB hardening: один live persistent user-owned BYOK credential на пользователя.
 - #100 - Vercel Preview quota hygiene.
 - #107 - index для `usage_events.credential_id` FK.
 - #108 - Supabase leaked password protection.
 
-PR #97/#99 относятся к Image Arena monetary kill-switch path и требуют отдельного rebase/review; не считать их merged.
+Platform-funded Image Arena spend guard: `ENABLE_PLATFORM_PAID_IMAGE_ARENA=false` fail-closed блокирует platform-funded provider generation до явного monetary rollout; `user_openrouter` funding остаётся отдельным funding source.
+
+Старые PR #97/#99 superseded актуальной реализацией поверх Stage 3.3/3.4 gateway и не должны сливаться как есть.
 PR #98 закрыт как superseded после того, как актуальный OIDC runbook был синхронизирован и merged через PR #109.
 
 ## Что делать следующим
@@ -209,7 +210,7 @@ PR #98 закрыт как superseded после того, как актуаль
 4. Повторно проверить Supabase advisors/schema.
 5. Выполнить контролируемый Stage 3.4 OAuth canary cohort.
 6. Только после подтверждённого canary и явной verification Vercel env values рассматривать включение Stage 3.4 flags.
-7. Отдельно закрыть P0 Image Arena monetary guard (#95) до разрешения paid shared-key generation.
+7. Сохранять `ENABLE_PLATFORM_PAID_IMAGE_ARENA=false`, пока platform-funded paid Image Arena не получит отдельное бюджетное разрешение/provider-side hard cap и operational rollout approval.
 8. После этого переходить к следующим Stage 3.5-3.7 задачам.
 
 ## Запрещённые shortcuts

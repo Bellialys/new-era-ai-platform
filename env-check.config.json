@@ -274,6 +274,21 @@
       "example": "arn:aws:kms:eu-west-1:123456789012:key/00000000-0000-0000-0000-000000000000"
     },
     {
+      "name": "ENABLE_PLATFORM_PAID_IMAGE_ARENA",
+      "required": false,
+      "category": "config",
+      "groups": [
+        "basic",
+        "full"
+      ],
+      "validation": {
+        "type": "regex",
+        "pattern": "^(true|false)$",
+        "message": "must be true or false"
+      },
+      "example": "false"
+    },
+    {
       "name": "ENABLE_OPENROUTER_USER_OAUTH",
       "required": false,
       "category": "config",

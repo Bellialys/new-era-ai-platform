@@ -32,6 +32,10 @@ const PROVIDER_IMAGE_CONTENT_TYPES = new Map([
   ["image/webp", "webp"],
 ]);
 
+function isPlatformPaidImageArenaEnabled(): boolean {
+  return process.env.ENABLE_PLATFORM_PAID_IMAGE_ARENA === "true";
+}
+
 interface ImageGenerationResult {
   id?: unknown;
   model?: unknown;
@@ -419,26 +423,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  let imageStorageBucket: ImageStorageBucket;
-  try {
-    const supabase = getSupabaseServerClient();
-    if (!supabase) {
-      logApiRequest("POST", "/api/image-compare", 503, Date.now() - startTime, requestId);
-      return NextResponse.json(
-        { error: "IMAGE_STORAGE_UNAVAILABLE", message: "Image storage is not configured" },
-        { status: 503 }
-      );
-    }
-    imageStorageBucket = supabase.storage.from("images");
-  } catch {
-    console.warn("[image-compare] Storage initialization failed");
-    logApiRequest("POST", "/api/image-compare", 503, Date.now() - startTime, requestId);
-    return NextResponse.json(
-      { error: "IMAGE_STORAGE_UNAVAILABLE", message: "Image storage is unavailable" },
-      { status: 503 }
-    );
-  }
-
   let gatewayCredential: Awaited<
     ReturnType<typeof resolveOpenRouterRuntimeCredential>
   >;
@@ -466,6 +450,50 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         message: apiError.message,
       },
       { status: apiError.statusCode }
+    );
+  }
+
+  // Platform-funded image generation can incur direct provider spend. Keep it
+  // fail-closed unless an explicit server-side rollout enables that spend.
+  // User-controlled OpenRouter funding is a separate source and is governed by
+  // the Stage 3.4 credential-persistence rollout gates instead.
+  if (
+    gatewayCredential.billingSource === "platform" &&
+    !isPlatformPaidImageArenaEnabled()
+  ) {
+    logApiRequest(
+      "POST",
+      "/api/image-compare",
+      503,
+      Date.now() - startTime,
+      requestId
+    );
+    return NextResponse.json(
+      {
+        error: "IMAGE_PLATFORM_PAID_GENERATION_DISABLED",
+        message: "Platform-funded image generation is temporarily unavailable.",
+      },
+      { status: 503 }
+    );
+  }
+
+  let imageStorageBucket: ImageStorageBucket;
+  try {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
+      logApiRequest("POST", "/api/image-compare", 503, Date.now() - startTime, requestId);
+      return NextResponse.json(
+        { error: "IMAGE_STORAGE_UNAVAILABLE", message: "Image storage is not configured" },
+        { status: 503 }
+      );
+    }
+    imageStorageBucket = supabase.storage.from("images");
+  } catch {
+    console.warn("[image-compare] Storage initialization failed");
+    logApiRequest("POST", "/api/image-compare", 503, Date.now() - startTime, requestId);
+    return NextResponse.json(
+      { error: "IMAGE_STORAGE_UNAVAILABLE", message: "Image storage is unavailable" },
+      { status: 503 }
     );
   }
 
