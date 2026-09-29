@@ -36,6 +36,8 @@ vi.mock("@/lib/server/openrouter-usage", () => ({
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 const consoleWarnMock = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+const originalPlatformPaidImageArenaEnv =
+  process.env.ENABLE_PLATFORM_PAID_IMAGE_ARENA;
 
 import { POST } from "./route";
 import {
@@ -123,6 +125,8 @@ function mockStorageClient(
 }
 
 beforeEach(() => {
+  process.env.ENABLE_PLATFORM_PAID_IMAGE_ARENA = "true";
+
   resolveIdentityMock.mockReset();
   checkRateLimitMock.mockReset();
   resolveRuntimeCredentialMock.mockReset();
@@ -149,6 +153,12 @@ beforeEach(() => {
 });
 
 afterAll(() => {
+  if (originalPlatformPaidImageArenaEnv === undefined) {
+    delete process.env.ENABLE_PLATFORM_PAID_IMAGE_ARENA;
+  } else {
+    process.env.ENABLE_PLATFORM_PAID_IMAGE_ARENA =
+      originalPlatformPaidImageArenaEnv;
+  }
   consoleWarnMock.mockRestore();
 });
 
@@ -209,6 +219,39 @@ describe("POST /api/image-compare — identity and rate limiting", () => {
       expect.anything(),
       expect.anything()
     );
+  });
+});
+
+describe("POST /api/image-compare — monetary funding guard", () => {
+  it("fails closed before Storage/provider work for platform-funded image generation", async () => {
+    delete process.env.ENABLE_PLATFORM_PAID_IMAGE_ARENA;
+
+    const response = await POST(makeRequest(VALID_BODY));
+    const body = await response.json() as { error?: string; message?: string };
+
+    expect(response.status).toBe(503);
+    expect(body).toEqual({
+      error: "IMAGE_PLATFORM_PAID_GENERATION_DISABLED",
+      message: "Platform-funded image generation is temporarily unavailable.",
+    });
+    expect(resolveRuntimeCredentialMock).toHaveBeenCalledTimes(1);
+    expect(getClientMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not apply the platform-spend switch to user-owned OpenRouter funding", async () => {
+    delete process.env.ENABLE_PLATFORM_PAID_IMAGE_ARENA;
+    resolveRuntimeCredentialMock.mockResolvedValue({
+      billingSource: "user_openrouter",
+      credentialId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      apiKey: "user-owned-test-api-key",
+    });
+
+    const response = await POST(makeRequest(VALID_BODY));
+
+    expect(response.status).toBe(200);
+    expect(getClientMock).toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
