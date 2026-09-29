@@ -16,6 +16,15 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Image Arena platform-spend fail-closed guard - 2026-09-29
+
+- Added server-only `ENABLE_PLATFORM_PAID_IMAGE_ARENA=false` monetary kill switch.
+- Image Arena now resolves funding before Storage/provider work; when funding is `platform`, generation returns controlled `503 IMAGE_PLATFORM_PAID_GENERATION_DISABLED` unless the flag is explicitly `true`.
+- The platform-spend switch does not block future `user_openrouter` funding; that path remains governed by Stage 3.4 OAuth/persistence gates.
+- Added regression coverage proving disabled platform funding reaches neither Storage nor OpenRouter and proving user-owned funding is not coupled to the platform-spend switch.
+- Registered the flag in env SSOT/examples and synchronized API, feature-flag and environment documentation.
+- This hardening does not enable paid traffic; default behavior is fail-closed.
+
 ## Project context and Stage 3.2 runbook sync - 2026-09-29
 
 - Added `PROJECT-CONTEXT.md` as the AI/chat recovery index for the current architecture, Stage 3 status, live blockers and canonical next steps.
