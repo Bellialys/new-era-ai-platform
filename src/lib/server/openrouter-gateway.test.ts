@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { fetchWithKeyMock, streamWithKeyMock } = vi.hoisted(() => ({
+const { fetchWithKeyMock, streamWithKeyMock, recordUsageMock } = vi.hoisted(() => ({
   fetchWithKeyMock: vi.fn(),
   streamWithKeyMock: vi.fn(),
+  recordUsageMock: vi.fn(),
 }));
 
 vi.mock("./openrouter", () => ({
   fetchOpenRouterResponseWithApiKey: fetchWithKeyMock,
   streamOpenRouterResponseWithApiKey: streamWithKeyMock,
+}));
+
+vi.mock("./openrouter-usage", () => ({
+  recordOpenRouterUsageEventBestEffort: recordUsageMock,
 }));
 
 import {
@@ -34,8 +39,10 @@ const providerResult = {
 beforeEach(() => {
   fetchWithKeyMock.mockReset();
   streamWithKeyMock.mockReset();
+  recordUsageMock.mockReset();
   fetchWithKeyMock.mockResolvedValue(providerResult);
   streamWithKeyMock.mockResolvedValue(providerResult);
+  recordUsageMock.mockResolvedValue(undefined);
 });
 
 describe("OpenRouter unified gateway foundation", () => {
@@ -136,6 +143,39 @@ describe("OpenRouter unified gateway foundation", () => {
     ).rejects.toBeInstanceOf(OpenRouterGatewayConfigurationError);
 
     expect(fetchWithKeyMock).not.toHaveBeenCalled();
+  });
+
+  it("records provider usage telemetry without exposing the secret", async () => {
+    await executeOpenRouterText({
+      prompt: "hello",
+      modelId: "requested/model",
+      credential: {
+        billingSource: "platform",
+        credentialId: null,
+        apiKey: "platform-secret",
+      },
+      telemetry: {
+        userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        guestId: null,
+        modeSlug: "prompt-arena",
+        requestKind: "text",
+      },
+    });
+
+    expect(recordUsageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        guestId: null,
+        modeSlug: "prompt-arena",
+        requestKind: "text",
+        modelKey: "requested/model",
+        billingSource: "platform",
+        credentialId: null,
+        result: providerResult,
+        errorCode: null,
+      })
+    );
+    expect(JSON.stringify(recordUsageMock.mock.calls)).not.toContain("platform-secret");
   });
 
   it("uses the same funding contract for streaming", async () => {

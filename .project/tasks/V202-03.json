@@ -1,0 +1,46 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V202-03",
+  "title": "Stage 3.3 Provider Usage Telemetry",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V202-03.json",
+    "supabase/migrations/20260929100500_stage3_usage_telemetry.sql",
+    "src/lib/server/index.ts",
+    "src/lib/server/openrouter-gateway.ts",
+    "src/lib/server/openrouter-gateway.test.ts",
+    "src/lib/server/openrouter-usage.ts",
+    "src/lib/server/openrouter-usage.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "schema:review",
+    "usage:telemetry-contract",
+    "audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T12:58:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T12:58:00+03:00",
+      "note": "Continue Stage 3.3 on a consolidated branch targeting main while Vercel Preview quota is externally exhausted."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T12:58:00+03:00",
+      "note": "Add usage_events provider metadata and a best-effort gateway telemetry hook without changing funding source or enabling paid models."
+    }
+  ],
+  "notes": "Telemetry writes are explicitly non-fatal to inference. This slice does not enable user credential persistence, paid catalog expansion or platform-paid traffic."
+}

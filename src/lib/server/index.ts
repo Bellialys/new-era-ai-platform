@@ -7,6 +7,8 @@ export * from "./auth";
 export * from "./models";
 export * from "./model-catalog";
 export * from "./openrouter";
+export * from "./openrouter-gateway";
+export * from "./openrouter-usage";
 export * from "./arena-persistence";
 export * from "./history";
 export * from "./rate-limit";

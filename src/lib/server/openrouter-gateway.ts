@@ -4,9 +4,15 @@ import {
 } from "./provider-credentials";
 import {
   fetchOpenRouterResponseWithApiKey,
+  getApiKey,
   streamOpenRouterResponseWithApiKey,
   type OpenRouterCallResult,
 } from "./openrouter";
+import {
+  recordOpenRouterUsageEventBestEffort,
+  type OpenRouterUsageTelemetryContext,
+} from "./openrouter-usage";
+import { ApiError } from "./utils";
 
 export interface OpenRouterGatewayCredentialContext {
   billingSource: AiFundingSource;
@@ -19,6 +25,7 @@ export interface OpenRouterGatewayRequest {
   modelId: string;
   systemPrompt?: string;
   credential: OpenRouterGatewayCredentialContext;
+  telemetry?: OpenRouterUsageTelemetryContext;
 }
 
 export interface OpenRouterGatewayStreamRequest
@@ -36,6 +43,38 @@ export class OpenRouterGatewayConfigurationError extends Error {
     super(message);
     this.name = "OpenRouterGatewayConfigurationError";
   }
+}
+
+export function resolveLegacyPlatformOpenRouterCredential(): OpenRouterGatewayCredentialContext {
+  return {
+    billingSource: "platform",
+    credentialId: null,
+    apiKey: getApiKey(),
+  };
+}
+
+function safeGatewayErrorCode(error: unknown): string {
+  return error instanceof ApiError ? error.errorCode : "UNKNOWN_ERROR";
+}
+
+async function recordGatewayUsage(
+  request: OpenRouterGatewayRequest,
+  credential: Pick<OpenRouterGatewayCredentialContext, "billingSource" | "credentialId">,
+  result: OpenRouterCallResult | null,
+  latencyMs: number,
+  errorCode: string | null
+): Promise<void> {
+  if (!request.telemetry) return;
+
+  await recordOpenRouterUsageEventBestEffort({
+    ...request.telemetry,
+    modelKey: request.modelId,
+    billingSource: credential.billingSource,
+    credentialId: credential.credentialId,
+    result,
+    latencyMs,
+    errorCode,
+  });
 }
 
 function normalizeCredentialContext(
@@ -94,16 +133,36 @@ export async function executeOpenRouterText(
   request: OpenRouterGatewayRequest
 ): Promise<OpenRouterGatewayResult> {
   const credential = normalizeCredentialContext(request.credential);
-  const result = await fetchOpenRouterResponseWithApiKey(
-    credential.apiKey,
-    request.prompt,
-    request.modelId,
-    request.systemPrompt
-      ? { systemPrompt: request.systemPrompt }
-      : undefined
-  );
+  const startedAt = Date.now();
 
-  return attachFundingMetadata(result, credential);
+  try {
+    const result = await fetchOpenRouterResponseWithApiKey(
+      credential.apiKey,
+      request.prompt,
+      request.modelId,
+      request.systemPrompt
+        ? { systemPrompt: request.systemPrompt }
+        : undefined
+    );
+
+    await recordGatewayUsage(
+      request,
+      credential,
+      result,
+      result.latencyMs,
+      null
+    );
+    return attachFundingMetadata(result, credential);
+  } catch (error) {
+    await recordGatewayUsage(
+      request,
+      credential,
+      null,
+      Date.now() - startedAt,
+      safeGatewayErrorCode(error)
+    );
+    throw error;
+  }
 }
 
 /**
@@ -114,15 +173,35 @@ export async function streamOpenRouterText(
   request: OpenRouterGatewayStreamRequest
 ): Promise<OpenRouterGatewayResult> {
   const credential = normalizeCredentialContext(request.credential);
-  const result = await streamOpenRouterResponseWithApiKey(
-    credential.apiKey,
-    request.prompt,
-    request.modelId,
-    request.onToken,
-    request.systemPrompt
-      ? { systemPrompt: request.systemPrompt }
-      : undefined
-  );
+  const startedAt = Date.now();
 
-  return attachFundingMetadata(result, credential);
+  try {
+    const result = await streamOpenRouterResponseWithApiKey(
+      credential.apiKey,
+      request.prompt,
+      request.modelId,
+      request.onToken,
+      request.systemPrompt
+        ? { systemPrompt: request.systemPrompt }
+        : undefined
+    );
+
+    await recordGatewayUsage(
+      request,
+      credential,
+      result,
+      result.latencyMs,
+      null
+    );
+    return attachFundingMetadata(result, credential);
+  } catch (error) {
+    await recordGatewayUsage(
+      request,
+      credential,
+      null,
+      Date.now() - startedAt,
+      safeGatewayErrorCode(error)
+    );
+    throw error;
+  }
 }
