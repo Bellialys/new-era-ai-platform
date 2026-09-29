@@ -5,15 +5,16 @@ import {
   IMAGE_MAX_MODELS,
   IMAGE_RATE_LIMIT_MAX,
   IMAGE_RATE_LIMIT_WINDOW_MS,
-  OPENROUTER_IMAGE_API_URL,
 } from "@/lib/arena/constants";
 import {
   logApiRequest,
   resolveRequestIdentity,
   checkRateLimit,
+  executeOpenRouterImage,
   getApiKey,
   getSupabaseServerClient,
   isJsonObject,
+  normalizeOpenRouterUsage,
 } from "@/lib/server";
 
 export const maxDuration = 60;
@@ -31,6 +32,9 @@ const PROVIDER_IMAGE_CONTENT_TYPES = new Map([
 ]);
 
 interface ImageGenerationResult {
+  id?: unknown;
+  model?: unknown;
+  usage?: unknown;
   data?: { b64_json?: unknown; media_type?: unknown }[];
 }
 
@@ -100,13 +104,6 @@ async function readBoundedProviderJson(response: Response): Promise<BoundedJsonR
   } catch {
     return { success: false, reason: "invalid" };
   }
-}
-
-function logProviderFailure(modelId: string, status: number): void {
-  console.warn("[image-compare] Provider request failed", {
-    modelId,
-    status,
-  });
 }
 
 function detectProviderImageType(bytes: Uint8Array): {
@@ -216,61 +213,105 @@ function decodeProviderImage(value: string, declaredMediaType?: unknown): Decode
 
 async function generateImage(
   modelId: string,
-  prompt: string
+  prompt: string,
+  userId: string
 ): Promise<{ image: DecodedProviderImage } | { error: string }> {
   let apiKey: string;
   try {
     apiKey = getApiKey();
   } catch {
-    console.warn("[image-compare] Provider configuration unavailable", { modelId });
+    console.warn("[image-compare] Provider configuration unavailable", {
+      modelId,
+    });
     return { error: "Image generation is not configured" };
   }
 
-  let res: Response;
   try {
-    res = await fetch(OPENROUTER_IMAGE_API_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-        "X-Title": "New Era AI Platform",
+    return await executeOpenRouterImage({
+      prompt,
+      modelId,
+      credential: {
+        billingSource: "platform",
+        credentialId: null,
+        apiKey,
       },
-      body: JSON.stringify({ model: modelId, prompt, n: 1, aspect_ratio: "1:1" }),
-      signal: AbortSignal.timeout(PROVIDER_IMAGE_GENERATION_TIMEOUT_MS),
+      telemetry: {
+        userId,
+        guestId: null,
+        modeSlug: "image-arena",
+        requestKind: "image",
+      },
+      timeoutMs: PROVIDER_IMAGE_GENERATION_TIMEOUT_MS,
+      consumeResponse: async (response) => {
+        const providerJson = await readBoundedProviderJson(response);
+        if (!providerJson.success || !isJsonObject(providerJson.data)) {
+          console.warn(
+            "[image-compare] Provider returned an invalid response",
+            {
+              modelId,
+              reason: providerJson.success
+                ? "invalid_shape"
+                : providerJson.reason,
+            }
+          );
+          return {
+            value: {
+              error: "Image provider returned an invalid response",
+            } as const,
+            errorCode: "INVALID_RESPONSE",
+          };
+        }
+
+        const data = providerJson.data as ImageGenerationResult;
+        const providerRequestId =
+          typeof data.id === "string" && data.id.trim() ? data.id : null;
+        const providerModelId =
+          typeof data.model === "string" && data.model.trim()
+            ? data.model
+            : null;
+        const usage = normalizeOpenRouterUsage(data.usage);
+        const providerImage = data.data?.[0];
+
+        if (!providerImage || typeof providerImage.b64_json !== "string") {
+          return {
+            value: {
+              error: "No image data returned by provider",
+            } as const,
+            usage,
+            providerRequestId,
+            providerModelId,
+            errorCode: "INVALID_RESPONSE",
+          };
+        }
+
+        const decodedImage = decodeProviderImage(
+          providerImage.b64_json,
+          providerImage.media_type
+        );
+        if (!decodedImage) {
+          return {
+            value: {
+              error: "Provider image data failed validation",
+            } as const,
+            usage,
+            providerRequestId,
+            providerModelId,
+            errorCode: "INVALID_RESPONSE",
+          };
+        }
+
+        return {
+          value: { image: decodedImage } as const,
+          usage,
+          providerRequestId,
+          providerModelId,
+          errorCode: null,
+        };
+      },
     });
   } catch {
-    logProviderFailure(modelId, 0);
     return { error: "Image provider request failed" };
   }
-
-  if (!res.ok) {
-    await cancelResponseBody(res);
-    logProviderFailure(modelId, res.status);
-    return { error: "Image provider request failed" };
-  }
-
-  const providerJson = await readBoundedProviderJson(res);
-  if (!providerJson.success || !isJsonObject(providerJson.data)) {
-    console.warn("[image-compare] Provider returned an invalid response", {
-      modelId,
-      reason: providerJson.success ? "invalid_shape" : providerJson.reason,
-    });
-    return { error: "Image provider returned an invalid response" };
-  }
-
-  const data = providerJson.data as ImageGenerationResult;
-  const providerImage = data.data?.[0];
-  if (!providerImage || typeof providerImage.b64_json !== "string") {
-    return { error: "No image data returned by provider" };
-  }
-
-  const decodedImage = decodeProviderImage(providerImage.b64_json, providerImage.media_type);
-  if (!decodedImage) {
-    return { error: "Provider image data failed validation" };
-  }
-
-  return { image: decodedImage };
 }
 
 async function uploadToStorage(
@@ -415,7 +456,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const modelName = model?.name ?? modelId;
 
       try {
-        const generated = await generateImage(modelId, cleanPrompt);
+        const generated = await generateImage(
+          modelId,
+          cleanPrompt,
+          identity.userId
+        );
         if ("error" in generated) {
           return { modelId, modelName, imageUrl: null, error: generated.error };
         }

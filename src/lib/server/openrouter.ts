@@ -323,7 +323,7 @@ export async function fetchOpenRouterResponseWithApiKey(
     return {
       text: content,
       latencyMs,
-      usage: toModelUsage(responseData.usage),
+      usage: normalizeOpenRouterUsage(responseData.usage),
       providerRequestId:
         typeof responseData.id === "string" && responseData.id.trim()
           ? responseData.id
@@ -378,23 +378,27 @@ function parseSseDataLines(rawEvent: string): string | null {
   return dataLines.length > 0 ? dataLines.join("\n") : null;
 }
 
-function toModelUsage(
-  usage: OpenRouterResponse["usage"] | OpenRouterStreamChunk["usage"]
+export function normalizeOpenRouterUsage(
+  usage: unknown
 ): ModelUsage {
-  const rawCost = usage?.cost;
+  const normalized =
+    typeof usage === "object" && usage !== null
+      ? (usage as OpenRouterResponse["usage"])
+      : undefined;
+  const rawCost = normalized?.cost;
   const costUsd =
     typeof rawCost === "number" && Number.isFinite(rawCost) && rawCost >= 0
       ? rawCost
       : null;
 
   return {
-    inputTokens: usage?.prompt_tokens ?? null,
-    outputTokens: usage?.completion_tokens ?? null,
-    totalTokens: usage?.total_tokens ?? null,
+    inputTokens: normalized?.prompt_tokens ?? null,
+    outputTokens: normalized?.completion_tokens ?? null,
+    totalTokens: normalized?.total_tokens ?? null,
     costUsd,
     costSource: costUsd === null ? "unknown" : "provider_usage",
     providerIsByok:
-      typeof usage?.is_byok === "boolean" ? usage.is_byok : null,
+      typeof normalized?.is_byok === "boolean" ? usage.is_byok : null,
   };
 }
 
@@ -502,7 +506,7 @@ export async function streamOpenRouterResponseWithApiKey(
     const decoder = new TextDecoder();
     let buffer = "";
     let text = "";
-    let usage: ModelUsage = toModelUsage(undefined);
+    let usage: ModelUsage = normalizeOpenRouterUsage(undefined);
     let providerRequestId: string | null = null;
     let providerModelId: string | null = null;
 
@@ -538,7 +542,7 @@ export async function streamOpenRouterResponseWithApiKey(
           providerModelId = chunk.model;
         }
         if (chunk.usage) {
-          usage = toModelUsage(chunk.usage);
+          usage = normalizeOpenRouterUsage(chunk.usage);
         }
 
         const token =
