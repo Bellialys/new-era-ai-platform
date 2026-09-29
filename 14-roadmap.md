@@ -93,11 +93,11 @@ v2.0.0-alpha.1 - AI Team Mode
 # Stage 3.2 IAM/KMS policy canary ✅: reusable raw GenerateDataKey probe with an extra encryption-context key merged; only AWS AccessDeniedException counts as proof, and any unexpectedly returned plaintext DEK is wiped
 # Stage 3.2 remaining external blocker: deploy infra/aws-kms-vercel-oidc.yaml in AWS, enable Vercel OIDC in Team Issuer mode, map stack outputs to Vercel env, run the KMS env-readiness check, then invoke both prepared preview canaries
 # Pre-persistence security gate: current MVP IaC shares one KMS key between preview/production; DEC-022 proposes separate preview/production KMS keys as preferred isolation, but recurring AWS key cost requires explicit approval before IaC switches from one key to two
-# Stage 3.3 remains intentionally skipped for now; open PRs #101/#102 are not dependencies of the Stage 3.4 branch
+# Stage 3.3 Pricing + Actual Usage ✅: consolidated PR #105 is merged into main; unified gateway, actual usage telemetry and pricing foundation are available to Stage 3.4
 # Stage 3.4 OAuth beta foundation 🟡: auth-only connect/callback/status/disconnect, signed short-lived PKCE flow state, encrypted credential lifecycle, server-side funding resolver and profile UI are implemented behind fail-closed flags in PR #104
 # Stage 3.4 atomic activation ✅ in PR #104: encrypted credential activation + funding_source=user_openrouter commit through one service-role PostgreSQL RPC; disconnect/callback races cannot leave an active/funding split-brain state
 # Stage 3.4 activation gate: migration 20260929022500_stage34_atomic_openrouter_activation.sql must be applied, and ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE stays false until Stage 3.2 live KMS/OIDC + environment-isolation gates pass; ENABLE_OPENROUTER_USER_OAUTH also defaults false
-# Because Stage 3.3 inference gateway cutover is intentionally skipped, current Arena requests still use the legacy platform credential path; Stage 3.4 does not silently route inference through the connected user credential
+# Stage 3.4 runtime funding cutover ✅ in PR #104: Prompt, Stream, Code, Judge, Team and Image Arena routes resolve the server-side OpenRouter runtime credential through the funding resolver; user credential selection remains fail-closed behind Stage 3.4 flags and the Stage 3.2 live KMS gate
 # Separate operational issue remains: GitHub Actions OPENROUTER_API_KEY secret must be restored for scheduled live models:verify
 # paid Image generation smoke + полный Image safety/persistence review нужны для продвижения Image Arena выше auth-only alpha, но не блокируют закрытие provider-recovery Этапа 2
 # scheduled live models:verify считается operational после первого подтверждённого live run
