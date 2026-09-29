@@ -37,6 +37,7 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ### Safety and sequencing
 
+- Stage 3.4 code foundation was squash-merged to `main` through PR #104 as commit `4c80612e`; rollout remains gated and disabled.
 - Stage 3.3 is now complete in `main`; the unified gateway and actual-usage telemetry are available for the Stage 3.4 funding cutover.
 - Stage 3.4 is reconciled onto the completed Stage 3.3 base and its funding resolver is wired into all Arena routes. Real user credential activation remains disabled until Stage 3.2 live KMS readiness and environment isolation pass.
 - Migration `20260929022500_stage34_atomic_openrouter_activation.sql` must be applied before OAuth persistence can be enabled.
