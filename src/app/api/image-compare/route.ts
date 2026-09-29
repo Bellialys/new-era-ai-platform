@@ -227,7 +227,9 @@ async function generateImage(
   }
 
   try {
-    return await executeOpenRouterImage({
+    return await executeOpenRouterImage<
+      { image: DecodedProviderImage } | { error: string }
+    >({
       prompt,
       modelId,
       credential: {

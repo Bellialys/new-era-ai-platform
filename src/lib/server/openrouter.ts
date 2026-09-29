@@ -398,7 +398,7 @@ export function normalizeOpenRouterUsage(
     costUsd,
     costSource: costUsd === null ? "unknown" : "provider_usage",
     providerIsByok:
-      typeof normalized?.is_byok === "boolean" ? usage.is_byok : null,
+      typeof normalized?.is_byok === "boolean" ? normalized.is_byok : null,
   };
 }
 
