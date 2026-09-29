@@ -1,0 +1,43 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V201-16",
+  "title": "Complete Stage 3.2 Live AWS KMS and Vercel OIDC Gate",
+  "status": "in_progress",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V201-16.json",
+    "infra/aws-kms-vercel-oidc.yaml",
+    "docs/infra/aws-kms-vercel-oidc.md",
+    "src/lib/server/aws-kms-data-key-provider.ts",
+    "src/lib/server/credential-kms-canary.ts"
+  ],
+  "checksRequired": [
+    "aws:cloudformation-deploy",
+    "vercel:oidc-team-issuer",
+    "kms:env-readiness",
+    "kms:round-trip-canary",
+    "kms:context-mismatch-canary",
+    "kms:extra-context-policy-canary",
+    "kms:environment-isolation-review",
+    "security:audit"
+  ],
+  "checksPassed": [],
+  "lastUpdated": "2026-09-29T22:05:00+03:00",
+  "commitHash": null,
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T22:05:00+03:00",
+      "note": "Created after Stage 3.2 code, IaC, audience hardening, env-readiness and both reusable KMS canaries were completed."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T22:05:00+03:00",
+      "note": "External live gate remains: deploy AWS stack, enable Vercel Team Issuer OIDC, map role/key env, run KMS readiness and both preview canaries, then close preview/production environment isolation before provider credential persistence."
+    }
+  ],
+  "notes": "Do not enable ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE or persist real user OpenRouter credentials until every live gate check passes. Never introduce static AWS access keys; the KMS path is OIDC-only."
+}
