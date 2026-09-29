@@ -85,16 +85,36 @@ aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs'
 ```
 
-If an IAM OIDC provider for `https://oidc.vercel.com/bellial-s-projects` already exists:
+If an IAM OIDC provider for `https://oidc.vercel.com/bellial-s-projects` already exists, do **not** reuse it until its client-id list contains the AWS-specific audience `sts.amazonaws.com`.
 
 ```bash
-# Reuse the existing provider instead of creating a duplicate.
+# Inspect the existing provider. ClientIDList must include sts.amazonaws.com.
+aws iam get-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects \
+  --query 'ClientIDList'
+
+# Add the AWS STS audience if it is missing.
+aws iam add-client-id-to-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects \
+  --client-id sts.amazonaws.com
+
+# Re-read and verify before CloudFormation reuse.
+aws iam get-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects \
+  --query 'ClientIDList'
+
+# Reuse only after verification. The template additionally requires an explicit
+# confirmation parameter for the existing-provider path.
 aws cloudformation deploy \
   --stack-name new-era-ai-credential-kms \
   --template-file infra/aws-kms-vercel-oidc.yaml \
   --capabilities CAPABILITY_IAM \
-  --parameter-overrides ExistingVercelOidcProviderArn=arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects
+  --parameter-overrides \
+    ExistingVercelOidcProviderArn=arn:aws:iam::<account-id>:oidc-provider/oidc.vercel.com/bellial-s-projects \
+    ExistingVercelOidcProviderHasStsAudience=true
 ```
+
+The existing-provider path is a precondition, not a fallback that bypasses audience validation. Runtime and both IAM role trust policies require `aud=sts.amazonaws.com`.
 
 ## Vercel environment mapping
 
@@ -117,10 +137,10 @@ Vercel OIDC must be enabled for the project so deployments receive a short-lived
 For this CloudFormation template, enable **Team Issuer** mode. The trust policy is intentionally scoped to:
 
 - issuer: `https://oidc.vercel.com/bellial-s-projects`;
-- audience: `https://vercel.com/bellial-s-projects`;
+- audience: `sts.amazonaws.com`;
 - subject: `owner:bellial-s-projects:project:new-era-ai-platform:environment:<preview|production>`.
 
-The current application calls `awsCredentialsProvider({ roleArn })` without a custom audience, so the expected default audience remains `https://vercel.com/bellial-s-projects`. If the code is later changed to request a custom audience such as `sts.amazonaws.com`, the IAM OIDC provider/client-id and role trust condition must be reviewed and updated in the same change.
+The application explicitly calls `awsCredentialsProvider({ roleArn, audience: "sts.amazonaws.com", clientConfig: { region } })`. The CloudFormation OIDC provider/client-id list and both role trust conditions use the same AWS-specific audience. Do not revert one side independently.
 
 The IAM role then uses `sts:AssumeRoleWithWebIdentity`.
 
