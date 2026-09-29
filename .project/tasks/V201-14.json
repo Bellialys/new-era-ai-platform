@@ -2,14 +2,15 @@
   "$schema": "../task.schema.json",
   "id": "V201-14",
   "title": "Bind Vercel AWS OIDC to AWS-Specific Audience",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
     ".project/tasks/V201-14.json",
     "src/lib/server/aws-kms-data-key-provider.ts",
     "src/lib/server/aws-kms-data-key-provider.test.ts",
-    "infra/aws-kms-vercel-oidc.yaml"
+    "infra/aws-kms-vercel-oidc.yaml",
+    "docs/infra/aws-kms-vercel-oidc.md"
   ],
   "checksRequired": [
     "typecheck",
@@ -23,9 +24,20 @@
     "diff:check",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-29T00:15:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "kms:oidc-audience-unit",
+    "cfn:contract-review",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-29T22:05:00+03:00",
+  "commitHash": "f9db1a2a542d89ca66bba4962c4976d51662182b",
   "transitions": [
     {
       "from": null,
@@ -56,7 +68,13 @@
       "to": "in_progress",
       "at": "2026-09-29T00:15:00+03:00",
       "note": "Reopened after PR review correctly found that an existing reused OIDC provider could lack the new sts.amazonaws.com client ID."
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "at": "2026-09-29T22:05:00+03:00",
+      "note": "Existing-provider runbook aligned with the already-merged runtime and CloudFormation contract: sts.amazonaws.com is required in ClientIDList, reuse requires explicit verification/confirmation, and Team Issuer trust documents the same audience. No AWS/Vercel resource or secret mutation."
     }
   ],
-  "notes": "Completed pre-deployment security hardening. Vercel custom OIDC audience is now provider-specific (sts.amazonaws.com), reducing cross-service token replay risk."
+  "notes": "Completed code/IaC/runbook audience alignment. Runtime requests aud=sts.amazonaws.com with explicit region; CloudFormation creates/reuses an OIDC provider only under the matching STS audience contract. Live AWS deployment remains a separate external gate."
 }
