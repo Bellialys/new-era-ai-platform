@@ -664,9 +664,9 @@ Before persistent provider credentials are activated, there is one additional en
 - safe price/status API;
 - no paid-model expansion.
 
-### Stage 3.4 — OpenRouter OAuth user beta — FOUNDATION IN PR #104
+### Stage 3.4 — OpenRouter OAuth user beta — CODE MERGED VIA PR #104, ROLLOUT GATED
 
-Implemented in the isolated Stage 3.4 branch:
+Implemented and merged into `main` via PR #104:
 
 - authenticated-only `Connect OpenRouter` using OAuth PKCE S256;
 - signed, user-bound, httpOnly flow state/verifier lifecycle with a 10-minute TTL;
