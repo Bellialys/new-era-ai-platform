@@ -7,12 +7,14 @@ const {
   getApiKeyMock,
   getClientMock,
   logApiRequestMock,
+  recordUsageMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   getApiKeyMock: vi.fn(),
   getClientMock: vi.fn(),
   logApiRequestMock: vi.fn(),
+  recordUsageMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -26,6 +28,10 @@ vi.mock("@/lib/server", async (importOriginal) => {
     getSupabaseServerClient: getClientMock,
   };
 });
+
+vi.mock("@/lib/server/openrouter-usage", () => ({
+  recordOpenRouterUsageEventBestEffort: recordUsageMock,
+}));
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -122,6 +128,7 @@ beforeEach(() => {
   getApiKeyMock.mockReset();
   getClientMock.mockReset();
   logApiRequestMock.mockReset();
+  recordUsageMock.mockReset();
   fetchMock.mockReset();
   consoleWarnMock.mockClear();
 
@@ -133,6 +140,7 @@ beforeEach(() => {
   });
   getApiKeyMock.mockReturnValue("test-api-key");
   getClientMock.mockReturnValue(mockStorageClient().client);
+  recordUsageMock.mockResolvedValue(undefined);
   fetchMock.mockImplementation(() => Promise.resolve(mockOpenRouterSuccess()));
 });
 
