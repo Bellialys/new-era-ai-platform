@@ -87,7 +87,7 @@ Release-gate note: `POST /api/guest` создаёт anonymous session и дол�
 
 ## OpenRouter OAuth integration (Stage 3.4 beta control-plane)
 
-Stage 3.4 добавляет authenticated OAuth/funding control-plane, но не переключает текущие Arena inference routes на пользовательский OpenRouter credential. Inference cutover остаётся частью Stage 3.3 unified gateway.
+Stage 3.4 добавляет authenticated OAuth/funding control-plane поверх завершённого Stage 3.3 unified gateway. Prompt, Stream, Code, Judge, Team и Image Arena получают runtime credential только через server-side funding resolver; браузер не выбирает и не получает provider credential.
 
 ### `GET /api/integrations/openrouter`
 
@@ -106,7 +106,7 @@ Stage 3.4 добавляет authenticated OAuth/funding control-plane, но н�
 }
 ```
 
-Raw API key, credential UUID, внутренний lifecycle status, ciphertext, wrapped DEK и KMS key id в браузерный ответ не включаются. Пока Stage 3.4 flags выключены, отсутствие ещё не применённой credential schema деградирует в безопасный disabled/disconnected ответ вместо rollout-time `500`; после включения feature persistence errors снова являются явными ошибками.
+Raw API key, credential UUID, внутренний lifecycle status, ciphertext, wrapped DEK и KMS key id в браузерный ответ не включаются. Пока Stage 3.4 flags выключены, отсутствие ещё не применённой credential schema деградирует в безопасный disabled/disconnected ответ вместо rollout-time `500`; после включения feature persistence errors являются явными ошибками, а профиль показывает retryable status-load error вместо скрытия integration UI.
 
 ### `POST /api/integrations/openrouter/connect`
 
@@ -114,11 +114,11 @@ Raw API key, credential UUID, внутренний lifecycle status, ciphertext,
 
 ### `GET /api/integrations/openrouter/callback`
 
-Проверяет user-bound signed flow cookie, TTL и state, обменивает authorization code только server-side с bounded timeout и не возвращает полученный provider key браузеру. Encrypted credential activation и `funding_source=user_openrouter` фиксируются одной service-role PostgreSQL RPC-транзакцией. Callback завершает flow контролируемым `303` redirect на профиль.
+Проверяет user-bound signed flow cookie, TTL и state, обменивает authorization code только server-side с bounded timeout и не возвращает полученный provider key браузеру. Encrypted credential activation и `funding_source=user_openrouter` фиксируются одной service-role PostgreSQL RPC-транзакцией. Если после успешного provider exchange падает KMS/activation, still-pending row переводится в безопасный `orphaned` reconciliation state с hash/fingerprint/error metadata без plaintext/ciphertext. Callback завершает flow контролируемым `303` redirect на профиль.
 
 ### `DELETE /api/integrations/openrouter`
 
-Требует same-origin request и auth. Сначала отзывает live user OAuth credential и очищает ciphertext/wrapped DEK/KMS reference, затем возвращает funding preference на `platform`. При `429` возвращает `Retry-After`.
+Требует same-origin request и auth. New Era не отзывает внешний user-controlled OpenRouter key: endpoint переводит локальную credential запись в revoked state, очищает свою ciphertext/wrapped DEK/KMS reference и возвращает funding preference на `platform`. При `429` возвращает `Retry-After`.
 
 Rollout boundary:
 
@@ -126,7 +126,8 @@ Rollout boundary:
 - `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false` до Stage 3.2 live AWS/Vercel KMS + environment-isolation gate;
 - migration `20260929022500_stage34_atomic_openrouter_activation.sql` должна быть применена до включения persistence;
 - internal credential id и provider secret остаются server-only;
-- Stage 3.3 PRs #101/#102 не являются зависимостью текущего control-plane PR.
+- Stage 3.3 завершён через PR #105; superseded PRs #101/#102 не являются зависимостью текущего control-plane PR;
+- runtime funding cutover уже присутствует в PR #104, но real user credential activation остаётся заблокирована Stage 3.2 live KMS/environment-isolation gate.
 
 ## `GET /api/models`
 
