@@ -10,6 +10,7 @@ import {
   OPENROUTER_TIMEOUT_MS,
 } from "@/lib/arena/constants";
 import { ApiError } from "./utils";
+import type { OpenRouterUsageTelemetryContext } from "./openrouter-usage";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -208,12 +209,28 @@ export type ModelResult =
   | ({ success: true } & OpenRouterCallResult)
   | { success: false; errorCode: string; errorMessage: string };
 
+export type OpenRouterGatewayCallOptions = {
+  systemPrompt?: string;
+  telemetry?: OpenRouterUsageTelemetryContext;
+};
+
 export async function fetchOpenRouterResponse(
   prompt: string,
   modelId: string,
-  options?: { systemPrompt?: string }
+  options?: OpenRouterGatewayCallOptions
 ): Promise<OpenRouterCallResult> {
-  return fetchOpenRouterResponseWithApiKey(getApiKey(), prompt, modelId, options);
+  const {
+    executeOpenRouterText,
+    resolveLegacyPlatformOpenRouterCredential,
+  } = await import("./openrouter-gateway");
+
+  return executeOpenRouterText({
+    prompt,
+    modelId,
+    systemPrompt: options?.systemPrompt,
+    credential: resolveLegacyPlatformOpenRouterCredential(),
+    telemetry: options?.telemetry,
+  });
 }
 
 export async function fetchOpenRouterResponseWithApiKey(
@@ -384,15 +401,21 @@ export async function streamOpenRouterResponse(
   prompt: string,
   modelId: string,
   onToken: (token: string) => void | Promise<void>,
-  options?: { systemPrompt?: string }
+  options?: OpenRouterGatewayCallOptions
 ): Promise<OpenRouterCallResult> {
-  return streamOpenRouterResponseWithApiKey(
-    getApiKey(),
+  const {
+    resolveLegacyPlatformOpenRouterCredential,
+    streamOpenRouterText,
+  } = await import("./openrouter-gateway");
+
+  return streamOpenRouterText({
     prompt,
     modelId,
     onToken,
-    options
-  );
+    systemPrompt: options?.systemPrompt,
+    credential: resolveLegacyPlatformOpenRouterCredential(),
+    telemetry: options?.telemetry,
+  });
 }
 
 export async function streamOpenRouterResponseWithApiKey(
@@ -549,7 +572,7 @@ export async function streamOpenRouterResponseWithApiKey(
 export async function fetchMultipleResponses(
   prompt: string,
   modelIds: string[],
-  options?: { systemPrompt?: string }
+  options?: OpenRouterGatewayCallOptions
 ): Promise<ModelResult[]> {
   const promises = modelIds.map(async (modelId): Promise<ModelResult> => {
     try {

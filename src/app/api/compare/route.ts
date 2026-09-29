@@ -115,6 +115,14 @@ function createStreamingCompareResponse({
                     modelId: model.selectionId,
                     token,
                   });
+                },
+                {
+                  telemetry: {
+                    userId: identity.userId,
+                    guestId: identity.guestId,
+                    modeSlug: MODE_SLUG_PROMPT_ARENA,
+                    requestKind: "stream",
+                  },
                 }
               );
 
@@ -410,7 +418,15 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const responses = await fetchMultipleResponses(
       cleanPrompt,
-      selectedModels.map((model) => model.modelKey)
+      selectedModels.map((model) => model.modelKey),
+      {
+        telemetry: {
+          userId: identity.userId,
+          guestId: identity.guestId,
+          modeSlug: MODE_SLUG_PROMPT_ARENA,
+          requestKind: "text",
+        },
+      }
     );
 
     const arenaResponses: PersistableCompareResponse[] = selectedModels.map((model, index) => {
