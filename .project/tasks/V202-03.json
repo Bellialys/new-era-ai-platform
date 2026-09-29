@@ -1,0 +1,84 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V202-03",
+  "title": "Stage 3.3 Provider Usage Telemetry",
+  "status": "done",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V202-03.json",
+    "src/lib/server/index.ts",
+    "src/lib/server/openrouter-gateway.ts",
+    "src/lib/server/openrouter-gateway.test.ts",
+    "src/lib/server/openrouter-usage.ts",
+    "src/lib/server/openrouter-usage.test.ts",
+    "08-database.md",
+    "15-changelog.md",
+    "scripts/check-schema-sync.mjs",
+    "src/lib/server/openrouter-pricing.ts",
+    "src/lib/server/openrouter-pricing.test.ts",
+    "src/app/api/admin/pricing/sync/route.ts",
+    "src/app/api/models/pricing/route.ts",
+    "src/app/api/compare/route.ts",
+    "src/app/api/code-compare/route.ts",
+    "src/app/api/judge/route.ts",
+    "src/app/api/team-run/route.ts",
+    "src/app/api/stream-compare/route.ts",
+    "src/app/api/stream-compare/route.test.ts",
+    "supabase/migrations/20260929103057_stage3_usage_telemetry.sql",
+    "supabase/migrations/20260929103107_stage3_model_pricing.sql",
+    "supabase/migrations/20260929120151_stage3_usage_telemetry.sql",
+    "supabase/migrations/20260929120153_stage3_model_pricing.sql"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "schema:review",
+    "usage:telemetry-contract",
+    "audit"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "schema:review",
+    "usage:telemetry-contract",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-29T15:18:00+03:00",
+  "commitHash": "08349de3b225e02a78c3389bc94cfd4b7da30e46",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T12:58:00+03:00",
+      "note": "Continue Stage 3.3 on a consolidated branch targeting main while Vercel Preview quota is externally exhausted."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T12:58:00+03:00",
+      "note": "Add usage_events provider metadata and a best-effort gateway telemetry hook without changing funding source or enabling paid models."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-29T15:16:00+03:00",
+      "note": "Consolidated PR #105 passed audit, typecheck, lint, 547 tests, build, state/docs checks and smoke; Vercel preview is READY. Production Supabase Stage 3.3 schema and privilege boundaries were verified live."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-29T15:18:00+03:00",
+      "note": "Stage 3.3 completion criteria are satisfied: unified gateway, actual provider usage/cost, Image Arena coverage, bounded usage telemetry, pricing history sync/status API, no paid-model expansion, and local/remote migration history reconciliation."
+    }
+  ],
+  "notes": "Stage 3.3 is complete on consolidated PR #105. Production Supabase has the usage/pricing schema; live verification confirmed constraints, SECURITY INVOKER pricing RPC and least-privilege grants. Repeated idempotent migration history is represented by no-op reconciliation files. Platform paid allowance remains $0 and persistent user OpenRouter credentials remain blocked by the unfinished Stage 3.2 live AWS/Vercel KMS gate."
+}

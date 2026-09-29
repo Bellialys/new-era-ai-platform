@@ -19,7 +19,7 @@ import {
   saveArenaRun,
   checkRateLimit,
   resolveRequestIdentity,
-  getApiKey,
+  streamOpenRouterResponse,
   logApiRequest,
   checkDailyLimit,
   fisherYatesShuffle,
@@ -67,41 +67,94 @@ async function streamOneModel(
   model: ResolvedModel,
   wire: WireModelDescriptor,
   controller: ReadableStreamDefaultController<Uint8Array>,
-  signal: AbortSignal
-): Promise<{ text: string; latencyMs: number; inputTokens: number | null; outputTokens: number | null; success: boolean; errorCode?: string; errorMessage?: string }> {
-  const apiKey = getApiKey();
+  signal: AbortSignal,
+  owner: { userId: string | null; guestId: string | null }
+): Promise<{
+  text: string;
+  latencyMs: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+  success: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+}> {
   const startTime = Date.now();
 
-  // Announce model start
-  controller.enqueue(sse("model_start", {
-    modelId: wire.id,
-    modelName: wire.name,
-    modelRole: wire.role,
-  }));
+  controller.enqueue(
+    sse("model_start", {
+      modelId: wire.id,
+      modelName: wire.name,
+      modelRole: wire.role,
+    })
+  );
 
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-        "X-Title": "New Era AI Platform",
+    const result = await streamOpenRouterResponse(
+      prompt,
+      model.modelKey,
+      (token) => {
+        controller.enqueue(
+          sse("model_token", {
+            modelId: wire.id,
+            token,
+          })
+        );
       },
-      body: JSON.stringify({
-        model: model.modelKey,
-        messages: [{ role: "user", content: prompt }],
-        stream: true,
-        temperature: 0.7,
-        max_tokens: 2048,
-      }),
-      signal,
-    });
+      {
+        signal,
+        telemetry: {
+          userId: owner.userId,
+          guestId: owner.guestId,
+          modeSlug: MODE_SLUG_PROMPT_ARENA,
+          requestKind: "stream",
+        },
+      }
+    );
 
-    if (!res.ok || !res.body) {
-      const msg = `OpenRouter returned ${res.status}`;
-      const errorCode = res.status === 429 ? "RATE_LIMIT" : res.status >= 500 ? "PROVIDER_ERROR" : "OPENROUTER_ERROR";
-      controller.enqueue(sse("model_error", {
+    controller.enqueue(
+      sse("model_done", {
+        modelId: wire.id,
+        response: {
+          id: crypto.randomUUID(),
+          modelId: wire.id,
+          modelName: wire.name,
+          status: "success",
+          answerText: result.text,
+          latencyMs: result.latencyMs,
+        },
+      })
+    );
+
+    return {
+      text: result.text,
+      latencyMs: result.latencyMs,
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens,
+      totalTokens: result.usage.totalTokens,
+      success: true,
+    };
+  } catch (err) {
+    if (signal.aborted) {
+      return {
+        text: "",
+        latencyMs: Date.now() - startTime,
+        inputTokens: null,
+        outputTokens: null,
+        totalTokens: null,
+        success: false,
+        errorCode: "ABORTED",
+        errorMessage: "Aborted",
+      };
+    }
+
+    const errorCode = err instanceof ApiError ? err.errorCode : "NETWORK_ERROR";
+    console.warn("stream-compare model stream failed", {
+      modelKey: model.modelKey,
+      errorCode,
+    });
+    controller.enqueue(
+      sse("model_error", {
         modelId: wire.id,
         response: {
           id: crypto.randomUUID(),
@@ -110,85 +163,18 @@ async function streamOneModel(
           status: "error",
           answerText: null,
           errorCode,
-          errorMessage: msg,
+          errorMessage: PUBLIC_STREAM_MODEL_ERROR_MESSAGE,
         },
-      }));
-      return { text: "", latencyMs: Date.now() - startTime, inputTokens: null, outputTokens: null, success: false, errorCode, errorMessage: msg };
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let accumulated = "";
-    let inputTokens: number | null = null;
-    let outputTokens: number | null = null;
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const payload = line.slice(6).trim();
-        if (payload === "[DONE]") continue;
-        try {
-          const parsed = JSON.parse(payload) as {
-            choices?: { delta?: { content?: string } }[];
-            usage?: { prompt_tokens?: number; completion_tokens?: number };
-          };
-          const token = parsed.choices?.[0]?.delta?.content;
-          if (token) {
-            accumulated += token;
-            controller.enqueue(sse("model_token", { modelId: wire.id, token }));
-          }
-          if (parsed.usage) {
-            inputTokens = parsed.usage.prompt_tokens ?? null;
-            outputTokens = parsed.usage.completion_tokens ?? null;
-          }
-        } catch { /* skip malformed */ }
-      }
-    }
-
-    const latencyMs = Date.now() - startTime;
-    controller.enqueue(sse("model_done", {
-      modelId: wire.id,
-      response: {
-        id: crypto.randomUUID(),
-        modelId: wire.id,
-        modelName: wire.name,
-        status: "success",
-        answerText: accumulated,
-        latencyMs,
-      },
-    }));
-
-    return { text: accumulated, latencyMs, inputTokens, outputTokens, success: true };
-  } catch (err) {
-    if (signal.aborted) return { text: "", latencyMs: 0, inputTokens: null, outputTokens: null, success: false, errorCode: "ABORTED", errorMessage: "Aborted" };
-    console.error("stream-compare model stream failed:", err);
-    controller.enqueue(sse("model_error", {
-      modelId: wire.id,
-      response: {
-        id: crypto.randomUUID(),
-        modelId: wire.id,
-        modelName: wire.name,
-        status: "error",
-        answerText: null,
-        errorCode: "NETWORK_ERROR",
-        errorMessage: PUBLIC_STREAM_MODEL_ERROR_MESSAGE,
-      },
-    }));
+      })
+    );
     return {
       text: "",
       latencyMs: Date.now() - startTime,
       inputTokens: null,
       outputTokens: null,
+      totalTokens: null,
       success: false,
-      errorCode: "NETWORK_ERROR",
+      errorCode,
       errorMessage: PUBLIC_STREAM_MODEL_ERROR_MESSAGE,
     };
   }
@@ -313,7 +299,8 @@ export async function POST(request: NextRequest): Promise<Response> {
               model,
               orderedWires[index] ?? wireForModel(model, index, isBlind),
               controller,
-              abortController.signal
+              abortController.signal,
+              { userId: identity.userId, guestId: identity.guestId }
             )
           )
         );
@@ -332,7 +319,13 @@ export async function POST(request: NextRequest): Promise<Response> {
             latencyMs: r.latencyMs,
             errorCode: r.errorCode,
             errorMessage: r.errorMessage,
-            usage: r.success ? { inputTokens: r.inputTokens, outputTokens: r.outputTokens, totalTokens: null } : undefined,
+            usage: r.success
+              ? {
+                  inputTokens: r.inputTokens,
+                  outputTokens: r.outputTokens,
+                  totalTokens: r.totalTokens,
+                }
+              : undefined,
           };
         });
 

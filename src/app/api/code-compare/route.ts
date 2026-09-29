@@ -249,7 +249,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<CodeCompa
     const responses = await fetchMultipleResponses(
       cleanPrompt,
       selectedModels.map((model) => model.modelKey),
-      { systemPrompt }
+      {
+        systemPrompt,
+        telemetry: {
+          userId: identity.userId,
+          guestId: identity.guestId,
+          modeSlug: MODE_SLUG_CODE_ARENA,
+          requestKind: "text",
+        },
+      }
     );
 
     const arenaResponses: PersistableCodeResponse[] = selectedModels.map((model, index) => {

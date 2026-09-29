@@ -1,0 +1,6 @@
+-- Migration-history reconciliation only.
+-- Production recorded a second idempotent application of stage3_usage_telemetry
+-- under version 20260929120151. The actual schema change is represented by
+-- 20260929103057_stage3_usage_telemetry.sql above.
+--
+-- No SQL is required here on a fresh database.

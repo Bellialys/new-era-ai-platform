@@ -152,7 +152,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { task: rawTask, modelId },
       {
         callModel: async (prompt, systemPrompt, mId) => {
-          const { text } = await fetchOpenRouterResponse(prompt, mId, { systemPrompt });
+          const { text } = await fetchOpenRouterResponse(prompt, mId, {
+            systemPrompt,
+            telemetry: {
+              userId: identity.userId,
+              guestId: null,
+              modeSlug: MODE_SLUG_AI_TEAM,
+              requestKind: "text",
+            },
+          });
           return text;
         },
       }

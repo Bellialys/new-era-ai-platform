@@ -212,12 +212,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
       const result = await fetchOpenRouterResponse(userPrompt, JUDGE_PRIMARY_MODEL_ID, {
         systemPrompt: JUDGE_SYSTEM_PROMPT,
+        telemetry: {
+          userId: identity.userId,
+          guestId: identity.guestId,
+          modeSlug: "judge",
+          requestKind: "text",
+        },
       });
       judgeText = result.text;
     } catch (primaryErr) {
       try {
         const result = await fetchOpenRouterResponse(userPrompt, JUDGE_FALLBACK_MODEL_ID, {
           systemPrompt: JUDGE_SYSTEM_PROMPT,
+          telemetry: {
+            userId: identity.userId,
+            guestId: identity.guestId,
+            modeSlug: "judge",
+            requestKind: "text",
+          },
         });
         judgeText = result.text;
       } catch {

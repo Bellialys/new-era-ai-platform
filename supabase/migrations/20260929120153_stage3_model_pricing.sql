@@ -1,0 +1,6 @@
+-- Migration-history reconciliation only.
+-- Production recorded a second idempotent application of stage3_model_pricing
+-- under version 20260929120153. The actual schema change is represented by
+-- 20260929103107_stage3_model_pricing.sql above.
+--
+-- No SQL is required here on a fresh database.

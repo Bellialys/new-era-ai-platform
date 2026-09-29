@@ -36,11 +36,33 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ### Safety and sequencing
 
-- Stage 3.3 remains intentionally skipped; PRs #101/#102 are not dependencies of the Stage 3.4 branch.
-- Current Arena inference is not switched to the connected user credential in this slice because that routing cutover belongs to the Stage 3.3 unified gateway.
+- Stage 3.3 is now complete in `main`; the unified gateway and actual-usage telemetry are available for the Stage 3.4 funding cutover.
+- This merge only reconciles the existing OAuth control-plane onto the completed Stage 3.3 base. User credential routing remains disabled until the funding resolver is wired into the gateway and Stage 3.2 live KMS readiness passes.
 - Migration `20260929022500_stage34_atomic_openrouter_activation.sql` must be applied before OAuth persistence can be enabled.
 - `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` must stay false until Stage 3.2 live AWS/Vercel KMS canaries and the preview/production KMS isolation gate are complete.
 - No Vercel flag is enabled, no real user OpenRouter credential is persisted, no paid-model catalog is expanded and no platform-paid traffic is enabled by this change.
+
+## Stage 3.3 Pricing + Actual Usage - 2026-09-29
+
+### Implemented in PR #105
+
+- OpenRouter text and streaming requests now request provider usage and capture actual `usage.cost`, provider request id and actual returned model id.
+- Added unified server-only gateway with explicit funding/credential context; current runtime remains on the existing shared platform credential.
+- Added per-provider-call `usage_events` telemetry for Prompt Arena, Code Arena, Judge and AI Team; blind/streaming Prompt Arena now uses the same gateway instead of a direct OpenRouter fetch.
+- Telemetry keeps New Era `billing_source` separate from OpenRouter `provider_is_byok` and is bounded best-effort so database latency cannot indefinitely block a successful inference result.
+- Added forward-only usage telemetry migration and schema-sync requirements for all new columns/constraints.
+- Added OpenRouter pricing sync for curated text + Image Arena catalogs, preserving full `raw_pricing` while normalizing prompt/completion token rates per million.
+- Added service-role-only atomic `upsert_model_price_snapshot` RPC, admin sync endpoint and safe public `/api/models/pricing` status endpoint that does not expose server-side text model keys.
+- Pricing RPC is `SECURITY INVOKER` (not definer); `EXECUTE` is denied to `PUBLIC`/`anon`/`authenticated`, and the service role receives the minimum table privileges required for atomic snapshots.
+- Platform-paid model expansion remains disabled; Stage 3.2 live AWS/Vercel KMS gate remains independent and still blocks persistent user credential activation.
+
+### Verification state
+
+- PR #105 is the consolidated Stage 3.3 branch targeting `main`.
+- GitHub CI and Vercel Preview are used as the mandatory validation gates for each consolidated slice.
+- Production Supabase migration history verified: actual Stage 3.3 schema changes are recorded as `20260929103057_stage3_usage_telemetry` and `20260929103107_stage3_model_pricing`.
+- Production also contains a second idempotent application of each migration at `20260929120151` and `20260929120153`; repository migration filenames include matching no-op reconciliation entries so local/remote history remains aligned.
+- Live verification confirmed the new columns/constraints, `SECURITY INVOKER` pricing RPC, service-role-only execution, and no new Supabase security-advisor findings.
 
 ## Stage 3.2 KMS environment-isolation cost decision - 2026-09-28
 
