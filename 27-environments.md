@@ -74,6 +74,7 @@ Production должен быть защищён не только правила
 | `AI_CREDENTIAL_KMS_KEY_ID` | Stage 3 KMS server runtime | Нет | KMS key ARN/id для envelope encryption provider credentials. |
 | `ENABLE_OPENROUTER_USER_OAUTH` | Backend rollout gate | Нет | По умолчанию false; включает Stage 3.4 OAuth control-plane только после controlled rollout. |
 | `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` | Backend rollout gate | Нет | По умолчанию false; нельзя включать до Stage 3.2 live KMS/OIDC + environment-isolation gate и activation migration. |
+| `ENABLE_PLATFORM_PAID_IMAGE_ARENA` | Backend monetary rollout gate | Нет | По умолчанию false; разрешает только platform-funded Image Arena spend. Не заменяет provider budget/rate limit/telemetry. |
 | `OPENROUTER_OAUTH_COOKIE_SECRET` | Backend OAuth session signing | Нет | Secret минимум 32 non-whitespace chars; подписывает short-lived OAuth flow cookie. |
 
 ## Нормализация `APP_ENV`
