@@ -2,19 +2,16 @@
 
 ## Статус
 
-**Stage 3.0 complete / Stage 3.1 Free OAuth readiness complete / Stage 3.2 foundation + env-readiness + both KMS canaries ready; live AWS/Vercel Team Issuer gate pending**
+**Stage 3.0 complete / Stage 3.1 complete / Stage 3.2 code+IaC+canaries ready, live AWS/Vercel gate pending / Stage 3.3 complete / Stage 3.4 code merged, rollout disabled**
 
 Дата ревью внешних контрактов: **2026-09-27**.
-Дата повторного code/architecture audit: **2026-09-27** (`main` baseline `a5b9fc6b4471635b1ed5a4923a8eef58247d88f6`).
+Дата последней status/context синхронизации: **2026-09-29** (`main` baseline `cc61811dce52c2ad35208198adab24380c02fba6`; перед новой работой сверять текущий `main`).
 
 Этот документ фиксирует архитектуру Stage 3 после закрытых Stage 1 и Stage 2.
 На текущем `main` уже реализованы OAuth PKCE protocol foundation, encrypted credential schema,
 AES-256-GCM envelope codec, AWS KMS/Vercel OIDC adapter, CloudFormation IaC, dedicated KMS env-readiness checker,
 reusable round-trip/context-mismatch canary и extra-context IAM/KMS policy canary.
-Production credential tables созданы, но хранение пользовательских OpenRouter credentials остаётся disabled
-до развёртывания AWS/Vercel OIDC Team Issuer infrastructure, успешного `--mode=kms` readiness check
-и успешного прохождения обоих live preview canaries.
-Платные platform-funded модели по-прежнему не включены.
+Production credential tables созданы; Stage 3.3 unified gateway/actual usage/pricing и Stage 3.4 OAuth/funding resolver уже merged. Хранение реальных пользовательских OpenRouter credentials остаётся disabled до развёртывания AWS/Vercel OIDC Team Issuer infrastructure, успешного `--mode=kms` readiness check, обоих live preview canaries, закрытия environment-isolation gate и применения Stage 3.4 activation migration. Платные platform-funded модели по-прежнему не включены.
 
 ## 1. Цель
 
@@ -386,9 +383,9 @@ Connect/replace/disconnect/funding-switch operations are security-sensitive:
 
 Plaintext key существует только в TLS request и server memory на время validation/encryption/inference и не попадает в persistence до шифрования.
 
-## 8. Planned database changes
+## 8. Database foundation and remaining hardening
 
-Это план, не применённая схема.
+Базовая Stage 3 credential/usage/pricing schema уже применена в production. Ниже фиксируется фактическая foundation-модель и оставшиеся hardening decisions; конкретным источником истины для колонок/constraints являются migrations в текущем `main`.
 
 ### `provider_credentials`
 
@@ -396,7 +393,7 @@ Plaintext key существует только в TLS request и server memory 
 id uuid PK
 user_id uuid NOT NULL
 provider text = 'openrouter'
-origin text = 'platform_managed' | 'user_provided'
+origin text = 'user_oauth' | 'user_manual' | 'platform_managed'
 status text = 'pending' | 'active' | 'revoking' | 'revoked' | 'orphaned' | 'error'
 provider_key_hash text nullable
 safe_fingerprint text nullable
@@ -421,8 +418,8 @@ Rules:
 - no direct `anon`/`authenticated` table grants;
 - backend/service layer only;
 - one active platform credential per user in MVP;
-- one active persistent BYOK credential per user in MVP;
-- planned partial UNIQUE constraints prevent more than one `pending|active` credential per `(user_id, provider, origin)`;
+- target invariant: one live persistent user-owned BYOK credential per user in MVP;
+- current production partial UNIQUE constraint prevents more than one `pending|active` credential per `(user_id, provider, origin)`; cross-origin `user_oauth | user_manual` hardening remains tracked in issue #96;
 - credential rows use an opaque internal id as the remote key label/reference; email/display name are not used;
 - raw secret never appears in user-facing API.
 
@@ -435,11 +432,9 @@ preferred_credential_id uuid nullable
 updated_at timestamptz
 ```
 
-### Extend `usage_events`
+### `usage_events` Stage 3.3 extensions
 
-Current table already has user/model/tokens/latency/cost.
-
-Planned additions:
+Stage 3.3 migration already adds:
 
 ```text
 billing_source
@@ -452,11 +447,9 @@ currency
 request_kind
 ```
 
-### Extend `model_price_history`
+### `model_price_history` Stage 3.3 extensions
 
-Reuse existing table instead of creating a parallel pricing table.
-
-Planned additions:
+Stage 3.3 reuses the existing table and already adds:
 
 ```text
 provider
@@ -651,7 +644,9 @@ Stage 3.2 live infrastructure evidence requires the env-readiness check and **bo
 
 Before persistent provider credentials are activated, there is one additional environment-isolation decision: the current MVP IaC gives preview and production roles access to the same KMS key. Role separation prevents cross-environment role assumption but does not prevent a preview principal from decrypting production ciphertext if it can obtain the ciphertext, wrapped DEK and matching context. Preferred production design is separate KMS keys per environment; the alternative is an explicit environment-bound encryption-context/IAM design. No real provider credential persistence is enabled until this boundary is reviewed and implemented.
 
-### Stage 3.3 — Pricing + actual usage
+### Stage 3.3 — Pricing + actual usage — COMPLETE via PR #105
+
+Implemented:
 
 - refactor provider calls behind the unified gateway before funding cutover;
 - gateway accepts server-resolved credential context/opaque credential id; raw credential ownership is never client-controlled;
