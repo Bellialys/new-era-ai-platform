@@ -87,11 +87,12 @@ v2.0.0-alpha.1 - AI Team Mode
 # Production credential tables verified with RLS/service-role-only policies; migration history aligned to production version 20260927212853
 # Stage 3.2 AWS KMS adapter ✅: GenerateDataKey(AES_256)/Decrypt, Vercel OIDC-only credentials, encryption-context binding and GenerateDataKey/Decrypt plaintext-DEK zeroization reviewed and merged
 # Stage 3.2 AWS IaC ✅: reviewed CloudFormation stack creates project-scoped Vercel OIDC trust, separate preview/production IAM roles and rotated symmetric KMS key; cfn-lint passed
+# Stage 3.2 OIDC audience hardening ✅: runtime, IAM trust and CloudFormation provider use aud=sts.amazonaws.com; reused OIDC provider must be verified to include sts.amazonaws.com in ClientIDList before deployment
 # Live Vercel probe: AWS_REGION present; AWS_ROLE_ARN / AI_CREDENTIAL_KMS_KEY_ID / VERCEL_OIDC_TOKEN absent; static AWS access keys absent ✅
 # Stage 3.2 KMS canary foundation ✅: reusable server-only round-trip verifier merged; directly requires AWS KMS InvalidCiphertextException for mismatched credential_id and fails closed on operational errors
 # Stage 3.2 KMS env-readiness ✅: npm run env:check -- --mode=kms requires AWS_REGION/AWS_ROLE_ARN/AI_CREDENTIAL_KMS_KEY_ID and fails closed if any static AWS credential variable is present
 # Stage 3.2 IAM/KMS policy canary ✅: reusable raw GenerateDataKey probe with an extra encryption-context key merged; only AWS AccessDeniedException counts as proof, and any unexpectedly returned plaintext DEK is wiped
-# Stage 3.2 remaining external blocker: deploy infra/aws-kms-vercel-oidc.yaml in AWS, enable Vercel OIDC in Team Issuer mode, map stack outputs to Vercel env, run the KMS env-readiness check, then invoke both prepared preview canaries
+# Stage 3.2 active task V201-16: deploy infra/aws-kms-vercel-oidc.yaml in AWS, enable Vercel OIDC Team Issuer, map stack outputs to Vercel env, run KMS env-readiness + both preview canaries, then close Preview/Production environment-isolation gate
 # Pre-persistence security gate: current MVP IaC shares one KMS key between preview/production; DEC-022 proposes separate preview/production KMS keys as preferred isolation, but recurring AWS key cost requires explicit approval before IaC switches from one key to two
 # Stage 3.3 Pricing + Actual Usage ✅: consolidated PR #105 is merged into main; unified gateway, actual usage telemetry and pricing foundation are available to Stage 3.4
 # Stage 3.4 OAuth beta code foundation ✅ merged via PR #104: auth-only connect/callback/status/disconnect, signed short-lived PKCE flow state, encrypted credential lifecycle, server-side funding resolver and profile UI are in main behind fail-closed flags
