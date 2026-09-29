@@ -13,7 +13,7 @@
 Не восстанавливать состояние проекта по старому чату, если оно противоречит GitHub, `.project/state.json` или этому документу.
 
 Последняя ручная синхронизация контекста: 2026-09-29.
-Последний контекстный sync merged через PR #109: `main = cac3b3253a0d8cde0cca460a8d7253d43b467a6a`.
+Последний подтверждённый production baseline после context sync + Image Arena monetary hardening: `main = 1389043b6785313288e7f2c6e2ed8726eb1a68fb` (PR #111).
 Baseline SHA является исторической отметкой, а не неизменяемым источником истины: перед новой работой всегда перечитывать текущий `main`.
 
 ## Источники истины и приоритет
@@ -181,6 +181,7 @@ Performance Advisor:
 - Production deployment Stage 3.4 merge commit `4c80612e`: READY.
 - Production deployment post-merge docs commit `cc61811d`: READY.
 - Production deployment context/state sync commit `cac3b325`: READY.
+- Production deployment Image Arena monetary-hardening commit `1389043b`: READY.
 - Репозиторный rollout contract остаётся fail-closed; Vercel env values через доступный connector не читаются и требуют отдельной dashboard/CLI verification перед activation.
 - Live Stage 3.2 AWS/KMS env gate остаётся внешним blocker.
 
@@ -197,7 +198,7 @@ Vercel Preview quota hygiene остаётся отдельной задачей:
 
 Platform-funded Image Arena spend guard: `ENABLE_PLATFORM_PAID_IMAGE_ARENA=false` fail-closed блокирует platform-funded provider generation до явного monetary rollout; `user_openrouter` funding остаётся отдельным funding source.
 
-Старые PR #97/#99 superseded актуальной реализацией поверх Stage 3.3/3.4 gateway и не должны сливаться как есть.
+Старые PR #97/#99 закрыты как superseded после merge PR #111; их pre-gateway branches не должны использоваться как актуальный код.
 PR #98 закрыт как superseded после того, как актуальный OIDC runbook был синхронизирован и merged через PR #109.
 
 ## Что делать следующим
