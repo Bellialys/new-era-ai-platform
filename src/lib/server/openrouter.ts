@@ -212,6 +212,7 @@ export type ModelResult =
 export type OpenRouterGatewayCallOptions = {
   systemPrompt?: string;
   telemetry?: OpenRouterUsageTelemetryContext;
+  signal?: AbortSignal;
 };
 
 export async function fetchOpenRouterResponse(
@@ -415,6 +416,7 @@ export async function streamOpenRouterResponse(
     systemPrompt: options?.systemPrompt,
     credential: resolveLegacyPlatformOpenRouterCredential(),
     telemetry: options?.telemetry,
+    signal: options?.signal,
   });
 }
 
@@ -423,7 +425,7 @@ export async function streamOpenRouterResponseWithApiKey(
   prompt: string,
   modelId: string,
   onToken: (token: string) => void | Promise<void>,
-  options?: { systemPrompt?: string }
+  options?: { systemPrompt?: string; signal?: AbortSignal }
 ): Promise<OpenRouterCallResult> {
   const normalizedApiKey = normalizeOpenRouterApiKey(apiKey);
 
@@ -434,6 +436,15 @@ export async function streamOpenRouterResponseWithApiKey(
 
   const controller = new AbortController();
   const timeoutMs = getOpenRouterTimeoutMs();
+  const externalSignal = options?.signal;
+  const abortFromExternalSignal = () => controller.abort();
+
+  if (externalSignal?.aborted) {
+    controller.abort();
+  } else {
+    externalSignal?.addEventListener("abort", abortFromExternalSignal, { once: true });
+  }
+
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const startTime = Date.now();
 
@@ -557,6 +568,9 @@ export async function streamOpenRouterResponseWithApiKey(
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
+      if (externalSignal?.aborted) {
+        throw new ApiError(499, "ABORTED", "AI provider request was aborted.");
+      }
       throw new ApiError(504, "TIMEOUT", `AI provider request timed out after ${timeoutMs}ms.`);
     }
     if (error instanceof ApiError) {
@@ -566,6 +580,7 @@ export async function streamOpenRouterResponseWithApiKey(
     throw new ApiError(502, "NETWORK_ERROR", "Failed to stream from OpenRouter. Please try again.");
   } finally {
     clearTimeout(timeoutId);
+    externalSignal?.removeEventListener("abort", abortFromExternalSignal);
   }
 }
 

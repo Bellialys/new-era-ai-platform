@@ -31,6 +31,7 @@ export interface OpenRouterGatewayRequest {
 export interface OpenRouterGatewayStreamRequest
   extends OpenRouterGatewayRequest {
   onToken: (token: string) => void | Promise<void>;
+  signal?: AbortSignal;
 }
 
 export type OpenRouterGatewayResult = OpenRouterCallResult & {
@@ -181,8 +182,11 @@ export async function streamOpenRouterText(
       request.prompt,
       request.modelId,
       request.onToken,
-      request.systemPrompt
-        ? { systemPrompt: request.systemPrompt }
+      request.systemPrompt || request.signal
+        ? {
+            systemPrompt: request.systemPrompt,
+            signal: request.signal,
+          }
         : undefined
     );
 

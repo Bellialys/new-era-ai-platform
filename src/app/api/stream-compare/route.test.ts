@@ -7,16 +7,14 @@ const {
   checkRateLimitMock,
   resolveSelectedModelsMock,
   saveArenaRunMock,
-  getApiKeyMock,
-  fetchMock,
+  streamOpenRouterMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkDailyLimitMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   resolveSelectedModelsMock: vi.fn(),
   saveArenaRunMock: vi.fn(),
-  getApiKeyMock: vi.fn(),
-  fetchMock: vi.fn(),
+  streamOpenRouterMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -28,7 +26,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     checkRateLimit: checkRateLimitMock,
     resolveSelectedModels: resolveSelectedModelsMock,
     saveArenaRun: saveArenaRunMock,
-    getApiKey: getApiKeyMock,
+    streamOpenRouterResponse: streamOpenRouterMock,
     logApiRequest: vi.fn(),
   };
 });
@@ -65,38 +63,38 @@ function makeRequest(body: Record<string, unknown>): NextRequest {
   });
 }
 
-function openRouterResponse(): Response {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(
-        encoder.encode(
-          [
-            'data: {"choices":[{"delta":{"content":"hello "}}]}',
-            'data: {"choices":[{"delta":{"content":"world"}}],"usage":{"prompt_tokens":1,"completion_tokens":2}}',
-            "data: [DONE]",
-            "",
-          ].join("\n")
-        )
-      );
-      controller.close();
-    },
-  });
-
-  return new Response(stream, { status: 200 });
-}
-
 beforeEach(() => {
-  vi.stubGlobal("fetch", fetchMock);
-  fetchMock.mockReset();
   resolveIdentityMock.mockReset();
   checkDailyLimitMock.mockReset();
   checkRateLimitMock.mockReset();
   resolveSelectedModelsMock.mockReset();
   saveArenaRunMock.mockReset();
-  getApiKeyMock.mockReset();
+  streamOpenRouterMock.mockReset();
 
-  fetchMock.mockImplementation(() => Promise.resolve(openRouterResponse()));
+  streamOpenRouterMock.mockImplementation(
+    async (
+      _prompt: string,
+      _modelId: string,
+      onToken: (token: string) => void | Promise<void>
+    ) => {
+      await onToken("hello ");
+      await onToken("world");
+      return {
+        text: "hello world",
+        latencyMs: 20,
+        usage: {
+          inputTokens: 1,
+          outputTokens: 2,
+          totalTokens: 3,
+          costUsd: 0,
+          costSource: "provider_usage",
+          providerIsByok: false,
+        },
+        providerRequestId: "gen-stream-test",
+        providerModelId: "provider/actual-model",
+      };
+    }
+  );
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
   checkDailyLimitMock.mockResolvedValue({ allowed: true, used: 1, limit: 100 });
   checkRateLimitMock.mockResolvedValue({ limited: false, remaining: 9, resetAt: Date.now() + 60_000 });
@@ -108,7 +106,6 @@ beforeEach(() => {
       [MODEL_B.selectionId]: "33333333-3333-4333-8333-333333333333",
     },
   });
-  getApiKeyMock.mockReturnValue("test-openrouter-key");
 });
 
 afterEach(() => {
@@ -184,7 +181,9 @@ describe("POST /api/stream-compare blind mode", () => {
   });
 
   it("does not stream raw provider exception messages to the browser", async () => {
-    fetchMock.mockRejectedValue(new Error("provider trace with secret-token=abc123"));
+    streamOpenRouterMock.mockRejectedValue(
+      new Error("provider trace with secret-token=abc123")
+    );
 
     const response = await POST(makeRequest({}));
     const text = await response.text();
