@@ -6,6 +6,8 @@
 
 Главный источник порядка версий - `14-roadmap.md`.
 
+Для ChatGPT/Codex и восстановления рабочего контекста сначала читать `PROJECT-CONTEXT.md`, затем сверять его с текущим `main` и `.project/state.json`.
+
 ## Текущий статус
 
 <!-- SYNC:CURRENT_PHASE_START -->
