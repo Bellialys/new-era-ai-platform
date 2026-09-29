@@ -12,7 +12,21 @@
     "src/lib/server/openrouter-gateway.ts",
     "src/lib/server/openrouter-gateway.test.ts",
     "src/lib/server/openrouter-usage.ts",
-    "src/lib/server/openrouter-usage.test.ts"
+    "src/lib/server/openrouter-usage.test.ts",
+    "08-database.md",
+    "15-changelog.md",
+    "scripts/check-schema-sync.mjs",
+    "src/lib/server/openrouter-pricing.ts",
+    "src/lib/server/openrouter-pricing.test.ts",
+    "src/app/api/admin/pricing/sync/route.ts",
+    "src/app/api/models/pricing/route.ts",
+    "supabase/migrations/20260929103000_stage3_model_pricing.sql",
+    "src/app/api/compare/route.ts",
+    "src/app/api/code-compare/route.ts",
+    "src/app/api/judge/route.ts",
+    "src/app/api/team-run/route.ts",
+    "src/app/api/stream-compare/route.ts",
+    "src/app/api/stream-compare/route.test.ts"
   ],
   "checksRequired": [
     "typecheck",
@@ -26,7 +40,7 @@
     "audit"
   ],
   "checksPassed": [],
-  "lastUpdated": "2026-09-29T12:58:00+03:00",
+  "lastUpdated": "2026-09-29T13:24:00+03:00",
   "commitHash": null,
   "transitions": [
     {
@@ -42,5 +56,5 @@
       "note": "Add usage_events provider metadata and a best-effort gateway telemetry hook without changing funding source or enabling paid models."
     }
   ],
-  "notes": "Telemetry writes are explicitly non-fatal to inference. This slice does not enable user credential persistence, paid catalog expansion or platform-paid traffic."
+  "notes": "Stage 3.3 consolidated PR #105 now includes actual provider usage metadata, bounded usage_events telemetry, unified text/stream gateway cutover, published pricing history sync/status API, schema-sync coverage and canonical documentation updates. Image Arena provider-call cutover and final validation remain in progress."
 }

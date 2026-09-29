@@ -1,6 +1,9 @@
 import type { AiFundingSource } from "./provider-credentials";
 import type { OpenRouterCallResult } from "./openrouter";
 import { getSupabaseServerClient } from "./supabase";
+import { withTimeout } from "./utils";
+
+const OPENROUTER_USAGE_WRITE_TIMEOUT_MS = 1_500;
 
 export type OpenRouterUsageRequestKind = "text" | "stream" | "image";
 
@@ -49,7 +52,8 @@ export async function recordOpenRouterUsageEventBestEffort(
       is_byok: usage?.providerIsByok ?? null,
     };
 
-    const { error } = await supabase.from("usage_events").insert({
+    const { error } = await withTimeout(
+      supabase.from("usage_events").insert({
       user_id: input.userId,
       guest_id: input.guestId,
       mode_slug: input.modeSlug,
@@ -68,8 +72,11 @@ export async function recordOpenRouterUsageEventBestEffort(
       provider_is_byok: usage?.providerIsByok ?? null,
       cost_source: usage?.costSource ?? "unknown",
       currency: "USD",
-      request_kind: input.requestKind,
-    });
+        request_kind: input.requestKind,
+      }),
+      OPENROUTER_USAGE_WRITE_TIMEOUT_MS,
+      "OpenRouter usage telemetry write"
+    );
 
     if (error) {
       console.error("[OpenRouter usage] telemetry insert failed", {

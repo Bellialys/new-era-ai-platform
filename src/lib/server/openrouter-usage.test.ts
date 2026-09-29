@@ -90,6 +90,33 @@ describe("recordOpenRouterUsageEventBestEffort", () => {
     expect(consoleSpy).toHaveBeenCalled();
   });
 
+  it("bounds a telemetry write that never settles", async () => {
+    vi.useFakeTimers();
+    insertMock.mockReturnValue(new Promise(() => {}));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const pending = recordOpenRouterUsageEventBestEffort({
+        userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        guestId: null,
+        modeSlug: "prompt-arena",
+        requestKind: "text",
+        modelKey: "requested/model",
+        billingSource: "platform",
+        credentialId: null,
+        result: null,
+        latencyMs: 25,
+        errorCode: null,
+      });
+
+      await vi.advanceTimersByTimeAsync(1_500);
+      await expect(pending).resolves.toBeUndefined();
+      expect(consoleSpy).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("skips writes when Supabase is not configured", async () => {
     getSupabaseMock.mockReturnValue(null);
 

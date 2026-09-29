@@ -529,6 +529,8 @@ with check (true);
 | `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql` | Применена в production: atomic admin user/model mutation + mandatory audit RPCs и concurrent-safe last-admin trigger; execute только `service_role` |
 | `20260824213000_serialize_admin_role_updates.sql` | Применена в production: сериализует admin role updates и усиливает last-admin invariant |
 | `20260927065448_recover_openrouter_model_catalog.sql` | Применена в production 2026-09-27: P0 provider recovery деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
+| `20260929100500_stage3_usage_telemetry.sql` | Stage 3.3 pending: расширяет `usage_events` actual-cost/provider/funding metadata; migration должна быть применена до включения telemetry writes в production |
+| `20260929103000_stage3_model_pricing.sql` | Stage 3.3 pending: расширяет `model_price_history` raw pricing/freshness metadata и добавляет service-role-only atomic `upsert_model_price_snapshot` RPC |
 
 Release-gate note:
 
@@ -672,21 +674,33 @@ Supabase PostgreSQL хранит metadata и storage path.
 
 ### usage_events
 
-Учёт каждого AI-запроса (токены, стоимость, latency, ошибки).
+Одна строка на фактический provider call. Таблица хранит usage/cost telemetry и не является денежным ledger.
 
 | Колонка | Тип | Описание |
 |---|---|---|
 | `id` | uuid | PK |
 | `user_id` | uuid null | FK → auth.users |
 | `guest_id` | text null | Анонимный session ID |
-| `mode_slug` | text | `prompt-arena`, `ai-team-mode`, `code-arena` и т.д. |
-| `model_key` | text | OpenRouter model key |
-| `prompt_tokens` | integer null | Токены промпта |
-| `completion_tokens` | integer null | Токены ответа |
-| `latency_ms` | integer null | Время ответа |
-| `cost_usd` | numeric(12,8) null | Стоимость в USD |
-| `error_code` | text null | Код ошибки, если запрос упал |
+| `mode_slug` | text | Режим New Era, например `prompt-arena`, `code-arena`, `judge` |
+| `model_key` | text | Запрошенный OpenRouter model key |
+| `prompt_tokens` | integer null | Provider-reported input tokens |
+| `completion_tokens` | integer null | Provider-reported output tokens |
+| `total_tokens` | integer null | Provider-reported total tokens |
+| `latency_ms` | integer null | Время provider call |
+| `cost_usd` | numeric(12,8) null | Actual provider `usage.cost`, когда доступен |
+| `error_code` | text null | Безопасный код ошибки |
+| `billing_source` | text null | New Era funding source: `platform` или `user_openrouter` |
+| `credential_id` | uuid null | FK → provider_credentials; null для shared platform credential |
+| `provider_request_id` | text null | OpenRouter request/generation id |
+| `provider_model_key` | text null | Фактически возвращённая provider model id |
+| `provider_usage` | jsonb | Нормализованный provider usage snapshot без секретов |
+| `provider_is_byok` | boolean null | OpenRouter provider-routing BYOK flag; не заменяет `billing_source` |
+| `cost_source` | text null | `provider_usage`, `estimated` или `unknown` |
+| `currency` | text null | Валюта стоимости, сейчас `USD` |
+| `request_kind` | text null | `text`, `stream` или `image` |
 | `created_at` | timestamptz | Дата события |
+
+Stage 3.3 telemetry write выполняется best-effort с коротким timeout: сбой/зависание Supabase не должен превращать успешный AI-ответ в ошибку.
 
 ### team_runs / team_run_steps
 
@@ -719,7 +733,11 @@ Metadata файлов (изображений, документов, code output
 
 ### model_price_history
 
-Append-only история цен моделей OpenRouter (input/output per million tokens), с полями `effective_from` / `effective_to` и `source`.
+История опубликованных цен OpenRouter с интервалами `effective_from` / `effective_to`.
+
+Нормализованные token rates хранятся в `input_price_per_million` / `output_price_per_million`. Полный provider pricing object сохраняется в `raw_pricing`, поэтому image/request/прочие единицы не теряются и не выдаются за token pricing. `provider`, `currency`, `source` и `source_checked_at` фиксируют происхождение и свежесть snapshot.
+
+Stage 3.3 использует service-role-only RPC `upsert_model_price_snapshot`: advisory transaction lock сериализует обновление одной модели, неизменная цена только освежает `source_checked_at`, а изменение закрывает предыдущий interval и создаёт новый snapshot.
 
 ### cleanup_log
 
