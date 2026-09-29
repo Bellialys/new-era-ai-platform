@@ -26,6 +26,7 @@ import {
   isJsonObject,
   blindSlotId,
   blindSlotName,
+  resolveOpenRouterRuntimeCredential,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -68,7 +69,10 @@ async function streamOneModel(
   wire: WireModelDescriptor,
   controller: ReadableStreamDefaultController<Uint8Array>,
   signal: AbortSignal,
-  owner: { userId: string | null; guestId: string | null }
+  owner: { userId: string | null; guestId: string | null },
+  gatewayCredential: Awaited<
+    ReturnType<typeof resolveOpenRouterRuntimeCredential>
+  >
 ): Promise<{
   text: string;
   latencyMs: number;
@@ -103,6 +107,7 @@ async function streamOneModel(
       },
       {
         signal,
+        credential: gatewayCredential,
         telemetry: {
           userId: owner.userId,
           guestId: owner.guestId,
@@ -280,6 +285,41 @@ export async function POST(request: NextRequest): Promise<Response> {
     return new Response(JSON.stringify({ status: "error", error: { code: ae.errorCode, message: ae.message } }), { status: ae.statusCode, headers: { "Content-Type": "application/json" } });
   }
 
+  let gatewayCredential: Awaited<
+    ReturnType<typeof resolveOpenRouterRuntimeCredential>
+  >;
+  try {
+    gatewayCredential = await resolveOpenRouterRuntimeCredential(identity);
+  } catch (error) {
+    const apiError =
+      error instanceof ApiError
+        ? error
+        : new ApiError(
+            503,
+            "AI_CREDENTIAL_UNAVAILABLE",
+            "AI credential is unavailable."
+          );
+    logApiRequest(
+      "POST",
+      "/api/stream-compare",
+      apiError.statusCode,
+      Date.now() - startTime
+    );
+    return new Response(
+      JSON.stringify({
+        status: "error",
+        error: {
+          code: apiError.errorCode,
+          message: apiError.message,
+        },
+      }),
+      {
+        status: apiError.statusCode,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
   const orderedModels = isBlind ? fisherYatesShuffle(selectedModels) : selectedModels;
   const orderedWires = orderedModels.map((model, index) =>
     wireForModel(model, index, isBlind)
@@ -300,7 +340,8 @@ export async function POST(request: NextRequest): Promise<Response> {
               orderedWires[index] ?? wireForModel(model, index, isBlind),
               controller,
               abortController.signal,
-              { userId: identity.userId, guestId: identity.guestId }
+              { userId: identity.userId, guestId: identity.guestId },
+              gatewayCredential
             )
           )
         );

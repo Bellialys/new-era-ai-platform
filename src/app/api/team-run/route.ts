@@ -7,6 +7,7 @@ import {
   logApiRequest,
   isJsonObject,
   ApiError,
+  resolveOpenRouterRuntimeCredential,
 } from "@/lib/server";
 import {
   runTeamMode,
@@ -145,6 +146,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const modelId = TEAM_ALLOWED_MODEL_IDS.has(requestedModelId)
       ? requestedModelId
       : TEAM_DEFAULT_MODEL_ID;
+    const gatewayCredential =
+      await resolveOpenRouterRuntimeCredential(identity);
 
     // Execute team mode. callModel wraps fetchOpenRouterResponse with the server-side API key.
     // System prompts are defined in team-mode.ts — they are not read from the request body.
@@ -154,6 +157,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         callModel: async (prompt, systemPrompt, mId) => {
           const { text } = await fetchOpenRouterResponse(prompt, mId, {
             systemPrompt,
+            credential: gatewayCredential,
             telemetry: {
               userId: identity.userId,
               guestId: null,

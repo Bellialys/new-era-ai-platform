@@ -16,6 +16,7 @@ import {
   logApiRequest,
   isJsonObject,
   ApiError,
+  resolveOpenRouterRuntimeCredential,
 } from "@/lib/server";
 import type { JudgeVerdict } from "@/types/arena";
 
@@ -207,11 +208,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    const gatewayCredential =
+      await resolveOpenRouterRuntimeCredential(identity);
     const userPrompt = buildJudgeUserPrompt(prompt, judgeable);
     let judgeText: string;
     try {
       const result = await fetchOpenRouterResponse(userPrompt, JUDGE_PRIMARY_MODEL_ID, {
         systemPrompt: JUDGE_SYSTEM_PROMPT,
+        credential: gatewayCredential,
         telemetry: {
           userId: identity.userId,
           guestId: identity.guestId,
@@ -224,6 +228,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       try {
         const result = await fetchOpenRouterResponse(userPrompt, JUDGE_FALLBACK_MODEL_ID, {
           systemPrompt: JUDGE_SYSTEM_PROMPT,
+          credential: gatewayCredential,
           telemetry: {
             userId: identity.userId,
             guestId: identity.guestId,
