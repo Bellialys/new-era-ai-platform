@@ -1,0 +1,64 @@
+{
+  "$schema": "../task.schema.json",
+  "id": "V202-01",
+  "title": "Stage 3.3 Provider Usage Contract",
+  "status": "done",
+  "priority": "high",
+  "files": [
+    ".project/state.json",
+    ".project/tasks/V202-01.json",
+    "src/lib/server/openrouter.ts",
+    "src/lib/server/openrouter.test.ts"
+  ],
+  "checksRequired": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "openrouter:usage-contract",
+    "diff:check",
+    "audit"
+  ],
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "openrouter:usage-contract",
+    "diff:check",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-29T01:45:00+03:00",
+  "commitHash": "dbd4f467e32cf8a2669b60f76be9143c57ef5a0b",
+  "transitions": [
+    {
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-29T01:36:00+03:00",
+      "note": "Stage 3.3 started in parallel while Codex owns the remaining Stage 3.2 live AWS/OIDC gate."
+    },
+    {
+      "from": "planned",
+      "to": "in_progress",
+      "at": "2026-09-29T01:36:00+03:00",
+      "note": "Add provider-reported usage/cost metadata and usage include request contract without switching routes, credentials, DB schema or funding source."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-29T01:44:30+03:00",
+      "note": "PR CI passed audit, typecheck, lint, tests, environment/model-verifier checks, build, state/docs and smoke; Vercel Preview succeeded. No review findings."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-29T01:45:00+03:00",
+      "note": "Provider usage/cost contract completed without route credential cutover, persistence change, database migration or paid-model activation."
+    }
+  ],
+  "notes": "Backwards-compatible transport contract only. Existing routes keep using the legacy shared OPENROUTER_API_KEY. No user credential persistence, DB migration, paid catalog or Stage 3.2 file is changed."
+}

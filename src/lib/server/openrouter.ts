@@ -10,6 +10,7 @@ import {
   OPENROUTER_TIMEOUT_MS,
 } from "@/lib/arena/constants";
 import { ApiError } from "./utils";
+import type { OpenRouterUsageTelemetryContext } from "./openrouter-usage";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -19,6 +20,9 @@ interface OpenRouterRequest {
   temperature?: number;
   max_tokens?: number;
   stream?: boolean;
+  usage?: {
+    include: true;
+  };
 }
 
 interface OpenRouterResponse {
@@ -34,10 +38,12 @@ interface OpenRouterResponse {
     };
     finish_reason: string;
   }[];
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    cost?: number;
+    is_byok?: boolean;
   };
 }
 
@@ -50,6 +56,8 @@ interface OpenRouterErrorResponse {
 }
 
 interface OpenRouterStreamChunk {
+  id?: string;
+  model?: string;
   choices?: {
     delta?: {
       content?: string;
@@ -62,6 +70,8 @@ interface OpenRouterStreamChunk {
     prompt_tokens?: number;
     completion_tokens?: number;
     total_tokens?: number;
+    cost?: number;
+    is_byok?: boolean;
   };
 }
 
@@ -79,6 +89,30 @@ export function getApiKey(): string {
     );
   }
   return apiKey;
+}
+
+const OPENROUTER_UNSAFE_HEADER_VALUE = /[\u0000-\u001F\u007F]/;
+
+function normalizeOpenRouterApiKey(apiKey: string): string {
+  const normalized = apiKey.trim();
+  if (!normalized || OPENROUTER_UNSAFE_HEADER_VALUE.test(normalized)) {
+    throw new ApiError(
+      503,
+      "AI_CREDENTIAL_UNAVAILABLE",
+      "AI provider credential is unavailable."
+    );
+  }
+  return normalized;
+}
+
+function logOpenRouterTransportFailure(
+  operation: "fetch" | "stream",
+  error: unknown
+): void {
+  console.error("[OpenRouter] transport failure", {
+    operation,
+    errorName: error instanceof Error ? error.name : "UnknownError",
+  });
 }
 
 function getOpenRouterTimeoutMs(): number {
@@ -152,22 +186,61 @@ function logOpenRouterDiagnostic({
   });
 }
 
+export type ModelCostSource = "provider_usage" | "unknown";
+
 export type ModelUsage = {
   inputTokens: number | null;
   outputTokens: number | null;
   totalTokens: number | null;
+  costUsd: number | null;
+  costSource: ModelCostSource;
+  providerIsByok: boolean | null;
+};
+
+export type OpenRouterCallResult = {
+  text: string;
+  latencyMs: number;
+  usage: ModelUsage;
+  providerRequestId: string | null;
+  providerModelId: string | null;
 };
 
 export type ModelResult =
-  | { success: true; text: string; latencyMs: number; usage: ModelUsage }
+  | ({ success: true } & OpenRouterCallResult)
   | { success: false; errorCode: string; errorMessage: string };
+
+export type OpenRouterGatewayCallOptions = {
+  systemPrompt?: string;
+  telemetry?: OpenRouterUsageTelemetryContext;
+  signal?: AbortSignal;
+};
 
 export async function fetchOpenRouterResponse(
   prompt: string,
   modelId: string,
+  options?: OpenRouterGatewayCallOptions
+): Promise<OpenRouterCallResult> {
+  const {
+    executeOpenRouterText,
+    resolveLegacyPlatformOpenRouterCredential,
+  } = await import("./openrouter-gateway");
+
+  return executeOpenRouterText({
+    prompt,
+    modelId,
+    systemPrompt: options?.systemPrompt,
+    credential: resolveLegacyPlatformOpenRouterCredential(),
+    telemetry: options?.telemetry,
+  });
+}
+
+export async function fetchOpenRouterResponseWithApiKey(
+  apiKey: string,
+  prompt: string,
+  modelId: string,
   options?: { systemPrompt?: string }
-): Promise<{ text: string; latencyMs: number; usage: ModelUsage }> {
-  const apiKey = getApiKey();
+): Promise<OpenRouterCallResult> {
+  const normalizedApiKey = normalizeOpenRouterApiKey(apiKey);
 
   const messages: OpenRouterRequest["messages"] = [];
   if (options?.systemPrompt) {
@@ -180,6 +253,7 @@ export async function fetchOpenRouterResponse(
     messages,
     temperature: 0.7,
     max_tokens: getOpenRouterMaxTokens(),
+    usage: { include: true },
   };
 
   const controller = new AbortController();
@@ -192,7 +266,7 @@ export async function fetchOpenRouterResponse(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${normalizedApiKey}`,
         "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
         "X-Title": "New Era AI Platform",
       },
@@ -249,11 +323,15 @@ export async function fetchOpenRouterResponse(
     return {
       text: content,
       latencyMs,
-      usage: {
-        inputTokens: responseData.usage?.prompt_tokens ?? null,
-        outputTokens: responseData.usage?.completion_tokens ?? null,
-        totalTokens: responseData.usage?.total_tokens ?? null,
-      },
+      usage: normalizeOpenRouterUsage(responseData.usage),
+      providerRequestId:
+        typeof responseData.id === "string" && responseData.id.trim()
+          ? responseData.id
+          : null,
+      providerModelId:
+        typeof responseData.model === "string" && responseData.model.trim()
+          ? responseData.model
+          : null,
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -262,7 +340,7 @@ export async function fetchOpenRouterResponse(
     if (error instanceof ApiError) {
       throw error;
     }
-    console.error("OpenRouter fetch error:", error);
+    logOpenRouterTransportFailure("fetch", error);
     throw new ApiError(502, "NETWORK_ERROR", "Failed to connect to OpenRouter. Please try again.");
   } finally {
     clearTimeout(timeoutId);
@@ -286,6 +364,7 @@ function buildOpenRouterRequest(
     temperature: 0.7,
     max_tokens: getOpenRouterMaxTokens(),
     stream: options?.stream,
+    usage: { include: true },
   };
 }
 
@@ -299,11 +378,27 @@ function parseSseDataLines(rawEvent: string): string | null {
   return dataLines.length > 0 ? dataLines.join("\n") : null;
 }
 
-function toModelUsage(usage: OpenRouterStreamChunk["usage"]): ModelUsage {
+export function normalizeOpenRouterUsage(
+  usage: unknown
+): ModelUsage {
+  const normalized =
+    typeof usage === "object" && usage !== null
+      ? (usage as OpenRouterResponse["usage"])
+      : undefined;
+  const rawCost = normalized?.cost;
+  const costUsd =
+    typeof rawCost === "number" && Number.isFinite(rawCost) && rawCost >= 0
+      ? rawCost
+      : null;
+
   return {
-    inputTokens: usage?.prompt_tokens ?? null,
-    outputTokens: usage?.completion_tokens ?? null,
-    totalTokens: usage?.total_tokens ?? null,
+    inputTokens: normalized?.prompt_tokens ?? null,
+    outputTokens: normalized?.completion_tokens ?? null,
+    totalTokens: normalized?.total_tokens ?? null,
+    costUsd,
+    costSource: costUsd === null ? "unknown" : "provider_usage",
+    providerIsByok:
+      typeof normalized?.is_byok === "boolean" ? normalized.is_byok : null,
   };
 }
 
@@ -311,9 +406,33 @@ export async function streamOpenRouterResponse(
   prompt: string,
   modelId: string,
   onToken: (token: string) => void | Promise<void>,
-  options?: { systemPrompt?: string }
-): Promise<{ text: string; latencyMs: number; usage: ModelUsage }> {
-  const apiKey = getApiKey();
+  options?: OpenRouterGatewayCallOptions
+): Promise<OpenRouterCallResult> {
+  const {
+    resolveLegacyPlatformOpenRouterCredential,
+    streamOpenRouterText,
+  } = await import("./openrouter-gateway");
+
+  return streamOpenRouterText({
+    prompt,
+    modelId,
+    onToken,
+    systemPrompt: options?.systemPrompt,
+    credential: resolveLegacyPlatformOpenRouterCredential(),
+    telemetry: options?.telemetry,
+    signal: options?.signal,
+  });
+}
+
+export async function streamOpenRouterResponseWithApiKey(
+  apiKey: string,
+  prompt: string,
+  modelId: string,
+  onToken: (token: string) => void | Promise<void>,
+  options?: { systemPrompt?: string; signal?: AbortSignal }
+): Promise<OpenRouterCallResult> {
+  const normalizedApiKey = normalizeOpenRouterApiKey(apiKey);
+
   const request = buildOpenRouterRequest(prompt, modelId, {
     systemPrompt: options?.systemPrompt,
     stream: true,
@@ -321,6 +440,15 @@ export async function streamOpenRouterResponse(
 
   const controller = new AbortController();
   const timeoutMs = getOpenRouterTimeoutMs();
+  const externalSignal = options?.signal;
+  const abortFromExternalSignal = () => controller.abort();
+
+  if (externalSignal?.aborted) {
+    controller.abort();
+  } else {
+    externalSignal?.addEventListener("abort", abortFromExternalSignal, { once: true });
+  }
+
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const startTime = Date.now();
 
@@ -329,7 +457,7 @@ export async function streamOpenRouterResponse(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${normalizedApiKey}`,
         "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
         "X-Title": "New Era AI Platform",
       },
@@ -378,11 +506,9 @@ export async function streamOpenRouterResponse(
     const decoder = new TextDecoder();
     let buffer = "";
     let text = "";
-    let usage: ModelUsage = {
-      inputTokens: null,
-      outputTokens: null,
-      totalTokens: null,
-    };
+    let usage: ModelUsage = normalizeOpenRouterUsage(undefined);
+    let providerRequestId: string | null = null;
+    let providerModelId: string | null = null;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -409,8 +535,14 @@ export async function streamOpenRouterResponse(
           continue;
         }
 
+        if (typeof chunk.id === "string" && chunk.id.trim()) {
+          providerRequestId = chunk.id;
+        }
+        if (typeof chunk.model === "string" && chunk.model.trim()) {
+          providerModelId = chunk.model;
+        }
         if (chunk.usage) {
-          usage = toModelUsage(chunk.usage);
+          usage = normalizeOpenRouterUsage(chunk.usage);
         }
 
         const token =
@@ -431,30 +563,53 @@ export async function streamOpenRouterResponse(
       throw new ApiError(502, "INVALID_RESPONSE", "AI provider returned an empty response.");
     }
 
-    return { text: trimmedText, latencyMs, usage };
+    return {
+      text: trimmedText,
+      latencyMs,
+      usage,
+      providerRequestId,
+      providerModelId,
+    };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
+      if (externalSignal?.aborted) {
+        throw new ApiError(499, "ABORTED", "AI provider request was aborted.");
+      }
       throw new ApiError(504, "TIMEOUT", `AI provider request timed out after ${timeoutMs}ms.`);
     }
     if (error instanceof ApiError) {
       throw error;
     }
-    console.error("OpenRouter stream error:", error);
+    logOpenRouterTransportFailure("stream", error);
     throw new ApiError(502, "NETWORK_ERROR", "Failed to stream from OpenRouter. Please try again.");
   } finally {
     clearTimeout(timeoutId);
+    externalSignal?.removeEventListener("abort", abortFromExternalSignal);
   }
 }
 
 export async function fetchMultipleResponses(
   prompt: string,
   modelIds: string[],
-  options?: { systemPrompt?: string }
+  options?: OpenRouterGatewayCallOptions
 ): Promise<ModelResult[]> {
   const promises = modelIds.map(async (modelId): Promise<ModelResult> => {
     try {
-      const { text, latencyMs, usage } = await fetchOpenRouterResponse(prompt, modelId, options);
-      return { success: true, text, latencyMs, usage };
+      const {
+        text,
+        latencyMs,
+        usage,
+        providerRequestId,
+        providerModelId,
+      } = await fetchOpenRouterResponse(prompt, modelId, options);
+      return {
+        success: true,
+        text,
+        latencyMs,
+        usage,
+        providerRequestId,
+        providerModelId,
+      };
     } catch (error) {
       const errorCode = error instanceof ApiError ? error.errorCode : "UNKNOWN_ERROR";
       const errorMessage = error instanceof ApiError
