@@ -1,62 +1,51 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-type IntegrationStatus = {
-  connected: boolean;
-  safeFingerprint: string | null;
-  lastVerifiedAt: string | null;
-  fundingSource: "platform" | "user_openrouter";
-};
-
-type StatusResponse = {
-  status: "success";
-  enabled: boolean;
-  integration: IntegrationStatus;
-};
+import {
+  loadOpenRouterIntegrationStatus,
+  type OpenRouterIntegrationStatus,
+} from "./openrouter-integration-loader";
 
 type UiMessage = { kind: "success" | "error"; text: string } | null;
 
 export function OpenRouterIntegration() {
   const [loading, setLoading] = useState(true);
   const [enabled, setEnabled] = useState(false);
-  const [integration, setIntegration] = useState<IntegrationStatus | null>(null);
+  const [integration, setIntegration] =
+    useState<OpenRouterIntegrationStatus | null>(null);
+  const [statusLoadError, setStatusLoadError] = useState<string | null>(null);
+  const [statusReloadToken, setStatusReloadToken] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<UiMessage>(null);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
 
     async function initialize() {
-      try {
-        const response = await fetch("/api/integrations/openrouter", {
-          cache: "no-store",
-        });
-        if (!active) return;
-
-        if (!response.ok) {
-          setIntegration(null);
-        } else {
-          const body = (await response.json()) as StatusResponse;
-          if (!active) return;
-          setEnabled(body.enabled);
-          setIntegration(body.integration);
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-
+      const result = await loadOpenRouterIntegrationStatus();
       if (!active) return;
+
+      if (result.kind === "error") {
+        setStatusLoadError(result.message);
+        setIntegration(null);
+      } else {
+        setStatusLoadError(null);
+        setEnabled(result.enabled);
+        setIntegration(result.integration);
+      }
+      setLoading(false);
+
       const params = new URLSearchParams(window.location.search);
-      const result = params.get("openrouter");
+      const oauthResult = params.get("openrouter");
       const code = params.get("code");
-      if (result === "connected") {
+      if (oauthResult === "connected") {
         setMessage({
           kind: "success",
           text:
-            "OpenRouter подключён, ключ сохранён в зашифрованном виде. Маршрутизация текущих AI-запросов через этот ключ пока не активирована.",
+            "OpenRouter подключён, ключ сохранён в зашифрованном виде. Arena использует server-side gateway и выбирает пользовательский credential только при активном funding source.",
         });
-      } else if (result === "error") {
+      } else if (oauthResult === "error") {
         setMessage({
           kind: "error",
           text:
@@ -71,7 +60,7 @@ export function OpenRouterIntegration() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [statusReloadToken]);
 
   async function connect() {
     setBusy(true);
@@ -142,7 +131,7 @@ export function OpenRouterIntegration() {
   }
 
   if (loading) return null;
-  if (!enabled && !integration?.connected) return null;
+  if (!enabled && !integration?.connected && !statusLoadError) return null;
 
   return (
     <section className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-6">
@@ -166,6 +155,19 @@ export function OpenRouterIntegration() {
           </span>
         )}
       </div>
+
+      {statusLoadError && (
+        <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <p>{statusLoadError}</p>
+          <button
+            type="button"
+            onClick={() => setStatusReloadToken((value) => value + 1)}
+            className="mt-3 rounded-lg border border-red-300/30 px-3 py-1.5 text-xs font-semibold text-red-100 transition hover:border-red-200/60"
+          >
+            Повторить
+          </button>
+        </div>
+      )}
 
       {integration?.connected && (
         <dl className="mb-4 grid gap-2 text-sm">
@@ -192,8 +194,8 @@ export function OpenRouterIntegration() {
             </dd>
           </div>
           <p className="mt-2 rounded-xl border border-sky-400/20 bg-sky-500/10 px-4 py-2.5 text-sm text-sky-200">
-            OAuth и funding control-plane подготовлены. Текущие Arena-запросы пока
-            используют существующий server-side gateway.
+            OAuth и funding control-plane подключены к server-side gateway. Пользовательский
+            credential используется только при активном funding source.
           </p>
         </dl>
       )}
@@ -217,27 +219,29 @@ export function OpenRouterIntegration() {
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {integration?.connected ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={disconnect}
-            className="rounded-lg border border-red-400/30 px-4 py-2 text-sm font-semibold text-red-200 transition hover:border-red-300/60 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy ? "Отключаем…" : "Отключить OpenRouter"}
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={busy || !enabled}
-            onClick={connect}
-            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy ? "Переходим…" : "Подключить OpenRouter"}
-          </button>
-        )}
-      </div>
+      {!statusLoadError && (
+        <div className="flex flex-wrap gap-2">
+          {integration?.connected ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={disconnect}
+              className="rounded-lg border border-red-400/30 px-4 py-2 text-sm font-semibold text-red-200 transition hover:border-red-300/60 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? "Отключаем…" : "Отключить OpenRouter"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={busy || !enabled}
+              onClick={connect}
+              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? "Переходим…" : "Подключить OpenRouter"}
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }
