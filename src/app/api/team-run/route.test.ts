@@ -10,11 +10,13 @@ const {
   checkRateLimitMock,
   fetchOpenRouterMock,
   saveArenaRunMock,
+  resolveRuntimeCredentialMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   fetchOpenRouterMock: vi.fn(),
   saveArenaRunMock: vi.fn(),
+  resolveRuntimeCredentialMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -26,6 +28,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     logApiRequest: vi.fn(),
     fetchOpenRouterResponse: fetchOpenRouterMock,
     saveArenaRun: saveArenaRunMock,
+    resolveOpenRouterRuntimeCredential: resolveRuntimeCredentialMock,
   };
 });
 
@@ -86,6 +89,7 @@ beforeEach(() => {
   checkRateLimitMock.mockReset();
   fetchOpenRouterMock.mockReset();
   saveArenaRunMock.mockReset();
+  resolveRuntimeCredentialMock.mockReset();
 
   // Enable team mode for all tests — individual tests that check the 503 gate
   // must delete or override this before calling POST().
@@ -100,6 +104,11 @@ beforeEach(() => {
     resetAt: Date.now() + TEAM_RUN_RATE_LIMIT_WINDOW_MS,
   });
   fetchOpenRouterMock.mockResolvedValue({ text: "mocked output", latencyMs: 100, usage: NULL_USAGE });
+  resolveRuntimeCredentialMock.mockResolvedValue({
+    billingSource: "platform",
+    credentialId: null,
+    apiKey: "test-openrouter-key",
+  });
   saveArenaRunMock.mockResolvedValue({ taskId: TASK_ID, responseIdsByModelId: {} });
 });
 

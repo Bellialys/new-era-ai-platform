@@ -664,17 +664,32 @@ Before persistent provider credentials are activated, there is one additional en
 - safe price/status API;
 - no paid-model expansion.
 
-### Stage 3.4 — OpenRouter OAuth user beta
+### Stage 3.4 — OpenRouter OAuth user beta — FOUNDATION IN PR #104
 
-- auth-only `Connect OpenRouter` using OAuth PKCE S256;
-- CSRF-safe state + short-lived verifier lifecycle;
-- callback code exchange through server-side OpenRouter auth endpoint;
-- encrypted credential persistence only after Stage 3.2 crypto foundation is operational;
-- funding resolver selects `user_openrouter`;
-- same governed catalog initially;
-- strict secret-redaction tests;
-- disconnect deletes New Era copy; user retains control of their OpenRouter account/key;
-- feature flag / controlled rollout.
+Implemented in the isolated Stage 3.4 branch:
+
+- authenticated-only `Connect OpenRouter` using OAuth PKCE S256;
+- signed, user-bound, httpOnly flow state/verifier lifecycle with a 10-minute TTL;
+- explicit same-origin mutation protection and per-user connection/mutation rate limits;
+- callback code exchange through the server-side OpenRouter auth endpoint;
+- encrypted `user_oauth` credential persistence wired to the existing AES-256-GCM + AWS KMS boundary;
+- credential activation + `funding_source=user_openrouter` are committed by one service-role PostgreSQL RPC, so callback/disconnect concurrency cannot split credential status from funding selection;
+- server-only funding resolver selects `user_openrouter` only when an active encrypted credential exists;
+- safe status API + profile UI expose only connection metadata/safe fingerprint, never the raw key; enabled-beta status failures render a retryable error instead of hiding the integration;
+- disconnect switches funding back to `platform`, clears the live ciphertext/wrapped DEK/KMS id, and preserves only safe non-secret state;
+- post-exchange KMS/activation failures transition the still-pending local row to `orphaned` with safe hash/fingerprint/error metadata for reconciliation; plaintext and ciphertext are not retained;
+- `ENABLE_OPENROUTER_USER_OAUTH=false` and `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false` are fail-closed rollout gates;
+- dedicated `OPENROUTER_OAUTH_COOKIE_SECRET` signs the short-lived flow cookie;
+- Prompt, Stream, Code, Judge, Team and Image Arena resolve their OpenRouter runtime credential through the server-side funding resolver;
+- regression tests cover flow signing/tamper/expiry/user binding, rollout gates, same-origin protection, orphan recovery and status-load failure handling.
+
+Intentional sequencing boundary:
+
+- migration `20260929022500_stage34_atomic_openrouter_activation.sql` must be applied before the persistence flag can be enabled;
+- Stage 3.2 live AWS/Vercel KMS canaries and environment isolation still block real credential-persistence activation, so `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` remains false;
+- Stage 3.3 is complete in `main` through consolidated PR #105; superseded PRs #101/#102 are not dependencies of the Stage 3.4 branch;
+- the Stage 3.4 funding resolver is wired into all current Arena inference routes, but real user credential activation remains fail-closed until the Stage 3.2 live KMS/OIDC and environment-isolation gates pass;
+- the governed model catalog is unchanged and no paid-model expansion is enabled.
 
 ### Stage 3.5 — Future platform-funded per-user keys
 

@@ -11,10 +11,11 @@ import {
   resolveRequestIdentity,
   checkRateLimit,
   executeOpenRouterImage,
-  getApiKey,
   getSupabaseServerClient,
   isJsonObject,
   normalizeOpenRouterUsage,
+  resolveOpenRouterRuntimeCredential,
+  ApiError,
 } from "@/lib/server";
 
 export const maxDuration = 60;
@@ -214,29 +215,18 @@ function decodeProviderImage(value: string, declaredMediaType?: unknown): Decode
 async function generateImage(
   modelId: string,
   prompt: string,
-  userId: string
+  userId: string,
+  gatewayCredential: Awaited<
+    ReturnType<typeof resolveOpenRouterRuntimeCredential>
+  >
 ): Promise<{ image: DecodedProviderImage } | { error: string }> {
-  let apiKey: string;
-  try {
-    apiKey = getApiKey();
-  } catch {
-    console.warn("[image-compare] Provider configuration unavailable", {
-      modelId,
-    });
-    return { error: "Image generation is not configured" };
-  }
-
   try {
     return await executeOpenRouterImage<
       { image: DecodedProviderImage } | { error: string }
     >({
       prompt,
       modelId,
-      credential: {
-        billingSource: "platform",
-        credentialId: null,
-        apiKey,
-      },
+      credential: gatewayCredential,
       telemetry: {
         userId,
         guestId: null,
@@ -449,6 +439,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  let gatewayCredential: Awaited<
+    ReturnType<typeof resolveOpenRouterRuntimeCredential>
+  >;
+  try {
+    gatewayCredential = await resolveOpenRouterRuntimeCredential(identity);
+  } catch (error) {
+    const apiError =
+      error instanceof ApiError
+        ? error
+        : new ApiError(
+            503,
+            "AI_CREDENTIAL_UNAVAILABLE",
+            "AI credential is unavailable."
+          );
+    logApiRequest(
+      "POST",
+      "/api/image-compare",
+      apiError.statusCode,
+      Date.now() - startTime,
+      requestId
+    );
+    return NextResponse.json(
+      {
+        error: apiError.errorCode,
+        message: apiError.message,
+      },
+      { status: apiError.statusCode }
+    );
+  }
+
   const cleanPrompt = prompt.trim();
   const taskId = crypto.randomUUID();
 
@@ -461,7 +481,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const generated = await generateImage(
           modelId,
           cleanPrompt,
-          identity.userId
+          identity.userId,
+          gatewayCredential
         );
         if ("error" in generated) {
           return { modelId, modelName, imageUrl: null, error: generated.error };

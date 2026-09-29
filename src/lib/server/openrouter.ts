@@ -11,6 +11,7 @@ import {
 } from "@/lib/arena/constants";
 import { ApiError } from "./utils";
 import type { OpenRouterUsageTelemetryContext } from "./openrouter-usage";
+import type { OpenRouterGatewayCredentialContext } from "./openrouter-gateway";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -213,6 +214,7 @@ export type OpenRouterGatewayCallOptions = {
   systemPrompt?: string;
   telemetry?: OpenRouterUsageTelemetryContext;
   signal?: AbortSignal;
+  credential?: OpenRouterGatewayCredentialContext;
 };
 
 export async function fetchOpenRouterResponse(
@@ -229,7 +231,8 @@ export async function fetchOpenRouterResponse(
     prompt,
     modelId,
     systemPrompt: options?.systemPrompt,
-    credential: resolveLegacyPlatformOpenRouterCredential(),
+    credential:
+      options?.credential ?? resolveLegacyPlatformOpenRouterCredential(),
     telemetry: options?.telemetry,
   });
 }
@@ -418,7 +421,8 @@ export async function streamOpenRouterResponse(
     modelId,
     onToken,
     systemPrompt: options?.systemPrompt,
-    credential: resolveLegacyPlatformOpenRouterCredential(),
+    credential:
+      options?.credential ?? resolveLegacyPlatformOpenRouterCredential(),
     telemetry: options?.telemetry,
     signal: options?.signal,
   });

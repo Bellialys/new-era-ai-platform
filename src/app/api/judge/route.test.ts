@@ -9,6 +9,7 @@ const {
   resolveIdentityMock,
   checkRateLimitMock,
   fetchOpenRouterMock,
+  resolveRuntimeCredentialMock,
   supabaseMock,
 } = vi.hoisted(() => {
   // All Supabase builder methods return `this` so the fluent chain works.
@@ -34,6 +35,7 @@ const {
     resolveIdentityMock: vi.fn(),
     checkRateLimitMock: vi.fn(),
     fetchOpenRouterMock: vi.fn(),
+    resolveRuntimeCredentialMock: vi.fn(),
     supabaseMock: mock,
   };
 });
@@ -45,6 +47,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     resolveRequestIdentity: resolveIdentityMock,
     checkRateLimit: checkRateLimitMock,
     fetchOpenRouterResponse: fetchOpenRouterMock,
+    resolveOpenRouterRuntimeCredential: resolveRuntimeCredentialMock,
     getSupabaseServerClient: vi.fn().mockReturnValue(supabaseMock),
     logApiRequest: vi.fn(),
   };
@@ -95,6 +98,7 @@ beforeEach(() => {
   resolveIdentityMock.mockReset();
   checkRateLimitMock.mockReset();
   fetchOpenRouterMock.mockReset();
+  resolveRuntimeCredentialMock.mockReset();
 
   // Reset builder mocks — restore chain behavior after each test.
   supabaseMock.from.mockReset().mockReturnValue(supabaseMock);
@@ -111,6 +115,11 @@ beforeEach(() => {
     resetAt: Date.now() + JUDGE_RATE_LIMIT_WINDOW_MS,
   });
   fetchOpenRouterMock.mockResolvedValue({ text: JUDGE_JSON, latencyMs: 200 });
+  resolveRuntimeCredentialMock.mockResolvedValue({
+    billingSource: "platform",
+    credentialId: null,
+    apiKey: "test-openrouter-key",
+  });
 
   // Default ownership check: task exists and belongs to current user.
   // `.single()` is the only terminal; the chain up to it uses mockReturnValue(supabaseMock).

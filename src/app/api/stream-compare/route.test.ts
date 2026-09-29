@@ -8,6 +8,7 @@ const {
   resolveSelectedModelsMock,
   saveArenaRunMock,
   streamOpenRouterMock,
+  resolveRuntimeCredentialMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkDailyLimitMock: vi.fn(),
@@ -15,6 +16,7 @@ const {
   resolveSelectedModelsMock: vi.fn(),
   saveArenaRunMock: vi.fn(),
   streamOpenRouterMock: vi.fn(),
+  resolveRuntimeCredentialMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -27,6 +29,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     resolveSelectedModels: resolveSelectedModelsMock,
     saveArenaRun: saveArenaRunMock,
     streamOpenRouterResponse: streamOpenRouterMock,
+    resolveOpenRouterRuntimeCredential: resolveRuntimeCredentialMock,
     logApiRequest: vi.fn(),
   };
 });
@@ -70,6 +73,7 @@ beforeEach(() => {
   resolveSelectedModelsMock.mockReset();
   saveArenaRunMock.mockReset();
   streamOpenRouterMock.mockReset();
+  resolveRuntimeCredentialMock.mockReset();
 
   streamOpenRouterMock.mockImplementation(
     async (
@@ -96,6 +100,11 @@ beforeEach(() => {
     }
   );
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
+  resolveRuntimeCredentialMock.mockResolvedValue({
+    billingSource: "platform",
+    credentialId: null,
+    apiKey: "test-openrouter-key",
+  });
   checkDailyLimitMock.mockResolvedValue({ allowed: true, used: 1, limit: 100 });
   checkRateLimitMock.mockResolvedValue({ limited: false, remaining: 9, resetAt: Date.now() + 60_000 });
   resolveSelectedModelsMock.mockResolvedValue([MODEL_A, MODEL_B]);

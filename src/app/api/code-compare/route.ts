@@ -26,6 +26,7 @@ import {
   checkRateLimit,
   resolveRequestIdentity,
   applyGuestCookie,
+  resolveOpenRouterRuntimeCredential,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -244,6 +245,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<CodeCompa
       );
     }
 
+    const gatewayCredential =
+      await resolveOpenRouterRuntimeCredential(identity);
     const systemPrompt = buildCodeSystemPrompt(cleanLanguage, cleanFramework);
 
     const responses = await fetchMultipleResponses(
@@ -251,6 +254,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CodeCompa
       selectedModels.map((model) => model.modelKey),
       {
         systemPrompt,
+        credential: gatewayCredential,
         telemetry: {
           userId: identity.userId,
           guestId: identity.guestId,
