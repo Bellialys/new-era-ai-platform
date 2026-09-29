@@ -42,12 +42,12 @@ async function expireStaleOpenRouterOAuthPendingCredential(
   const { error } = await supabase
     .from("provider_credentials")
     .update({
-      status: "error",
+      status: "orphaned",
       secret_ciphertext: null,
       encrypted_dek: null,
       kms_key_id: null,
-      reconcile_after: null,
-      last_error_code: "OAUTH_PENDING_EXPIRED",
+      reconcile_after: nowIso,
+      last_error_code: "OAUTH_PERSISTENCE_UNFINISHED",
       updated_at: nowIso,
     })
     .eq("user_id", userId)
@@ -233,9 +233,28 @@ export async function persistOpenRouterOAuthCredential(input: {
       fundingSource: "user_openrouter",
     };
   } catch (error) {
+    // The OAuth exchange has already created a real user-controlled OpenRouter
+    // key. New Era cannot revoke that external key on the user's behalf, so a
+    // post-exchange persistence failure must retain safe reconciliation state
+    // instead of deleting every local trace of the key.
+    //
+    // Only a still-pending row is transitioned. If the activation RPC committed
+    // but its response was lost, this compensation cannot overwrite the active
+    // credential or its funding selection.
     await input.supabase
       .from("provider_credentials")
-      .delete()
+      .update({
+        status: "orphaned",
+        secret_ciphertext: null,
+        encrypted_dek: null,
+        kms_key_id: null,
+        reconcile_after: new Date().toISOString(),
+        last_error_code:
+          error instanceof OpenRouterCredentialError
+            ? error.code
+            : "OPENROUTER_CREDENTIAL_STORE_FAILED",
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", credentialId)
       .eq("user_id", input.userId)
       .eq("status", "pending");
