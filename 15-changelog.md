@@ -16,6 +16,15 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Project context and Stage 3.2 runbook sync - 2026-09-29
+
+- Added `PROJECT-CONTEXT.md` as the AI/chat recovery index for the current architecture, Stage 3 status, live blockers and canonical next steps.
+- Registered the context file in the active documentation map and linked it from both README entry points.
+- Corrected the AWS/Vercel OIDC runbook to match the merged runtime/IaC contract: `aud=sts.amazonaws.com`, explicit region binding, verified existing-provider ClientIDList and explicit reuse confirmation.
+- Closed V201-14 after code/IaC/runbook audience alignment and moved active project state to V201-16, the external live AWS KMS + Vercel OIDC gate.
+- Closed stacked Stage 3.3 precursor PRs #101/#102/#103 as superseded by merged PR #105.
+- Stage 3.4 rollout flags remain disabled and the production activation migration remains gated.
+
 ## Stage 3.4 OpenRouter OAuth user beta foundation - 2026-09-29
 
 ### Added
