@@ -20,7 +20,6 @@ export function OpenRouterIntegration() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
 
     async function initialize() {
       const result = await loadOpenRouterIntegrationStatus();
@@ -61,6 +60,12 @@ export function OpenRouterIntegration() {
       active = false;
     };
   }, [statusReloadToken]);
+
+  function retryStatusLoad() {
+    setLoading(true);
+    setStatusLoadError(null);
+    setStatusReloadToken((value) => value + 1);
+  }
 
   async function connect() {
     setBusy(true);
@@ -161,7 +166,7 @@ export function OpenRouterIntegration() {
           <p>{statusLoadError}</p>
           <button
             type="button"
-            onClick={() => setStatusReloadToken((value) => value + 1)}
+            onClick={retryStatusLoad}
             className="mt-3 rounded-lg border border-red-300/30 px-3 py-1.5 text-xs font-semibold text-red-100 transition hover:border-red-200/60"
           >
             Повторить
