@@ -26,6 +26,13 @@
 
 Статус синхронизирован с `.project/state.json`; порядок будущих этапов описан в `14-roadmap.md`.
 
+Актуальный Stage 3 engineering status на 2026-09-29:
+
+- Stage 3.3 Pricing + Actual Usage — завершён и merged;
+- Stage 3.4 OpenRouter OAuth User Beta — код merged и production build READY, но rollout flags выключены;
+- Stage 3.2 AWS KMS + Vercel OIDC — code/IaC/canaries готовы, активная задача `V201-16` — live infrastructure gate;
+- persistent user OpenRouter credentials нельзя включать до успешного Stage 3.2 live gate и controlled activation migration.
+
 Реально готово:
 
 - Next.js App Router проект;
