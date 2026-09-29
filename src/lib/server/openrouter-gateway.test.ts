@@ -122,6 +122,22 @@ describe("OpenRouter unified gateway foundation", () => {
     expect(fetchWithKeyMock).not.toHaveBeenCalled();
   });
 
+  it("rejects header-unsafe credential characters before transport", async () => {
+    await expect(
+      executeOpenRouterText({
+        prompt: "hello",
+        modelId: "requested/model",
+        credential: {
+          billingSource: "user_openrouter",
+          credentialId: "cred-user-unsafe",
+          apiKey: "secret-key\r\nInjected: value",
+        },
+      })
+    ).rejects.toBeInstanceOf(OpenRouterGatewayConfigurationError);
+
+    expect(fetchWithKeyMock).not.toHaveBeenCalled();
+  });
+
   it("uses the same funding contract for streaming", async () => {
     const onToken = vi.fn();
 

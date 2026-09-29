@@ -90,6 +90,30 @@ export function getApiKey(): string {
   return apiKey;
 }
 
+const OPENROUTER_UNSAFE_HEADER_VALUE = /[\u0000-\u001F\u007F]/;
+
+function normalizeOpenRouterApiKey(apiKey: string): string {
+  const normalized = apiKey.trim();
+  if (!normalized || OPENROUTER_UNSAFE_HEADER_VALUE.test(normalized)) {
+    throw new ApiError(
+      503,
+      "AI_CREDENTIAL_UNAVAILABLE",
+      "AI provider credential is unavailable."
+    );
+  }
+  return normalized;
+}
+
+function logOpenRouterTransportFailure(
+  operation: "fetch" | "stream",
+  error: unknown
+): void {
+  console.error("[OpenRouter] transport failure", {
+    operation,
+    errorName: error instanceof Error ? error.name : "UnknownError",
+  });
+}
+
 function getOpenRouterTimeoutMs(): number {
   const timeoutFromEnv = process.env.MODEL_TIMEOUT_MS;
   if (!timeoutFromEnv) {
@@ -198,13 +222,7 @@ export async function fetchOpenRouterResponseWithApiKey(
   modelId: string,
   options?: { systemPrompt?: string }
 ): Promise<OpenRouterCallResult> {
-  if (!apiKey.trim()) {
-    throw new ApiError(
-      503,
-      "AI_CREDENTIAL_UNAVAILABLE",
-      "AI provider credential is unavailable."
-    );
-  }
+  const normalizedApiKey = normalizeOpenRouterApiKey(apiKey);
 
   const messages: OpenRouterRequest["messages"] = [];
   if (options?.systemPrompt) {
@@ -230,7 +248,7 @@ export async function fetchOpenRouterResponseWithApiKey(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${normalizedApiKey}`,
         "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
         "X-Title": "New Era AI Platform",
       },
@@ -304,7 +322,7 @@ export async function fetchOpenRouterResponseWithApiKey(
     if (error instanceof ApiError) {
       throw error;
     }
-    console.error("OpenRouter fetch error:", error);
+    logOpenRouterTransportFailure("fetch", error);
     throw new ApiError(502, "NETWORK_ERROR", "Failed to connect to OpenRouter. Please try again.");
   } finally {
     clearTimeout(timeoutId);
@@ -384,13 +402,7 @@ export async function streamOpenRouterResponseWithApiKey(
   onToken: (token: string) => void | Promise<void>,
   options?: { systemPrompt?: string }
 ): Promise<OpenRouterCallResult> {
-  if (!apiKey.trim()) {
-    throw new ApiError(
-      503,
-      "AI_CREDENTIAL_UNAVAILABLE",
-      "AI provider credential is unavailable."
-    );
-  }
+  const normalizedApiKey = normalizeOpenRouterApiKey(apiKey);
 
   const request = buildOpenRouterRequest(prompt, modelId, {
     systemPrompt: options?.systemPrompt,
@@ -407,7 +419,7 @@ export async function streamOpenRouterResponseWithApiKey(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${normalizedApiKey}`,
         "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
         "X-Title": "New Era AI Platform",
       },
@@ -527,7 +539,7 @@ export async function streamOpenRouterResponseWithApiKey(
     if (error instanceof ApiError) {
       throw error;
     }
-    console.error("OpenRouter stream error:", error);
+    logOpenRouterTransportFailure("stream", error);
     throw new ApiError(502, "NETWORK_ERROR", "Failed to stream from OpenRouter. Please try again.");
   } finally {
     clearTimeout(timeoutId);

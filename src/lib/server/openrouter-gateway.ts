@@ -48,7 +48,7 @@ function normalizeCredentialContext(
   }
 
   const apiKey = context.apiKey.trim();
-  if (!apiKey) {
+  if (!apiKey || /[\u0000-\u001F\u007F]/.test(apiKey)) {
     throw new OpenRouterGatewayConfigurationError(
       "OpenRouter credential is unavailable."
     );

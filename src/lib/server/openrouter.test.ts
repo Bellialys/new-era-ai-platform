@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchOpenRouterResponse,
+  fetchOpenRouterResponseWithApiKey,
   streamOpenRouterResponse,
+  streamOpenRouterResponseWithApiKey,
 } from "./openrouter";
 
 beforeEach(() => {
@@ -164,4 +166,50 @@ describe("OpenRouter provider usage contract", () => {
       usage: { include: true },
     });
   });
+  it("rejects control characters before constructing Authorization headers", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchOpenRouterResponseWithApiKey(
+        "secret-key\r\nInjected: value",
+        "hello",
+        "requested/model"
+      )
+    ).rejects.toMatchObject({
+      errorCode: "AI_CREDENTIAL_UNAVAILABLE",
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("redacts transport errors for explicit credentials", async () => {
+    const secret = "super-secret-key";
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValue(new Error(`Authorization: Bearer ${secret}`));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchOpenRouterResponseWithApiKey(secret, "hello", "requested/model")
+    ).rejects.toMatchObject({
+      errorCode: "NETWORK_ERROR",
+    });
+
+    await expect(
+      streamOpenRouterResponseWithApiKey(
+        secret,
+        "hello",
+        "requested/model",
+        vi.fn()
+      )
+    ).rejects.toMatchObject({
+      errorCode: "NETWORK_ERROR",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain(secret);
+  });
+
 });
