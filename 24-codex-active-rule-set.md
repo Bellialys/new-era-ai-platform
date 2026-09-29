@@ -17,9 +17,7 @@ Status: active
 
 Codex должен прочитать:
 
--1. `PROJECT-CONTEXT.md`
-   - recovery/index актуального runtime, Stage 3 статуса, live blockers и canonical next step;
-   - baseline SHA внутри файла исторический: перед изменениями обязательно сверять текущий `main`.
+Сначала прочитать `PROJECT-CONTEXT.md` как recovery/index актуального runtime, Stage 3 статуса, live blockers и canonical next step. Baseline SHA внутри файла исторический: перед изменениями обязательно сверять текущий `main`.
 
 0. `23-codex-quality-rules.md`
    - стандарты качества выполнения задач;
