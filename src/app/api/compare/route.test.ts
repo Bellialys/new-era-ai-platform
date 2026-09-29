@@ -11,12 +11,14 @@ const {
   resolveSelectedModelsMock,
   fetchMultipleResponsesMock,
   savePromptArenaRunMock,
+  resolveRuntimeCredentialMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   resolveSelectedModelsMock: vi.fn(),
   fetchMultipleResponsesMock: vi.fn(),
   savePromptArenaRunMock: vi.fn(),
+  resolveRuntimeCredentialMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -28,6 +30,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     resolveSelectedModels: resolveSelectedModelsMock,
     fetchMultipleResponses: fetchMultipleResponsesMock,
     savePromptArenaRun: savePromptArenaRunMock,
+    resolveOpenRouterRuntimeCredential: resolveRuntimeCredentialMock,
     applyGuestCookie: vi.fn(),
     logApiRequest: vi.fn(),
   };
@@ -84,10 +87,16 @@ beforeEach(() => {
   resolveSelectedModelsMock.mockReset();
   fetchMultipleResponsesMock.mockReset();
   savePromptArenaRunMock.mockReset();
+  resolveRuntimeCredentialMock.mockReset();
 
   // Defaults: authenticated user, not rate-limited
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
   checkRateLimitMock.mockResolvedValue(NOT_LIMITED);
+  resolveRuntimeCredentialMock.mockResolvedValue({
+    billingSource: "platform",
+    credentialId: null,
+    apiKey: "test-openrouter-key",
+  });
 
   // Default model resolution and response for success path
   resolveSelectedModelsMock.mockResolvedValue([

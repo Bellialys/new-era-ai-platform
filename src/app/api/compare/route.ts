@@ -24,6 +24,7 @@ import {
   checkRateLimit,
   resolveRequestIdentity,
   applyGuestCookie,
+  resolveOpenRouterRuntimeCredential,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -86,11 +87,15 @@ function createStreamingCompareResponse({
   cleanPrompt,
   selectedModels,
   identity,
+  gatewayCredential,
   startTime,
 }: {
   cleanPrompt: string;
   selectedModels: ResolvedPromptModel[];
   identity: Exclude<CompareIdentity, { kind: "none" }>;
+  gatewayCredential: Awaited<
+    ReturnType<typeof resolveOpenRouterRuntimeCredential>
+  >;
   startTime: number;
 }): NextResponse {
   const stream = new ReadableStream<Uint8Array>({
@@ -117,6 +122,7 @@ function createStreamingCompareResponse({
                   });
                 },
                 {
+                  credential: gatewayCredential,
                   telemetry: {
                     userId: identity.userId,
                     guestId: identity.guestId,
@@ -407,11 +413,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
+    const gatewayCredential =
+      await resolveOpenRouterRuntimeCredential(identity);
+
     if (shouldStream) {
       return createStreamingCompareResponse({
         cleanPrompt,
         selectedModels,
         identity,
+        gatewayCredential,
         startTime,
       });
     }
@@ -420,6 +430,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       cleanPrompt,
       selectedModels.map((model) => model.modelKey),
       {
+        credential: gatewayCredential,
         telemetry: {
           userId: identity.userId,
           guestId: identity.guestId,
