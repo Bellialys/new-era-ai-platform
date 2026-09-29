@@ -119,6 +119,18 @@ ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false
 
 `OPENROUTER_OAUTH_COOKIE_SECRET` является secret configuration, а не feature flag.
 
+## 4.3 Platform-funded Image Arena monetary kill switch
+
+`ENABLE_PLATFORM_PAID_IMAGE_ARENA=false` — server-only fail-closed денежный guard для Image Arena.
+
+Правила:
+
+- отсутствие, пустое значение или любое значение кроме `true` запрещает **platform-funded** image generation;
+- guard проверяется после server-side funding resolution и до Storage/provider generation;
+- browser не может выбрать funding source и не может обойти этот guard;
+- `user_openrouter` funding не управляется этим platform-spend flag и остаётся под Stage 3.4 OAuth/persistence gates;
+- включение `true` не заменяет provider budget, distributed rate limit, usage telemetry или отдельное разрешение на paid rollout.
+
 ## 5. Серверные флаги
 
 Флаги без `NEXT_PUBLIC_` должны использоваться только на сервере.
