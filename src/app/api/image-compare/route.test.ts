@@ -4,14 +4,14 @@ import { NextRequest } from "next/server";
 const {
   resolveIdentityMock,
   checkRateLimitMock,
-  getApiKeyMock,
+  resolveRuntimeCredentialMock,
   getClientMock,
   logApiRequestMock,
   recordUsageMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
-  getApiKeyMock: vi.fn(),
+  resolveRuntimeCredentialMock: vi.fn(),
   getClientMock: vi.fn(),
   logApiRequestMock: vi.fn(),
   recordUsageMock: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     resolveRequestIdentity: resolveIdentityMock,
     checkRateLimit: checkRateLimitMock,
     logApiRequest: logApiRequestMock,
-    getApiKey: getApiKeyMock,
+    resolveOpenRouterRuntimeCredential: resolveRuntimeCredentialMock,
     getSupabaseServerClient: getClientMock,
   };
 });
@@ -125,7 +125,7 @@ function mockStorageClient(
 beforeEach(() => {
   resolveIdentityMock.mockReset();
   checkRateLimitMock.mockReset();
-  getApiKeyMock.mockReset();
+  resolveRuntimeCredentialMock.mockReset();
   getClientMock.mockReset();
   logApiRequestMock.mockReset();
   recordUsageMock.mockReset();
@@ -138,7 +138,11 @@ beforeEach(() => {
     remaining: 4,
     resetAt: Date.now() + 60_000,
   });
-  getApiKeyMock.mockReturnValue("test-api-key");
+  resolveRuntimeCredentialMock.mockResolvedValue({
+    billingSource: "platform",
+    credentialId: null,
+    apiKey: "test-api-key",
+  });
   getClientMock.mockReturnValue(mockStorageClient().client);
   recordUsageMock.mockResolvedValue(undefined);
   fetchMock.mockImplementation(() => Promise.resolve(mockOpenRouterSuccess()));
@@ -598,27 +602,31 @@ describe("POST /api/image-compare — provider image validation", () => {
 });
 
 describe("POST /api/image-compare — storage and secret safety", () => {
-  it("keeps other model results when getApiKey throws for one model", async () => {
-    getApiKeyMock
-      .mockImplementationOnce(() => {
-        throw new Error("secret configuration details");
-      })
-      .mockReturnValue("test-api-key");
+  it("fails closed before provider fan-out when runtime credential resolution fails", async () => {
+    resolveRuntimeCredentialMock.mockRejectedValue(
+      new Error("secret configuration details")
+    );
 
-    const response = await POST(makeRequest({
-      prompt: VALID_BODY.prompt,
-      modelIds: [VALID_MODEL, SECOND_MODEL],
-    }));
-    const body = await response.json() as {
-      results: Array<{ imageUrl: string | null; error?: string }>;
+    const response = await POST(
+      makeRequest({
+        prompt: VALID_BODY.prompt,
+        modelIds: [VALID_MODEL, SECOND_MODEL],
+      })
+    );
+    const body = (await response.json()) as {
+      error?: string;
+      message?: string;
     };
 
-    expect(response.status).toBe(200);
-    expect(body.results).toEqual([
-      expect.objectContaining({ imageUrl: null, error: "Image generation is not configured" }),
-      expect.objectContaining({ imageUrl: expect.any(String) }),
-    ]);
-    expect(JSON.stringify(consoleWarnMock.mock.calls)).not.toContain("secret configuration details");
+    expect(response.status).toBe(503);
+    expect(body).toEqual({
+      error: "AI_CREDENTIAL_UNAVAILABLE",
+      message: "AI credential is unavailable.",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(JSON.stringify(consoleWarnMock.mock.calls)).not.toContain(
+      "secret configuration details"
+    );
   });
 
   it("fails before provider fan-out when Storage client initialization throws", async () => {
@@ -635,7 +643,7 @@ describe("POST /api/image-compare — storage and secret safety", () => {
       message: "Image storage is unavailable",
     });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(getApiKeyMock).not.toHaveBeenCalled();
+    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
     expect(JSON.stringify(consoleWarnMock.mock.calls)).not.toContain("secret client details");
   });
 
@@ -654,7 +662,7 @@ describe("POST /api/image-compare — storage and secret safety", () => {
     expect(response.status).toBe(503);
     expect(body.error).toBe("IMAGE_STORAGE_UNAVAILABLE");
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(getApiKeyMock).not.toHaveBeenCalled();
+    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
     expect(JSON.stringify(consoleWarnMock.mock.calls)).not.toContain("secret bucket details");
   });
 
@@ -716,7 +724,7 @@ describe("POST /api/image-compare — storage and secret safety", () => {
       message: "Image storage is not configured",
     });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(getApiKeyMock).not.toHaveBeenCalled();
+    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
   });
 
   it("returns a generic error and no image data when Storage upload fails", async () => {
@@ -744,7 +752,11 @@ describe("POST /api/image-compare — storage and secret safety", () => {
 
   it("uses the API key only in the provider Authorization header", async () => {
     const apiKey = "super-secret-openrouter-key";
-    getApiKeyMock.mockReturnValue(apiKey);
+    resolveRuntimeCredentialMock.mockResolvedValue({
+      billingSource: "platform",
+      credentialId: null,
+      apiKey,
+    });
 
     const response = await POST(makeRequest({
       ...VALID_BODY,
@@ -763,7 +775,11 @@ describe("POST /api/image-compare — storage and secret safety", () => {
   it("returns a controlled provider error and never logs an arbitrary provider message", async () => {
     const apiKey = "super-secret-openrouter-key";
     const arbitraryMessage = `invalid credential ${apiKey} prompt=${VALID_BODY.prompt}`;
-    getApiKeyMock.mockReturnValue(apiKey);
+    resolveRuntimeCredentialMock.mockResolvedValue({
+      billingSource: "platform",
+      credentialId: null,
+      apiKey,
+    });
     fetchMock.mockResolvedValue(mockOpenRouterError(401, arbitraryMessage, "AUTH_ERROR"));
 
     const response = await POST(makeRequest(VALID_BODY));
