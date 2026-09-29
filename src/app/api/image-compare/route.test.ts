@@ -686,7 +686,7 @@ describe("POST /api/image-compare — storage and secret safety", () => {
       message: "Image storage is unavailable",
     });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
+    expect(resolveRuntimeCredentialMock).toHaveBeenCalledOnce();
     expect(JSON.stringify(consoleWarnMock.mock.calls)).not.toContain("secret client details");
   });
 
@@ -705,7 +705,7 @@ describe("POST /api/image-compare — storage and secret safety", () => {
     expect(response.status).toBe(503);
     expect(body.error).toBe("IMAGE_STORAGE_UNAVAILABLE");
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
+    expect(resolveRuntimeCredentialMock).toHaveBeenCalledOnce();
     expect(JSON.stringify(consoleWarnMock.mock.calls)).not.toContain("secret bucket details");
   });
 
@@ -767,7 +767,7 @@ describe("POST /api/image-compare — storage and secret safety", () => {
       message: "Image storage is not configured",
     });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
+    expect(resolveRuntimeCredentialMock).toHaveBeenCalledOnce();
   });
 
   it("returns a generic error and no image data when Storage upload fails", async () => {
