@@ -69,6 +69,12 @@ Production должен быть защищён не только правила
 | `UPSTASH_REDIS_REST_URL` | Backend | Нет | Нужен для rate limiting перед публичным deploy. Vercel Marketplace alias: `KV_REST_API_URL`. |
 | `UPSTASH_REDIS_REST_TOKEN` | Backend | Нет | Секретный токен Redis. Только server-side. Vercel Marketplace alias: `KV_REST_API_TOKEN`. |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | CI / smoke tooling | Нет | Опциональный Vercel Deployment Protection bypass secret для автоматических проверок protected Preview. Не использовать в browser/client code. |
+| `AWS_REGION` | Stage 3 KMS server runtime | Нет | Обязателен в KMS mode; регион KMS и STS/OIDC provider client config. |
+| `AWS_ROLE_ARN` | Stage 3 KMS server runtime | Нет | IAM role, принимаемая Vercel через OIDC; static AWS access keys запрещены. |
+| `AI_CREDENTIAL_KMS_KEY_ID` | Stage 3 KMS server runtime | Нет | KMS key ARN/id для envelope encryption provider credentials. |
+| `ENABLE_OPENROUTER_USER_OAUTH` | Backend rollout gate | Нет | По умолчанию false; включает Stage 3.4 OAuth control-plane только после controlled rollout. |
+| `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` | Backend rollout gate | Нет | По умолчанию false; нельзя включать до Stage 3.2 live KMS/OIDC + environment-isolation gate и activation migration. |
+| `OPENROUTER_OAUTH_COOKIE_SECRET` | Backend OAuth session signing | Нет | Secret минимум 32 non-whitespace chars; подписывает short-lived OAuth flow cookie. |
 
 ## Нормализация `APP_ENV`
 

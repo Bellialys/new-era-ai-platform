@@ -99,6 +99,26 @@ NEXT_PUBLIC_ENABLE_TEAM_MODE=true
 
 Главный release-риск: включить UI-флаг без backend-флага. В этом случае `/team` может быть виден пользователю, но `POST /api/team-run` вернёт `503`.
 
+## 4.2 Stage 3.4 OpenRouter OAuth rollout gates
+
+Stage 3.4 использует два независимых server-side fail-closed флага:
+
+```env
+ENABLE_OPENROUTER_USER_OAUTH=false
+ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false
+```
+
+Правила:
+
+- оба значения по умолчанию остаются `false`;
+- `ENABLE_OPENROUTER_USER_OAUTH` разрешает OAuth connect/control-plane только после готовности rollout;
+- `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` разрешает persistent encrypted provider credentials только после Stage 3.2 live AWS KMS/Vercel OIDC + environment-isolation gate и применения activation migration;
+- UI не может самостоятельно обойти эти server-side gates;
+- включение OAuth без persistence не должно создавать plaintext/localStorage fallback;
+- production activation выполняется только как отдельный controlled rollout, а не автоматически вместе с merge кода.
+
+`OPENROUTER_OAUTH_COOKIE_SECRET` является secret configuration, а не feature flag.
+
 ## 5. Серверные флаги
 
 Флаги без `NEXT_PUBLIC_` должны использоваться только на сервере.

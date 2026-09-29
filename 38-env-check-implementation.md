@@ -20,6 +20,7 @@
 npm run env:check            # basic-проверка (для запуска сайта)
 npm run env:check:migrations # проверка переменных для миграций
 npm run env:check:full       # полный набор переменных
+npm run env:check -- --mode=kms # Stage 3 AWS KMS/Vercel OIDC readiness
 npm run env:check:json       # JSON-репортер (full), без значений
 npm run env:check:example    # генерация .env.local.example
 npm run test:env-check       # тесты самого чекера
@@ -55,6 +56,10 @@ CI-режим (`CI=true` или `--ci`) и переводит отсутстви
 `OK`, чтобы CI-логи не создавали ложный шум. Этот override не заменяет
 production-конфигурацию: в Vercel Production должны оставаться реальные
 `UPSTASH_REDIS_REST_*` или `KV_REST_API_*`.
+
+### KMS mode
+
+`scripts/check-env.mjs` поддерживает `--mode=kms`. Он требует `AWS_REGION`, `AWS_ROLE_ARN` и `AI_CREDENTIAL_KMS_KEY_ID`, а также отдельно fail-closed проверяет отсутствие static AWS credential variables. Это operational readiness check перед live Stage 3.2 KMS canary и не заменяется обычным `basic`/`full` build check.
 
 ## 3. Как работает загрузка переменных
 

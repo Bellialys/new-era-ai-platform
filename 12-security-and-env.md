@@ -668,9 +668,9 @@ Image-capable модели проходят allowlist.
 
 Полный план: `49-openrouter-funding-byok-plan.md`.
 
-### Planned server-only configuration
+### Current Stage 3 server-only configuration
 
-Следующие значения появятся в env-check только в том implementation PR, где runtime действительно начнёт их читать:
+Текущий runtime/env-check уже знает следующие Stage 3 значения. Канонический список и validation rules находятся в `env-check.config.json`:
 
 ```env
 OPENROUTER_MANAGEMENT_KEY=
@@ -690,9 +690,18 @@ AWS_ROLE_ARN=
 
 AI_CREDENTIAL_KMS_KEY_ID=
 # ссылка на KMS key; не сам DEK и не plaintext provider secret
+
+ENABLE_OPENROUTER_USER_OAUTH=false
+# server-side OAuth rollout gate
+
+ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false
+# server-side encrypted persistence rollout gate
+
+OPENROUTER_OAUTH_COOKIE_SECRET=
+# server-only signing secret для short-lived OAuth flow cookie; минимум 32 non-whitespace chars
 ```
 
-Не добавлять эти переменные в `env-check.config.json` заранее: env SSOT должен отражать только реально используемый runtime contract.
+`AWS_REGION`, `AWS_ROLE_ARN` и `AI_CREDENTIAL_KMS_KEY_ID` проверяются отдельным `kms` mode. OAuth flags остаются fail-closed по умолчанию. `OPENROUTER_OAUTH_COOKIE_SECRET` обязателен только когда соответствующий rollout реально включается по env contract.
 
 ### User BYOK secrets
 
@@ -719,6 +728,7 @@ OpenRouter key пользователя:
 Stage 3.2 adapter реализован для **AWS KMS + Vercel OIDC**:
 
 - `@vercel/oidc-aws-credentials-provider` получает short-lived AWS credentials через `AssumeRoleWithWebIdentity`;
+- runtime явно запрашивает AWS-specific OIDC audience `sts.amazonaws.com` и передаёт validated `AWS_REGION` в provider client config;
 - KMS adapter использует только `AWS_REGION`, `AWS_ROLE_ARN` и `AI_CREDENTIAL_KMS_KEY_ID`;
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` и `AWS_SESSION_TOKEN` для credential-KMS path явно отклоняются кодом;
 - `GenerateDataKey(AES_256)` и `Decrypt` используют одинаковый non-PII encryption context: `credential_id/provider/origin`;

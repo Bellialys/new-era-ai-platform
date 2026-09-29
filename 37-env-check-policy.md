@@ -88,6 +88,28 @@ JavaScript-бандл. Любой пользователь сайта может
 node scripts/check-env.mjs full
 ```
 
+## 6b. Переменные для режима `kms`
+
+Stage 3.2 live readiness использует отдельный fail-closed режим:
+
+```bash
+npm run env:check -- --mode=kms
+```
+
+Обязательны:
+
+- `AWS_REGION`;
+- `AWS_ROLE_ARN`;
+- `AI_CREDENTIAL_KMS_KEY_ID`.
+
+Дополнительно KMS mode завершает проверку security error, если присутствует любой static AWS credential: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` или `AWS_SESSION_TOKEN`. Credential-KMS path должен использовать только Vercel OIDC.
+
+Stage 3.4 rollout configuration также зарегистрирована в env SSOT:
+
+- `ENABLE_OPENROUTER_USER_OAUTH` — optional boolean, default rollout state false;
+- `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` — optional boolean, default rollout state false;
+- `OPENROUTER_OAUTH_COOKIE_SECRET` — server secret, минимум 32 non-whitespace chars when configured.
+
 ## 7. Возможные статусы
 
 | Статус | Значение |

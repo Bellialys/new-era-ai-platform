@@ -17,6 +17,8 @@ Status: active
 
 Codex должен прочитать:
 
+Сначала прочитать `PROJECT-CONTEXT.md` как recovery/index актуального runtime, Stage 3 статуса, live blockers и canonical next step. Baseline SHA внутри файла исторический: перед изменениями обязательно сверять текущий `main`.
+
 0. `23-codex-quality-rules.md`
    - стандарты качества выполнения задач;
    - self-review, чек-листы, security, performance, accessibility, API validation, Git workflow;

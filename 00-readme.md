@@ -19,6 +19,7 @@
 
 Главный источник текущей версии и активных задач - `.project/state.json`.
 Главный источник порядка будущих этапов - `14-roadmap.md`.
+Для нового ChatGPT/Codex чата и быстрого восстановления контекста - `PROJECT-CONTEXT.md`.
 
 Если в документах возникает конфликт по текущей версии, приоритет имеет `.project/state.json`.
 Если конфликт касается порядка будущих этапов, приоритет имеет `14-roadmap.md`.
@@ -47,6 +48,13 @@
 Текущая рабочая версия: **v2.0.0-alpha.1 - AI Team Mode**.
 
 Канонический текущий статус фиксируется в `.project/state.json`, порядок версий - в `14-roadmap.md`.
+
+Актуальный Stage 3 engineering status на 2026-09-29:
+
+- Stage 3.3 Pricing + Actual Usage — завершён и merged;
+- Stage 3.4 OpenRouter OAuth User Beta — код merged и production build READY, но rollout flags выключены;
+- Stage 3.2 AWS KMS + Vercel OIDC — code/IaC/canaries готовы, активная задача `V201-16` — live infrastructure gate;
+- persistent user OpenRouter credentials нельзя включать до успешного Stage 3.2 live gate и controlled activation migration.
 
 Сейчас проект уже не является чистым mock UI.
 
