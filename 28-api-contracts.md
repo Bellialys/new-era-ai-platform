@@ -863,6 +863,8 @@ Rules:
 
 Требует авторизованного пользователя. Гости получают `401 IMAGE_AUTH_REQUIRED`.
 
+Platform-funded image generation по умолчанию fail-closed. Если server-side funding resolver выбрал `billingSource=platform`, переменная `ENABLE_PLATFORM_PAID_IMAGE_ARENA` должна быть ровно `true`; иначе endpoint возвращает `503 IMAGE_PLATFORM_PAID_GENERATION_DISABLED` до инициализации Storage и до provider generation. Этот monetary guard не применяется к `billingSource=user_openrouter`, потому что такой запрос использует user-controlled OpenRouter funding и отдельно защищён Stage 3.4 credential rollout gates.
+
 > **Alpha endpoint.** API может измениться до стабильного v2.0 release. Frontend вызывает этот backend route; прямой вызов OpenRouter из браузера запрещён.
 
 Минимальный запрос:
@@ -903,7 +905,10 @@ Rules:
 - requires a real Supabase authenticated user; guest or unauthenticated → `401 IMAGE_AUTH_REQUIRED`;
 - `prompt` обязателен, после `trim()` не должен быть пустым и ограничен 1000 символами;
 - `modelIds` содержит 1–3 уникальные выбранные клиентом записи из registered-only `IMAGE_MODELS`; дубликат или произвольный provider key отклоняется до provider calls;
-- до provider fan-out backend инициализирует Storage client/bucket; недоступная конфигурация → `503 IMAGE_STORAGE_UNAVAILABLE` и ноль платных generation calls;
+- backend резолвит funding/credential только server-side; browser не выбирает `billingSource` или credential;
+- если resolved funding = `platform` и `ENABLE_PLATFORM_PAID_IMAGE_ARENA !== "true"`, endpoint fail-closed → `503 IMAGE_PLATFORM_PAID_GENERATION_DISABLED` до Storage/provider work;
+- `user_openrouter` funding не зависит от platform-paid switch и остаётся под отдельными Stage 3.4 OAuth/persistence gates;
+- после monetary guard backend инициализирует Storage client/bucket; недоступная конфигурация → `503 IMAGE_STORAGE_UNAVAILABLE` и ноль provider generation calls;
 - backend вызывает OpenRouter `POST /api/v1/images` отдельно для каждой модели с body `{ model, prompt, n: 1, aspect_ratio: "1:1" }`; дополнительные параметры не отправляются глобально, потому что capability-наборы моделей различаются;
 - provider response должен содержать `data[0].b64_json`; `media_type`, если присутствует, сверяется с сигнатурой декодированного файла;
 - разрешены только PNG, JPEG и WebP размером не более 5 MiB; SVG, неизвестный формат, некорректный base64 и MIME mismatch отклоняются до Storage upload;
@@ -911,7 +916,7 @@ Rules:
 - если генерация или Storage upload одной модели не удались, её result содержит `imageUrl: null` и controlled `error`, а результаты остальных моделей сохраняются;
 - frontend does NOT call image providers directly — only `POST /api/image-compare`;
 - response contains image URLs/metadata, not binary image data or provider secrets;
-- safe top-level errors include `IMAGE_AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `IMAGE_STORAGE_UNAVAILABLE`; generation и transient upload failures остаются per-model errors при HTTP `200`.
+- safe top-level errors include `IMAGE_AUTH_REQUIRED`, `IMAGE_PLATFORM_PAID_GENERATION_DISABLED`, `RATE_LIMIT`, `INVALID_JSON`, `VALIDATION_ERROR`, `IMAGE_STORAGE_UNAVAILABLE`; generation и transient upload failures остаются per-model errors при HTTP `200`.
 
 ## `GET /api/profile`
 
