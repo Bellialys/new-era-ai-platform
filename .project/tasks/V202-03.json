@@ -7,7 +7,6 @@
   "files": [
     ".project/state.json",
     ".project/tasks/V202-03.json",
-    "supabase/migrations/20260929100500_stage3_usage_telemetry.sql",
     "src/lib/server/index.ts",
     "src/lib/server/openrouter-gateway.ts",
     "src/lib/server/openrouter-gateway.test.ts",
@@ -20,13 +19,16 @@
     "src/lib/server/openrouter-pricing.test.ts",
     "src/app/api/admin/pricing/sync/route.ts",
     "src/app/api/models/pricing/route.ts",
-    "supabase/migrations/20260929103000_stage3_model_pricing.sql",
     "src/app/api/compare/route.ts",
     "src/app/api/code-compare/route.ts",
     "src/app/api/judge/route.ts",
     "src/app/api/team-run/route.ts",
     "src/app/api/stream-compare/route.ts",
-    "src/app/api/stream-compare/route.test.ts"
+    "src/app/api/stream-compare/route.test.ts",
+    "supabase/migrations/20260929103057_stage3_usage_telemetry.sql",
+    "supabase/migrations/20260929103107_stage3_model_pricing.sql",
+    "supabase/migrations/20260929120151_stage3_usage_telemetry.sql",
+    "supabase/migrations/20260929120153_stage3_model_pricing.sql"
   ],
   "checksRequired": [
     "typecheck",
@@ -40,7 +42,7 @@
     "audit"
   ],
   "checksPassed": [],
-  "lastUpdated": "2026-09-29T13:38:00+03:00",
+  "lastUpdated": "2026-09-29T15:10:00+03:00",
   "commitHash": null,
   "transitions": [
     {
@@ -56,5 +58,5 @@
       "note": "Add usage_events provider metadata and a best-effort gateway telemetry hook without changing funding source or enabling paid models."
     }
   ],
-  "notes": "Stage 3.3 consolidated PR #105 includes actual provider usage metadata, bounded usage_events telemetry, unified text/stream/Image Arena gateway cutover, pricing sync/status API, schema/docs coverage, and a SECURITY INVOKER service-role-only pricing RPC. Latest CI and live Supabase migration verification remain before completion."
+  "notes": "Stage 3.3 code and production Supabase schema are implemented. Live verification confirmed usage/pricing columns, constraints, SECURITY INVOKER pricing RPC and least-privilege grants. Production recorded two idempotent applications of each Stage 3.3 migration; repository history is reconciled with the actual four remote versions. Final consolidated CI/review remains before marking done."
 }

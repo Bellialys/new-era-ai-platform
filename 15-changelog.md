@@ -34,7 +34,9 @@ v2.0.0-alpha.1 - AI Team Mode
 
 - PR #105 is the consolidated Stage 3.3 branch targeting `main`.
 - GitHub CI and Vercel Preview are used as the mandatory validation gates for each consolidated slice.
-- Production migrations are not considered applied until the live Supabase migration history is verified.
+- Production Supabase migration history verified: actual Stage 3.3 schema changes are recorded as `20260929103057_stage3_usage_telemetry` and `20260929103107_stage3_model_pricing`.
+- Production also contains a second idempotent application of each migration at `20260929120151` and `20260929120153`; repository migration filenames include matching no-op reconciliation entries so local/remote history remains aligned.
+- Live verification confirmed the new columns/constraints, `SECURITY INVOKER` pricing RPC, service-role-only execution, and no new Supabase security-advisor findings.
 
 ## Stage 3.2 KMS environment-isolation cost decision - 2026-09-28
 

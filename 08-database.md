@@ -529,8 +529,10 @@ with check (true);
 | `20260824204614_atomic_admin_mutations_and_last_admin_guard.sql` | Применена в production: atomic admin user/model mutation + mandatory audit RPCs и concurrent-safe last-admin trigger; execute только `service_role` |
 | `20260824213000_serialize_admin_role_updates.sql` | Применена в production: сериализует admin role updates и усиливает last-admin invariant |
 | `20260927065448_recover_openrouter_model_catalog.sql` | Применена в production 2026-09-27: P0 provider recovery деактивирует без удаления OpenRouter rows вне curated 8-model text set и upsert-ит проверенные discovery metadata по `model_key` |
-| `20260929100500_stage3_usage_telemetry.sql` | Stage 3.3 pending: расширяет `usage_events` actual-cost/provider/funding metadata; migration должна быть применена до включения telemetry writes в production |
-| `20260929103000_stage3_model_pricing.sql` | Stage 3.3 pending: расширяет `model_price_history` raw pricing/freshness metadata и добавляет service-role-only atomic `upsert_model_price_snapshot` RPC |
+| `20260929103057_stage3_usage_telemetry.sql` | Stage 3.3 applied in production: расширяет `usage_events` actual-cost/provider/funding metadata |
+| `20260929103107_stage3_model_pricing.sql` | Stage 3.3 applied in production: расширяет `model_price_history` raw pricing/freshness metadata и добавляет service-role-only atomic `upsert_model_price_snapshot` RPC |
+| `20260929120151_stage3_usage_telemetry.sql` | Историческая no-op reconciliation запись: production повторно записал идемпотентную usage telemetry migration; схема уже была применена версией `20260929103057` |
+| `20260929120153_stage3_model_pricing.sql` | Историческая no-op reconciliation запись: production повторно записал идемпотентную pricing migration; схема уже была применена версией `20260929103107` |
 
 Release-gate note:
 
