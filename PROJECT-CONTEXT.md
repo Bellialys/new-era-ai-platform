@@ -13,7 +13,7 @@
 Не восстанавливать состояние проекта по старому чату, если оно противоречит GitHub, `.project/state.json` или этому документу.
 
 Последняя ручная синхронизация контекста: 2026-09-29.
-Baseline на момент синхронизации: `main = cc61811dce52c2ad35208198adab24380c02fba6`.
+Последний контекстный sync merged через PR #109: `main = cac3b3253a0d8cde0cca460a8d7253d43b467a6a`.
 Baseline SHA является исторической отметкой, а не неизменяемым источником истины: перед новой работой всегда перечитывать текущий `main`.
 
 ## Источники истины и приоритет
@@ -120,7 +120,7 @@ Stacked precursor PR #101/#102/#103 закрыты как superseded после 
 
 ### Stage 3.4 - OpenRouter OAuth User Beta
 
-Статус: CODE COMPLETE / MERGED / PRODUCTION BUILD READY, ROLLOUT DISABLED.
+Статус: CODE COMPLETE / MERGED / PRODUCTION BUILD READY, ACTIVATION GATED.
 
 PR #104 merged как `4c80612e`; post-merge docs sync PR #106 merged как `cc61811d`.
 
@@ -143,12 +143,13 @@ PR #104 merged как `4c80612e`; post-merge docs sync PR #106 merged как `cc
 - profile UI показывает retryable status-load failure вместо скрытия integration control;
 - regression tests + CI + Vercel Preview/Production builds прошли.
 
-Rollout остаётся выключенным:
+Rollout остаётся fail-closed по репозиторному контракту:
 
-- `ENABLE_OPENROUTER_USER_OAUTH=false`;
-- `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE=false`;
+- значения по умолчанию для `ENABLE_OPENROUTER_USER_OAUTH` и `ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE` — `false`;
+- доступный Vercel connector не предоставляет чтение production env values, поэтому фактические dashboard values нельзя считать проверенными из этого контекста;
+- нет подтверждённого evidence, что Stage 3.4 activation была разрешена;
 - production Supabase migration `20260929022500_stage34_atomic_openrouter_activation.sql` ещё должна быть применена корректным migration deployment;
-- реальное включение запрещено до Stage 3.2 live KMS/OIDC + environment-isolation gate.
+- включать persistence/real user credentials запрещено до Stage 3.2 live KMS/OIDC + environment-isolation gate.
 
 ## Live Supabase state на 2026-09-29
 
@@ -179,7 +180,8 @@ Performance Advisor:
 
 - Production deployment Stage 3.4 merge commit `4c80612e`: READY.
 - Production deployment post-merge docs commit `cc61811d`: READY.
-- Stage 3.4 runtime flags не включены.
+- Production deployment context/state sync commit `cac3b325`: READY.
+- Репозиторный rollout contract остаётся fail-closed; Vercel env values через доступный connector не читаются и требуют отдельной dashboard/CLI verification перед activation.
 - Live Stage 3.2 AWS/KMS env gate остаётся внешним blocker.
 
 Vercel Preview quota hygiene остаётся отдельной задачей: issue #100.
@@ -195,21 +197,20 @@ Vercel Preview quota hygiene остаётся отдельной задачей:
 - #108 - Supabase leaked password protection.
 
 PR #97/#99 относятся к Image Arena monetary kill-switch path и требуют отдельного rebase/review; не считать их merged.
-PR #98 содержит старый docs-only OIDC runbook branch и должен считаться superseded после синхронизации текущего runbook с `main`.
+PR #98 закрыт как superseded после того, как актуальный OIDC runbook был синхронизирован и merged через PR #109.
 
 ## Что делать следующим
 
 Канонический порядок продолжения:
 
-1. Закрыть документационный/State drift вокруг Stage 3.2 OIDC audience и существующего IAM OIDC provider.
-2. Завершить live Stage 3.2 AWS KMS + Vercel OIDC gate.
-3. Принять environment-isolation решение Preview vs Production KMS.
-4. Корректно применить `20260929022500_stage34_atomic_openrouter_activation.sql` через migration workflow без drift.
-5. Повторно проверить Supabase advisors/schema.
-6. Выполнить контролируемый Stage 3.4 OAuth canary cohort.
-7. Только после подтверждённого canary рассматривать включение Stage 3.4 flags.
-8. Отдельно закрыть P0 Image Arena monetary guard (#95) до разрешения paid shared-key generation.
-9. После этого переходить к следующим Stage 3.5-3.7 задачам.
+1. Выполнить active task `V201-16`: live Stage 3.2 AWS KMS + Vercel OIDC gate.
+2. Принять environment-isolation решение Preview vs Production KMS.
+3. Корректно применить `20260929022500_stage34_atomic_openrouter_activation.sql` через migration workflow без drift.
+4. Повторно проверить Supabase advisors/schema.
+5. Выполнить контролируемый Stage 3.4 OAuth canary cohort.
+6. Только после подтверждённого canary и явной verification Vercel env values рассматривать включение Stage 3.4 flags.
+7. Отдельно закрыть P0 Image Arena monetary guard (#95) до разрешения paid shared-key generation.
+8. После этого переходить к следующим Stage 3.5-3.7 задачам.
 
 ## Запрещённые shortcuts
 
