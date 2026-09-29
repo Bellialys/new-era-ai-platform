@@ -737,7 +737,7 @@ Metadata файлов (изображений, документов, code output
 
 Нормализованные token rates хранятся в `input_price_per_million` / `output_price_per_million`. Полный provider pricing object сохраняется в `raw_pricing`, поэтому image/request/прочие единицы не теряются и не выдаются за token pricing. `provider`, `currency`, `source` и `source_checked_at` фиксируют происхождение и свежесть snapshot.
 
-Stage 3.3 использует service-role-only RPC `upsert_model_price_snapshot`: advisory transaction lock сериализует обновление одной модели, неизменная цена только освежает `source_checked_at`, а изменение закрывает предыдущий interval и создаёт новый snapshot.
+Stage 3.3 использует `SECURITY INVOKER` service-role-only RPC `upsert_model_price_snapshot`: `PUBLIC`/`anon`/`authenticated` не имеют `EXECUTE`, а `service_role` имеет только необходимые `SELECT`/`INSERT`/`UPDATE` на `model_price_history`. Advisory transaction lock сериализует обновление одной модели, неизменная цена только освежает `source_checked_at`, а изменение закрывает предыдущий interval и создаёт новый snapshot.
 
 ### cleanup_log
 

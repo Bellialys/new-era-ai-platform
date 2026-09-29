@@ -40,7 +40,7 @@
     "audit"
   ],
   "checksPassed": [],
-  "lastUpdated": "2026-09-29T13:24:00+03:00",
+  "lastUpdated": "2026-09-29T13:38:00+03:00",
   "commitHash": null,
   "transitions": [
     {
@@ -56,5 +56,5 @@
       "note": "Add usage_events provider metadata and a best-effort gateway telemetry hook without changing funding source or enabling paid models."
     }
   ],
-  "notes": "Stage 3.3 consolidated PR #105 now includes actual provider usage metadata, bounded usage_events telemetry, unified text/stream gateway cutover, published pricing history sync/status API, schema-sync coverage and canonical documentation updates. Image Arena provider-call cutover and final validation remain in progress."
+  "notes": "Stage 3.3 consolidated PR #105 includes actual provider usage metadata, bounded usage_events telemetry, unified text/stream/Image Arena gateway cutover, pricing sync/status API, schema/docs coverage, and a SECURITY INVOKER service-role-only pricing RPC. Latest CI and live Supabase migration verification remain before completion."
 }

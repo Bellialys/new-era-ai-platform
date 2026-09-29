@@ -27,6 +27,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - Added forward-only usage telemetry migration and schema-sync requirements for all new columns/constraints.
 - Added OpenRouter pricing sync for curated text + Image Arena catalogs, preserving full `raw_pricing` while normalizing prompt/completion token rates per million.
 - Added service-role-only atomic `upsert_model_price_snapshot` RPC, admin sync endpoint and safe public `/api/models/pricing` status endpoint that does not expose server-side text model keys.
+- Pricing RPC is `SECURITY INVOKER` (not definer); `EXECUTE` is denied to `PUBLIC`/`anon`/`authenticated`, and the service role receives the minimum table privileges required for atomic snapshots.
 - Platform-paid model expansion remains disabled; Stage 3.2 live AWS/Vercel KMS gate remains independent and still blocks persistent user credential activation.
 
 ### Verification state

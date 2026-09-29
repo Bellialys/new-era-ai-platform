@@ -287,7 +287,7 @@ const REQUIRED_FUNCTIONS = [
       "p_currency text",
       "p_source text",
     ],
-    securityDefiner:    true,
+    securityDefiner:    false,
     definitionIncludes: [
       "pg_advisory_xact_lock",
       "model_price_history",
@@ -295,7 +295,7 @@ const REQUIRED_FUNCTIONS = [
       "source_checked_at",
       "raw_pricing",
     ],
-    definitionExcludes: [],
+    definitionExcludes: ["security definer"],
   },
 ];
 
@@ -475,11 +475,18 @@ const SERVICE_ROLE_REQUIRED_TABLE_GRANTS = [
   { table: "ai_funding_preferences", privilege: "INSERT" },
   { table: "ai_funding_preferences", privilege: "UPDATE" },
   { table: "ai_funding_preferences", privilege: "DELETE" },
+  { table: "usage_events", privilege: "SELECT" },
+  { table: "usage_events", privilege: "INSERT" },
+  { table: "model_price_history", privilege: "SELECT" },
+  { table: "model_price_history", privilege: "INSERT" },
+  { table: "model_price_history", privilege: "UPDATE" },
 ];
 
 const STAGE3_SERVER_ONLY_TABLES = [
   "provider_credentials",
   "ai_funding_preferences",
+  "usage_events",
+  "model_price_history",
 ];
 
 const DATA_API_TABLE_PRIVILEGES = [
@@ -588,6 +595,42 @@ const REQUIRED_GRANT_CHECKS = [
     grantee:   "authenticated",
     table:     "cast_best_vote",
     column:    "uuid, uuid, uuid, text",
+    privilege: "EXECUTE",
+    expected:  false,
+  },
+  {
+    id:        "service_role_upsert_model_price_snapshot_execute_allowed",
+    kind:      "routine",
+    grantee:   "service_role",
+    table:     "upsert_model_price_snapshot",
+    column:    "text, text, numeric, numeric, jsonb, timestamp with time zone, text, text",
+    privilege: "EXECUTE",
+    expected:  true,
+  },
+  {
+    id:        "public_upsert_model_price_snapshot_execute_denied",
+    kind:      "routine",
+    grantee:   "PUBLIC",
+    table:     "upsert_model_price_snapshot",
+    column:    "text, text, numeric, numeric, jsonb, timestamp with time zone, text, text",
+    privilege: "EXECUTE",
+    expected:  false,
+  },
+  {
+    id:        "anon_upsert_model_price_snapshot_execute_denied",
+    kind:      "routine",
+    grantee:   "anon",
+    table:     "upsert_model_price_snapshot",
+    column:    "text, text, numeric, numeric, jsonb, timestamp with time zone, text, text",
+    privilege: "EXECUTE",
+    expected:  false,
+  },
+  {
+    id:        "authenticated_upsert_model_price_snapshot_execute_denied",
+    kind:      "routine",
+    grantee:   "authenticated",
+    table:     "upsert_model_price_snapshot",
+    column:    "text, text, numeric, numeric, jsonb, timestamp with time zone, text, text",
     privilege: "EXECUTE",
     expected:  false,
   },

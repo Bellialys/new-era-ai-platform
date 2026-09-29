@@ -18,6 +18,9 @@ CREATE INDEX IF NOT EXISTS idx_model_price_history_current_provider_model
   ON public.model_price_history (provider, model_key, effective_from DESC)
   WHERE effective_to IS NULL;
 
+REVOKE ALL ON TABLE public.model_price_history FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.model_price_history TO service_role;
+
 CREATE OR REPLACE FUNCTION public.upsert_model_price_snapshot(
   p_model_key text,
   p_provider text,
@@ -30,8 +33,8 @@ CREATE OR REPLACE FUNCTION public.upsert_model_price_snapshot(
 )
 RETURNS TABLE(changed boolean, price_history_id uuid)
 LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
+SECURITY INVOKER
+SET search_path = ''
 AS $$
 DECLARE
   v_current public.model_price_history%ROWTYPE;
