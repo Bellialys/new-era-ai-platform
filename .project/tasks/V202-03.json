@@ -2,7 +2,7 @@
   "$schema": "../task.schema.json",
   "id": "V202-03",
   "title": "Stage 3.3 Provider Usage Telemetry",
-  "status": "in_progress",
+  "status": "done",
   "priority": "high",
   "files": [
     ".project/state.json",
@@ -41,9 +41,19 @@
     "usage:telemetry-contract",
     "audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-29T15:10:00+03:00",
-  "commitHash": null,
+  "checksPassed": [
+    "typecheck",
+    "lint",
+    "test",
+    "build",
+    "state:check",
+    "docs:check",
+    "schema:review",
+    "usage:telemetry-contract",
+    "audit"
+  ],
+  "lastUpdated": "2026-09-29T15:18:00+03:00",
+  "commitHash": "08349de3b225e02a78c3389bc94cfd4b7da30e46",
   "transitions": [
     {
       "from": null,
@@ -56,7 +66,19 @@
       "to": "in_progress",
       "at": "2026-09-29T12:58:00+03:00",
       "note": "Add usage_events provider metadata and a best-effort gateway telemetry hook without changing funding source or enabling paid models."
+    },
+    {
+      "from": "in_progress",
+      "to": "verify",
+      "at": "2026-09-29T15:16:00+03:00",
+      "note": "Consolidated PR #105 passed audit, typecheck, lint, 547 tests, build, state/docs checks and smoke; Vercel preview is READY. Production Supabase Stage 3.3 schema and privilege boundaries were verified live."
+    },
+    {
+      "from": "verify",
+      "to": "done",
+      "at": "2026-09-29T15:18:00+03:00",
+      "note": "Stage 3.3 completion criteria are satisfied: unified gateway, actual provider usage/cost, Image Arena coverage, bounded usage telemetry, pricing history sync/status API, no paid-model expansion, and local/remote migration history reconciliation."
     }
   ],
-  "notes": "Stage 3.3 code and production Supabase schema are implemented. Live verification confirmed usage/pricing columns, constraints, SECURITY INVOKER pricing RPC and least-privilege grants. Production recorded two idempotent applications of each Stage 3.3 migration; repository history is reconciled with the actual four remote versions. Final consolidated CI/review remains before marking done."
+  "notes": "Stage 3.3 is complete on consolidated PR #105. Production Supabase has the usage/pricing schema; live verification confirmed constraints, SECURITY INVOKER pricing RPC and least-privilege grants. Repeated idempotent migration history is represented by no-op reconciliation files. Platform paid allowance remains $0 and persistent user OpenRouter credentials remain blocked by the unfinished Stage 3.2 live AWS/Vercel KMS gate."
 }
