@@ -9,6 +9,7 @@ export * from "./model-catalog";
 export * from "./openrouter";
 export * from "./openrouter-gateway";
 export * from "./openrouter-usage";
+export * from "./openrouter-pricing";
 export * from "./arena-persistence";
 export * from "./history";
 export * from "./rate-limit";
