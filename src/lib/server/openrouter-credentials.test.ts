@@ -40,6 +40,7 @@ function chain(result: QueryResult) {
     maybeSingle: ReturnType<typeof vi.fn>;
     eq: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -69,14 +70,14 @@ describe("OpenRouter credential lifecycle races", () => {
       error: null,
     });
     const pendingInsert = chain({ error: null });
-    const pendingCleanup = chain({ error: null });
+    const orphanCleanup = chain({ error: null });
 
     const queries = [
       staleCleanup,
       statusQuery,
       fundingQuery,
       pendingInsert,
-      pendingCleanup,
+      orphanCleanup,
     ];
     const from = vi.fn((table: string) => {
       void table;
@@ -108,7 +109,28 @@ describe("OpenRouter credential lifecycle races", () => {
         p_kms_key_id: "kms-test-key",
       })
     );
-    expect(pendingCleanup.eq).toHaveBeenCalledWith("status", "pending");
+    expect(orphanCleanup.eq).toHaveBeenCalledWith("status", "pending");
+    expect(orphanCleanup.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "orphaned",
+        secret_ciphertext: null,
+        encrypted_dek: null,
+        kms_key_id: null,
+        reconcile_after: expect.any(String),
+        last_error_code: "OPENROUTER_CREDENTIAL_STORE_FAILED",
+      })
+    );
+
+    expect(staleCleanup.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "orphaned",
+        secret_ciphertext: null,
+        encrypted_dek: null,
+        kms_key_id: null,
+        reconcile_after: expect.any(String),
+        last_error_code: "OAUTH_PERSISTENCE_UNFINISHED",
+      })
+    );
 
     expect(pendingInsert.insert).toHaveBeenCalledWith(
       expect.objectContaining({
