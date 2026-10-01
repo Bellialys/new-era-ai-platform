@@ -18,7 +18,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:env-check": "node --test scripts/check-env.test.mjs",
-    "test:vercel-ignore": "node --test scripts/vercel-ignore-build.test.mjs",
     "test:models-verify": "node --test scripts/verify-models.test.mjs",
     "eval:promptfoo": "npx --yes promptfoo@0.123.0 eval -c promptfoo/promptfooconfig.yaml --env-file .env.local",
     "eval:promptfoo:platform": "npx --yes promptfoo@0.123.0 eval -c promptfoo/platform-eval.yaml",
