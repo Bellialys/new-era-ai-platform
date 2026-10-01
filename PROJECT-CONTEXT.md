@@ -13,7 +13,7 @@
 Не восстанавливать состояние проекта по старому чату, если оно противоречит GitHub, `.project/state.json` или этому документу.
 
 Последняя ручная синхронизация контекста: 2026-10-01.
-Последний подтверждённый production baseline после Vercel Preview hygiene и Stage 3 DB performance hardening: `main = 0ae9b54913f36d38a78f8c589fa1c7349783657c` (PR #114).
+Последний подтверждённый production baseline после Vercel Preview hygiene и Stage 3 DB credential hardening: `main = 229eff5b34147be92f265dee871f78c5432ce138` (PR #115).
 Baseline SHA является исторической отметкой, а не неизменяемым источником истины: перед новой работой всегда перечитывать текущий `main`.
 
 ## Источники истины и приоритет
@@ -192,6 +192,7 @@ Credential integrity:
 - Production deployment Image Arena monetary-hardening commit `1389043b`: READY.
 - PR #113 (`7f918001`) merged and production READY: Preview builds now skip only an explicit docs/project-state allowlist and fail closed to normal builds for runtime/config/migration/infra changes; issue #100 closed.
 - PR #114 (`0ae9b549`) merged and production READY: repository migration history is synchronized with the live `usage_events.credential_id` covering index; issue #107 closed.
+- PR #115 (`229eff5b`) merged and production READY: cross-origin user-owned BYOK uniqueness is synchronized with production; issue #96 closed.
 - Репозиторный rollout contract остаётся fail-closed; Vercel env values через доступный connector не читаются и требуют отдельной dashboard/CLI verification перед activation.
 - Live Stage 3.2 AWS/KMS env gate остаётся внешним blocker.
 
