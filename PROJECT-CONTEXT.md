@@ -13,7 +13,7 @@
 Не восстанавливать состояние проекта по старому чату, если оно противоречит GitHub, `.project/state.json` или этому документу.
 
 Последняя ручная синхронизация контекста: 2026-10-01.
-Последний подтверждённый production baseline после Vercel Preview hygiene и Stage 3 DB credential hardening: `main = 229eff5b34147be92f265dee871f78c5432ce138` (PR #115).
+Последний подтверждённый production baseline перед завершением Vercel quota investigation: `main = eaee3fb113be44fb0f1e6a38145367fe502c345a` (PR #119).
 Baseline SHA является исторической отметкой, а не неизменяемым источником истины: перед новой работой всегда перечитывать текущий `main`.
 
 ## Источники истины и приоритет
@@ -190,9 +190,15 @@ Credential integrity:
 - Production deployment post-merge docs commit `cc61811d`: READY.
 - Production deployment context/state sync commit `cac3b325`: READY.
 - Production deployment Image Arena monetary-hardening commit `1389043b`: READY.
-- PR #113 (`7f918001`) merged and production READY: Preview builds now skip only an explicit docs/project-state allowlist and fail closed to normal builds for runtime/config/migration/infra changes; issue #100 closed.
 - PR #114 (`0ae9b549`) merged and production READY: repository migration history is synchronized with the live `usage_events.credential_id` covering index; issue #107 closed.
 - PR #115 (`229eff5b`) merged and production READY: cross-origin user-owned BYOK uniqueness is synchronized with production; issue #96 closed.
+- Issue #100 remains OPEN. PR #113 introduced an Ignored Build Step experiment, followed by PR #117/#119 refinements. Live diagnostics established that this mechanism does not satisfy the original quota goal:
+  - `ignoreCommand` from repository `vercel.json` is executed by Vercel;
+  - Node is available in the Ignored Build Step;
+  - `VERCEL_GIT_PREVIOUS_SHA` is empty on the first deployment of a new branch;
+  - `HEAD^1` is unavailable in that first-deployment shallow clone;
+  - a forced `exit 0` is reported by Vercel as `Ignored/CANCELED`, but Vercel documentation counts ignored/canceled deployments against deployment/concurrency limits.
+- Therefore the repository Ignored Build Step experiment is retired. A real #100 fix must prevent unnecessary Vercel deployments from being created at all, for example a reviewed GitHub path-gated deployment workflow with dedicated Vercel credentials/status-check integration, or an equivalent platform-level architecture/tier change. Until then, consolidate commits and avoid micro-pushes.
 - Репозиторный rollout contract остаётся fail-closed; Vercel env values через доступный connector не читаются и требуют отдельной dashboard/CLI verification перед activation.
 - Live Stage 3.2 AWS/KMS env gate остаётся внешним blocker.
 
@@ -200,12 +206,12 @@ Credential integrity:
 
 Критичные или значимые открытые задачи на момент синхронизации:
 
-- #108 - Supabase leaked password protection.
+- #100 - Vercel deployment quota hygiene: Ignored Build Step не решает deployment-count quota; нужен механизм, который предотвращает создание лишних deployments до Vercel.
+- #108 - Supabase leaked password protection: plan-gated, текущая organization остаётся на Free tier.
 
 Закрытые follow-up 2026-10-01:
 
 - #96 - DB hardening: один live persistent user-owned BYOK credential на пользователя;
-- #100 - Vercel Preview quota hygiene;
 - #107 - covering index для `usage_events.credential_id` FK.
 
 Platform-funded Image Arena spend guard: `ENABLE_PLATFORM_PAID_IMAGE_ARENA=false` fail-closed блокирует platform-funded provider generation до явного monetary rollout; `user_openrouter` funding остаётся отдельным funding source.
