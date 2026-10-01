@@ -55,6 +55,9 @@ jobs:
       - name: Environment checker tests
         run: npm run test:env-check
 
+      - name: Vercel ignored-build tests
+        run: npm run test:vercel-ignore
+
       - name: Model verifier tests
         env:
           OPENROUTER_API_KEY: ""
