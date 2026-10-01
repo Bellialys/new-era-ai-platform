@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  getComparisonBase,
   isSafePreviewOnlyPath,
   shouldSkipVercelPreviewBuild,
 } from "./vercel-ignore-build.mjs";
@@ -44,6 +45,36 @@ test("rejects runtime, dependency, migration, infrastructure, env, CI and build-
   for (const filePath of rejected) {
     assert.equal(isSafePreviewOnlyPath(filePath), false, filePath);
   }
+});
+
+test("uses the explicit previous deployment SHA when Vercel provides one", () => {
+  assert.equal(
+    getComparisonBase({
+      vercelEnv: "preview",
+      previousSha: "abc123",
+    }),
+    "abc123",
+  );
+});
+
+test("uses HEAD^1 for the first Preview deployment when previous SHA is absent", () => {
+  assert.equal(
+    getComparisonBase({
+      vercelEnv: "preview",
+      previousSha: "",
+    }),
+    "HEAD^1",
+  );
+});
+
+test("does not invent a fallback comparison base for production", () => {
+  assert.equal(
+    getComparisonBase({
+      vercelEnv: "production",
+      previousSha: "",
+    }),
+    null,
+  );
 });
 
 test("skips a preview build when every changed path is explicitly safe", () => {
