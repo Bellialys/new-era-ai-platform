@@ -22,8 +22,10 @@
     "kms:environment-isolation-review",
     "security:audit"
   ],
-  "checksPassed": [],
-  "lastUpdated": "2026-09-29T22:05:00+03:00",
+  "checksPassed": [
+    "security:audit"
+  ],
+  "lastUpdated": "2026-10-01T14:35:00+03:00",
   "commitHash": null,
   "transitions": [
     {
@@ -39,5 +41,5 @@
       "note": "External live gate remains: deploy AWS stack, enable Vercel Team Issuer OIDC, map role/key env, run KMS readiness and both preview canaries, then close preview/production environment isolation before provider credential persistence."
     }
   ],
-  "notes": "Do not enable ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE or persist real user OpenRouter credentials until every live gate check passes. Never introduce static AWS access keys; the KMS path is OIDC-only."
+  "notes": "Repository security audit/CI is green on PR #115/main 229eff5b. External live checks remain blocked on AWS stack deployment plus Vercel Team Issuer/env verification. Do not enable ENABLE_PROVIDER_CREDENTIAL_PERSISTENCE or persist real user OpenRouter credentials until every live gate check passes. Never introduce static AWS access keys; the KMS path is OIDC-only."
 }
