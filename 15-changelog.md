@@ -18,7 +18,7 @@ v2.0.0-alpha.1 - AI Team Mode
 
 ## Stage 3 operational and DB hardening - 2026-10-01
 
-- Merged PR #113: Vercel Preview ignored-build logic now skips only an explicit docs/project-state allowlist; production and all runtime/config/migration/infra changes still build fail-closed. Issue #100 closed.
+- PR #113 introduced the explicit docs/project-state ignored-build allowlist. Live checks on #116/#118 showed environment-dependent detection was unreliable, so issue #100 was reopened; PR #119 replaced it with a Git-only fail-closed diff (`VERCEL_GIT_PREVIOUS_SHA` or `HEAD^1`) while keeping runtime/config/dependency/migration/infra/CI/script paths build-required. Final live evidence is recorded in issue #100.
 - Applied and synchronized migration `20261001112537_add_usage_events_credential_id_index`; Supabase Performance Advisor no longer reports the `usage_events.credential_id` unindexed foreign key. PR #114 merged and issue #107 closed.
 - Applied migration `20261001113002_enforce_one_live_user_owned_credential`, adding a cross-origin partial UNIQUE guard for `user_oauth | user_manual` credentials in `pending | active`.
 - Kept the existing per-origin UNIQUE guard so future `platform_managed` lifecycle remains independent and additionally protected.
