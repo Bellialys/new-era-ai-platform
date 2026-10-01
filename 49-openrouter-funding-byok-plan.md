@@ -5,7 +5,7 @@
 **Stage 3.0 complete / Stage 3.1 complete / Stage 3.2 code+IaC+canaries ready, live AWS/Vercel gate pending / Stage 3.3 complete / Stage 3.4 code merged, rollout disabled**
 
 Дата ревью внешних контрактов: **2026-09-27**.
-Дата последней status/context синхронизации: **2026-09-29** (`main` baseline `cc61811dce52c2ad35208198adab24380c02fba6`; перед новой работой сверять текущий `main`).
+Дата последней status/context синхронизации: **2026-10-01** (`main` baseline `0ae9b54913f36d38a78f8c589fa1c7349783657c`; перед новой работой сверять текущий `main`).
 
 Этот документ фиксирует архитектуру Stage 3 после закрытых Stage 1 и Stage 2.
 На текущем `main` уже реализованы OAuth PKCE protocol foundation, encrypted credential schema,
@@ -419,7 +419,9 @@ Rules:
 - backend/service layer only;
 - one active platform credential per user in MVP;
 - target invariant: one live persistent user-owned BYOK credential per user in MVP;
-- current production partial UNIQUE constraint prevents more than one `pending|active` credential per `(user_id, provider, origin)`; cross-origin `user_oauth | user_manual` hardening remains tracked in issue #96;
+- production migration `20261001113002_enforce_one_live_user_owned_credential` adds `uq_provider_credentials_one_live_user_owned`, enforcing at most one `pending|active` user-owned credential per `(user_id, provider)` across `user_oauth | user_manual`;
+- the existing per-origin UNIQUE guard is retained as defense in depth and keeps the future `platform_managed` lifecycle independent;
+- MVP user-owned credential replacement is explicit: disconnect/revoke the existing live credential first, then connect the replacement. No implicit last-writer replacement is enabled; the cross-origin UNIQUE index remains the final concurrency boundary;
 - credential rows use an opaque internal id as the remote key label/reference; email/display name are not used;
 - raw secret never appears in user-facing API.
 
@@ -616,6 +618,7 @@ Future platform-funded Management track остаётся отложенным д
 Completed:
 
 - provider credential/funding migration is applied to production and local/remote migration history is aligned;
+- cross-origin user-owned credential uniqueness hardening is applied in production migration `20261001113002_enforce_one_live_user_owned_credential`; issue #96 is closed without changing `funding_source` defaults;
 - `provider_credentials` and `ai_funding_preferences` are RLS-enabled, service-role-only and currently empty;
 - no plaintext provider-key column exists;
 - AES-256-GCM envelope codec is implemented with context binding and plaintext-key zeroization;

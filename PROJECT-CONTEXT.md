@@ -12,8 +12,8 @@
 
 Не восстанавливать состояние проекта по старому чату, если оно противоречит GitHub, `.project/state.json` или этому документу.
 
-Последняя ручная синхронизация контекста: 2026-09-29.
-Последний подтверждённый production baseline после context sync + Image Arena monetary hardening: `main = 1389043b6785313288e7f2c6e2ed8726eb1a68fb` (PR #111).
+Последняя ручная синхронизация контекста: 2026-10-01.
+Последний подтверждённый production baseline после Vercel Preview hygiene и Stage 3 DB performance hardening: `main = 0ae9b54913f36d38a78f8c589fa1c7349783657c` (PR #114).
 Baseline SHA является исторической отметкой, а не неизменяемым источником истины: перед новой работой всегда перечитывать текущий `main`.
 
 ## Источники истины и приоритет
@@ -151,7 +151,7 @@ Rollout остаётся fail-closed по репозиторному контр�
 - production Supabase migration `20260929022500_stage34_atomic_openrouter_activation.sql` ещё должна быть применена корректным migration deployment;
 - включать persistence/real user credentials запрещено до Stage 3.2 live KMS/OIDC + environment-isolation gate.
 
-## Live Supabase state на 2026-09-29
+## Live Supabase state на 2026-10-01
 
 Production project: active/healthy.
 
@@ -160,7 +160,9 @@ Production project: active/healthy.
 - `20260927212853_stage3_provider_credentials`;
 - `20260929103057_stage3_usage_telemetry`;
 - `20260929103107_stage3_model_pricing`;
-- reconciliation migration history `20260929120151` / `20260929120153`.
+- reconciliation migration history `20260929120151` / `20260929120153`;
+- `20261001112537_add_usage_events_credential_id_index`;
+- `20261001113002_enforce_one_live_user_owned_credential`.
 
 Не применена:
 
@@ -172,29 +174,38 @@ Security Advisor:
 
 Performance Advisor:
 
-- FK `usage_events.credential_id` без covering index -> issue #107.
+- issue #107 resolved: `usage_events.credential_id` now has covering index `idx_usage_events_credential_id`; live advisor no longer reports `unindexed_foreign_keys`.
+
+Credential integrity:
+
+- issue #96 resolved at the database boundary: `uq_provider_credentials_one_live_user_owned` permits at most one `pending|active` user-owned OpenRouter credential across `user_oauth | user_manual` per user/provider;
+- existing per-origin UNIQUE guard remains as defense in depth and keeps `platform_managed` lifecycle independent;
+- MVP replacement is explicit disconnect/revoke before reconnect; no implicit last-writer credential replacement is enabled.
 
 Не выполнять ad-hoc DDL, который создаёт migration-history drift. Schema changes должны идти через forward-only migration workflow.
 
-## Live Vercel state на 2026-09-29
+## Live Vercel state на 2026-10-01
 
 - Production deployment Stage 3.4 merge commit `4c80612e`: READY.
 - Production deployment post-merge docs commit `cc61811d`: READY.
 - Production deployment context/state sync commit `cac3b325`: READY.
 - Production deployment Image Arena monetary-hardening commit `1389043b`: READY.
+- PR #113 (`7f918001`) merged and production READY: Preview builds now skip only an explicit docs/project-state allowlist and fail closed to normal builds for runtime/config/migration/infra changes; issue #100 closed.
+- PR #114 (`0ae9b549`) merged and production READY: repository migration history is synchronized with the live `usage_events.credential_id` covering index; issue #107 closed.
 - Репозиторный rollout contract остаётся fail-closed; Vercel env values через доступный connector не читаются и требуют отдельной dashboard/CLI verification перед activation.
 - Live Stage 3.2 AWS/KMS env gate остаётся внешним blocker.
-
-Vercel Preview quota hygiene остаётся отдельной задачей: issue #100.
 
 ## Открытые safety/performance follow-up
 
 Критичные или значимые открытые задачи на момент синхронизации:
 
-- #96 - DB hardening: один live persistent user-owned BYOK credential на пользователя.
-- #100 - Vercel Preview quota hygiene.
-- #107 - index для `usage_events.credential_id` FK.
 - #108 - Supabase leaked password protection.
+
+Закрытые follow-up 2026-10-01:
+
+- #96 - DB hardening: один live persistent user-owned BYOK credential на пользователя;
+- #100 - Vercel Preview quota hygiene;
+- #107 - covering index для `usage_events.credential_id` FK.
 
 Platform-funded Image Arena spend guard: `ENABLE_PLATFORM_PAID_IMAGE_ARENA=false` fail-closed блокирует platform-funded provider generation до явного monetary rollout; `user_openrouter` funding остаётся отдельным funding source.
 
