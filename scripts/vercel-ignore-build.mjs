@@ -22,6 +22,18 @@ export function shouldSkipVercelPreviewBuild({ vercelEnv, changedPaths }) {
   );
 }
 
+export function getComparisonBase({ vercelEnv, previousSha }) {
+  const explicitBase = previousSha?.trim();
+  if (explicitBase) {
+    return explicitBase;
+  }
+
+  // VERCEL_GIT_PREVIOUS_SHA may be absent on the first deployment of a new
+  // Preview branch. Compare against the branch parent in that case. If HEAD^1
+  // is unavailable in the checkout, getChangedPaths still fails closed.
+  return vercelEnv === "preview" ? "HEAD^1" : null;
+}
+
 export function getChangedPaths({
   previousSha,
   currentSha = "HEAD",
@@ -63,11 +75,23 @@ function main() {
   const vercelEnv = process.env.VERCEL_ENV ?? "";
   const previousSha = process.env.VERCEL_GIT_PREVIOUS_SHA ?? "";
   const currentSha = process.env.VERCEL_GIT_COMMIT_SHA ?? "HEAD";
-  const changedPaths = getChangedPaths({ previousSha, currentSha });
+  const comparisonBase = getComparisonBase({ vercelEnv, previousSha });
+
+  if (!comparisonBase) {
+    process.stdout.write(
+      "[vercel-ignore] Build required: no safe Git comparison base is available.\n",
+    );
+    process.exit(1);
+  }
+
+  const changedPaths = getChangedPaths({
+    previousSha: comparisonBase,
+    currentSha,
+  });
 
   if (changedPaths === null) {
     process.stdout.write(
-      "[vercel-ignore] Build required: Git comparison unavailable or previous SHA missing.\n",
+      "[vercel-ignore] Build required: Git comparison failed.\n",
     );
     process.exit(1);
   }
