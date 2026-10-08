@@ -7,14 +7,16 @@ import { NextRequest } from "next/server";
 
 const {
   resolveIdentityMock,
-  checkRateLimitMock,
+  reserveCompareQuotaMock,
+  completeCompareQuotaMock,
   resolveSelectedModelsMock,
   fetchMultipleResponsesMock,
   savePromptArenaRunMock,
   resolveRuntimeCredentialMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
-  checkRateLimitMock: vi.fn(),
+  reserveCompareQuotaMock: vi.fn(),
+  completeCompareQuotaMock: vi.fn(),
   resolveSelectedModelsMock: vi.fn(),
   fetchMultipleResponsesMock: vi.fn(),
   savePromptArenaRunMock: vi.fn(),
@@ -26,7 +28,8 @@ vi.mock("@/lib/server", async (importOriginal) => {
   return {
     ...actual,
     resolveRequestIdentity: resolveIdentityMock,
-    checkRateLimit: checkRateLimitMock,
+    reserveCompareQuota: reserveCompareQuotaMock,
+    completeCompareQuota: completeCompareQuotaMock,
     resolveSelectedModels: resolveSelectedModelsMock,
     fetchMultipleResponses: fetchMultipleResponsesMock,
     savePromptArenaRun: savePromptArenaRunMock,
@@ -37,11 +40,8 @@ vi.mock("@/lib/server", async (importOriginal) => {
 });
 
 import { POST } from "./route";
-import {
-  COMPARE_RATE_LIMIT_MAX_REQUESTS,
-  COMPARE_RATE_LIMIT_WINDOW_MS,
-  PROMPT_MIN_LENGTH,
-} from "@/lib/arena/constants";
+import { PROMPT_MIN_LENGTH } from "@/lib/arena/constants";
+import { CompareQuotaExceededError } from "@/lib/server/compare-quota";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -70,28 +70,25 @@ function makeRequest(body?: unknown): NextRequest {
   });
 }
 
-const NOT_LIMITED = {
-  limited: false,
-  remaining: COMPARE_RATE_LIMIT_MAX_REQUESTS - 1,
-  resetAt: Date.now() + COMPARE_RATE_LIMIT_WINDOW_MS,
-};
-const RATE_LIMITED = {
-  limited: true,
-  remaining: 0,
-  resetAt: Date.now() + COMPARE_RATE_LIMIT_WINDOW_MS,
-};
-
 beforeEach(() => {
   resolveIdentityMock.mockReset();
-  checkRateLimitMock.mockReset();
+  reserveCompareQuotaMock.mockReset();
+  completeCompareQuotaMock.mockReset();
   resolveSelectedModelsMock.mockReset();
   fetchMultipleResponsesMock.mockReset();
   savePromptArenaRunMock.mockReset();
   resolveRuntimeCredentialMock.mockReset();
 
-  // Defaults: authenticated user, not rate-limited
+  // Defaults: authenticated user with an accepted logical reservation.
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
-  checkRateLimitMock.mockResolvedValue(NOT_LIMITED);
+  reserveCompareQuotaMock.mockResolvedValue({
+    outcome: "accepted",
+    reservationId: "reservation-1",
+    retryAfterSeconds: null,
+    responsePayload: null,
+    responseStatus: null,
+  });
+  completeCompareQuotaMock.mockResolvedValue(undefined);
   resolveRuntimeCredentialMock.mockResolvedValue({
     billingSource: "platform",
     credentialId: null,
@@ -126,7 +123,7 @@ describe("POST /api/compare — auth guard", () => {
     expect(res.status).toBe(401);
     const body = await res.json() as { errorCode?: string };
     expect(body.errorCode).toBe("AUTH_REQUIRED");
-    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    expect(reserveCompareQuotaMock).not.toHaveBeenCalled();
   });
 
   it("allows guest callers (guests have their own rate limit quota)", async () => {
@@ -139,36 +136,19 @@ describe("POST /api/compare — auth guard", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Rate limiting
+// Unified quota
 // ---------------------------------------------------------------------------
 
-describe("POST /api/compare — rate limiting", () => {
-  it("returns 429 RATE_LIMIT when the rate limit is exceeded", async () => {
-    checkRateLimitMock.mockResolvedValue(RATE_LIMITED);
+describe("POST /api/compare — unified quota", () => {
+  it("returns 429 QUOTA_EXCEEDED with Retry-After", async () => {
+    reserveCompareQuotaMock.mockRejectedValue(new CompareQuotaExceededError(17));
 
     const res = await POST(makeRequest(VALID_BODY));
 
     expect(res.status).toBe(429);
-    const body = await res.json() as { errorCode?: string };
-    expect(body.errorCode).toBe("RATE_LIMIT");
-  });
-
-  it("includes Retry-After header when rate-limited", async () => {
-    checkRateLimitMock.mockResolvedValue(RATE_LIMITED);
-
-    const res = await POST(makeRequest(VALID_BODY));
-
-    const retryAfter = res.headers.get("Retry-After");
-    expect(retryAfter).toBeTruthy();
-    expect(Number(retryAfter)).toBeGreaterThan(0);
-  });
-
-  it("keys rate limit to userId for authenticated users", async () => {
-    await POST(makeRequest(VALID_BODY));
-
-    const [key] = checkRateLimitMock.mock.calls[0] as [string, ...unknown[]];
-    expect(key).toContain(USER_ID);
-    expect(key).toContain("user:");
+    expect(res.headers.get("Retry-After")).toBe("17");
+    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
+    expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
   });
 });
 

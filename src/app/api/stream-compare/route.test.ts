@@ -3,16 +3,16 @@ import { NextRequest } from "next/server";
 
 const {
   resolveIdentityMock,
-  checkDailyLimitMock,
-  checkRateLimitMock,
+  reserveCompareQuotaMock,
+  completeCompareQuotaMock,
   resolveSelectedModelsMock,
   saveArenaRunMock,
   streamOpenRouterMock,
   resolveRuntimeCredentialMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
-  checkDailyLimitMock: vi.fn(),
-  checkRateLimitMock: vi.fn(),
+  reserveCompareQuotaMock: vi.fn(),
+  completeCompareQuotaMock: vi.fn(),
   resolveSelectedModelsMock: vi.fn(),
   saveArenaRunMock: vi.fn(),
   streamOpenRouterMock: vi.fn(),
@@ -24,8 +24,8 @@ vi.mock("@/lib/server", async (importOriginal) => {
   return {
     ...actual,
     resolveRequestIdentity: resolveIdentityMock,
-    checkDailyLimit: checkDailyLimitMock,
-    checkRateLimit: checkRateLimitMock,
+    reserveCompareQuota: reserveCompareQuotaMock,
+    completeCompareQuota: completeCompareQuotaMock,
     resolveSelectedModels: resolveSelectedModelsMock,
     saveArenaRun: saveArenaRunMock,
     streamOpenRouterResponse: streamOpenRouterMock,
@@ -35,6 +35,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
 });
 
 import { POST } from "./route";
+import { CompareQuotaExceededError } from "@/lib/server/compare-quota";
 
 const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const VALID_PROMPT = "Compare these models for a concise writing task.";
@@ -68,8 +69,8 @@ function makeRequest(body: Record<string, unknown>): NextRequest {
 
 beforeEach(() => {
   resolveIdentityMock.mockReset();
-  checkDailyLimitMock.mockReset();
-  checkRateLimitMock.mockReset();
+  reserveCompareQuotaMock.mockReset();
+  completeCompareQuotaMock.mockReset();
   resolveSelectedModelsMock.mockReset();
   saveArenaRunMock.mockReset();
   streamOpenRouterMock.mockReset();
@@ -105,8 +106,14 @@ beforeEach(() => {
     credentialId: null,
     apiKey: "test-openrouter-key",
   });
-  checkDailyLimitMock.mockResolvedValue({ allowed: true, used: 1, limit: 100 });
-  checkRateLimitMock.mockResolvedValue({ limited: false, remaining: 9, resetAt: Date.now() + 60_000 });
+  reserveCompareQuotaMock.mockResolvedValue({
+    outcome: "accepted",
+    reservationId: "reservation-stream-1",
+    retryAfterSeconds: null,
+    responsePayload: null,
+    responseStatus: null,
+  });
+  completeCompareQuotaMock.mockResolvedValue(undefined);
   resolveSelectedModelsMock.mockResolvedValue([MODEL_A, MODEL_B]);
   saveArenaRunMock.mockResolvedValue({
     taskId: "11111111-1111-4111-8111-111111111111",
@@ -123,6 +130,17 @@ afterEach(() => {
 });
 
 describe("POST /api/stream-compare blind mode", () => {
+  it("rejects before credential or provider calls when quota is exceeded", async () => {
+    reserveCompareQuotaMock.mockRejectedValue(new CompareQuotaExceededError(23));
+
+    const response = await POST(makeRequest({}));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("23");
+    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
+    expect(streamOpenRouterMock).not.toHaveBeenCalled();
+  });
+
   it("streams only slot identity while persisting real model identity", async () => {
     const response = await POST(makeRequest({ blind: true }));
     const text = await response.text();

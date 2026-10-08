@@ -16,6 +16,14 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Unified Compare Quota Hardening - 2026-10-08
+
+- Added a shared PostgreSQL reservation authority for `/api/compare` and `/api/stream-compare`.
+- Added atomic UTC day/minute buckets, trusted profile-derived plan limits, guest/free/pro/admin policy, and fail-closed `503` authority handling.
+- Added idempotency fingerprint/replay protection, cached terminal responses, `429 Retry-After`, and provider-call ordering before credential resolution.
+- Added forward-only migration `20261008090000_unified_compare_quota_hardening.sql` with RLS, grants/revokes, RPCs and non-resetting legacy `tasks` backfill support.
+- Production migration, backfill, flag changes and deployment are intentionally not performed by this branch.
+
 ## Stage 3 operational and DB hardening - 2026-10-01
 
 - PR #113 introduced an experimental repository-level Vercel Ignored Build Step for docs/state-only changes; live diagnostics later proved it cannot solve issue #100's deployment-count/build-rate quota. Vercel executes `ignoreCommand`, Node is available, first-branch `VERCEL_GIT_PREVIOUS_SHA` is empty, `HEAD^1` is unavailable in the shallow first-deployment clone, and ignored deployments are still created/counted. The experiment was retired and #100 remains open for a true pre-deployment/path-gated solution.
