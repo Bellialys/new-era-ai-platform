@@ -4,10 +4,6 @@ import {
   PROMPT_MAX_LENGTH,
   MODEL_MIN_SELECT,
   MODEL_MAX_SELECT,
-  COMPARE_RATE_LIMIT_MAX_REQUESTS,
-  COMPARE_RATE_LIMIT_WINDOW_MS,
-  GUEST_COMPARE_RATE_LIMIT_MAX_REQUESTS,
-  GUEST_COMPARE_RATE_LIMIT_WINDOW_MS,
   MODE_SLUG_PROMPT_ARENA,
 } from "@/lib/arena/constants";
 import {
@@ -17,16 +13,20 @@ import {
   resolveSelectedModels,
   ApiError,
   saveArenaRun,
-  checkRateLimit,
   resolveRequestIdentity,
   streamOpenRouterResponse,
   logApiRequest,
-  checkDailyLimit,
   fisherYatesShuffle,
   isJsonObject,
   blindSlotId,
   blindSlotName,
   resolveOpenRouterRuntimeCredential,
+  createErrorResponse,
+  reserveCompareQuota,
+  completeCompareQuota,
+  createCompareFingerprint,
+  getCompareIdempotencyKey,
+  getCompareRetryAfterSeconds,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -207,35 +207,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  const dailyCheck = await checkDailyLimit(identity.userId, identity.guestId);
-  if (!dailyCheck.allowed) {
-    logApiRequest("POST", "/api/stream-compare", 429, Date.now() - startTime);
-    return new Response(
-      JSON.stringify({
-        error: "DAILY_LIMIT_EXCEEDED",
-        used: dailyCheck.used,
-        limit: dailyCheck.limit,
-        message: "Дневной лимит запросов исчерпан. Обновите план для большего количества запросов.",
-      }),
-      { status: 429, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const rateLimitKey = `stream-compare:${identity.kind === "user" ? `user:${identity.userId}` : `guest:${identity.guestId}`}`;
-  const isGuest = identity.kind === "guest";
-  const rateLimit = await checkRateLimit(
-    rateLimitKey,
-    isGuest ? GUEST_COMPARE_RATE_LIMIT_MAX_REQUESTS : COMPARE_RATE_LIMIT_MAX_REQUESTS,
-    isGuest ? GUEST_COMPARE_RATE_LIMIT_WINDOW_MS : COMPARE_RATE_LIMIT_WINDOW_MS
-  );
-  if (rateLimit.limited) {
-    logApiRequest("POST", "/api/stream-compare", 429, Date.now() - startTime);
-    return new Response(
-      JSON.stringify({ status: "error", error: { code: "RATE_LIMIT", message: "Too many requests." } }),
-      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } }
-    );
-  }
-
   let body: unknown;
   try { body = await request.json(); } catch {
     logApiRequest("POST", "/api/stream-compare", 400, Date.now() - startTime);
@@ -283,6 +254,48 @@ export async function POST(request: NextRequest): Promise<Response> {
     const ae = err instanceof ApiError ? err : new ApiError(403, "MODEL_NOT_ALLOWED", "Model not allowed.");
     logApiRequest("POST", "/api/stream-compare", ae.statusCode, Date.now() - startTime);
     return new Response(JSON.stringify({ status: "error", error: { code: ae.errorCode, message: ae.message } }), { status: ae.statusCode, headers: { "Content-Type": "application/json" } });
+  }
+
+  let reservation;
+  try {
+    reservation = await reserveCompareQuota({
+      identity,
+      idempotencyKey: getCompareIdempotencyKey(request),
+      fingerprint: createCompareFingerprint({
+        prompt: cleanPrompt,
+        modelIds: selectedModelIds,
+        modeSlug: modeValidation.value ?? MODE_SLUG_PROMPT_ARENA,
+        blind: isBlind,
+      }),
+    });
+  } catch (error) {
+    const statusCode = error instanceof ApiError ? error.statusCode : 503;
+    const retryAfter = getCompareRetryAfterSeconds(error);
+    logApiRequest("POST", "/api/stream-compare", statusCode, Date.now() - startTime);
+    return new Response(JSON.stringify(createErrorResponse(error)), {
+      status: statusCode,
+      headers: {
+        "Content-Type": "application/json",
+        ...(retryAfter ? { "Retry-After": retryAfter.toString() } : {}),
+      },
+    });
+  }
+
+  if (reservation.outcome === "replayed") {
+    if (reservation.responsePayload === null || reservation.responseStatus === null) {
+      const error = new ApiError(503, "QUOTA_AUTHORITY_UNAVAILABLE", "Compare quota is temporarily unavailable.");
+      return new Response(JSON.stringify(createErrorResponse(error)), {
+        status: error.statusCode,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(`event: complete\ndata: ${JSON.stringify(reservation.responsePayload)}\n\n`, {
+      status: reservation.responseStatus,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+      },
+    });
   }
 
   let gatewayCredential: Awaited<
@@ -407,11 +420,17 @@ export async function POST(request: NextRequest): Promise<Response> {
           };
         });
 
-        controller.enqueue(sse("complete", {
+        const completePayload = {
           status: finalResponses.some((r) => r.status === "success") ? "success" : "error",
           taskId,
           responses: finalResponses,
-        }));
+        };
+        await completeCompareQuota({
+          reservationId: reservation.reservationId,
+          responsePayload: completePayload,
+          responseStatus: 200,
+        });
+        controller.enqueue(sse("complete", completePayload));
 
         controller.close();
       } catch (err) {
