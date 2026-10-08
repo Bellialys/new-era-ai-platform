@@ -2,7 +2,7 @@
 name: Coordinator
 description: Координирует Architect, Developer и Security для New Era AI Platform; подготавливает отчёт для приёмки человеком.
 target: vscode
-tools: [read, search, agent, todo]
+tools: [read, search, agent, todos]
 agents: [Architect, Developer, Security]
 user-invocable: true
 disable-model-invocation: true

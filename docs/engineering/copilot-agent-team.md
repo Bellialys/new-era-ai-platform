@@ -8,7 +8,7 @@
 
 | Путь | Роль | Разрешённые инструменты |
 | --- | --- | --- |
-| `.github/agents/coordinator.agent.md` | Coordinator, подзадачи и отчёт | `read`, `search`, `agent`, `todo` |
+| `.github/agents/coordinator.agent.md` | Coordinator, подзадачи и отчёт | `read`, `search`, `agent`, `todos` |
 | `.github/agents/architect.agent.md` | Architect, только проектирование | `read`, `search` |
 | `.github/agents/developer.agent.md` | Developer, изменения и проверки | `read`, `search`, `edit`, `execute` |
 | `.github/agents/security.agent.md` | Security, только аудит | `read`, `search`, `web` |
