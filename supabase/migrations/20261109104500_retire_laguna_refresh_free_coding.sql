@@ -7,7 +7,6 @@
 UPDATE public.models SET
   is_active = false,
   is_public = false,
-  status = 'inactive',
   updated_at = now()
 WHERE model_key IN (
   'poolside/laguna-s-2.1:free',
@@ -17,7 +16,7 @@ WHERE model_key IN (
 INSERT INTO public.models (
   provider, model_key, display_name, description, price_label,
   is_active, is_public, role_tags, context_length, max_output_tokens,
-  sort_order, raw_metadata, access_level, status, updated_at
+  sort_order, raw_metadata, access_level, updated_at
 )
 VALUES
   (
@@ -29,7 +28,7 @@ VALUES
     ARRAY['coding','reasoning','agentic','long-context']::text[],
     512000, 8192, 60,
     '{"catalog_checked_at":"2026-11-09","expiration_date":"2026-12-31","source":"https://openrouter.ai/dots-studio/dots-3-note-preview:free"}'::jsonb,
-    'anonymous','active',now()
+    'anonymous',now()
   ),
   (
     'openrouter',
@@ -40,7 +39,7 @@ VALUES
     ARRAY['coding','reasoning','agentic','fast']::text[],
     262144, 8192, 70,
     '{"catalog_checked_at":"2026-11-09","source":"https://openrouter.ai/xingchen-agi/xing4.0-29b-a4b:free"}'::jsonb,
-    'anonymous','active',now()
+    'anonymous',now()
   )
 ON CONFLICT (model_key) DO UPDATE SET
   display_name = EXCLUDED.display_name,
@@ -54,5 +53,4 @@ ON CONFLICT (model_key) DO UPDATE SET
   sort_order = EXCLUDED.sort_order,
   raw_metadata = EXCLUDED.raw_metadata,
   access_level = EXCLUDED.access_level,
-  status = EXCLUDED.status,
   updated_at = now();
