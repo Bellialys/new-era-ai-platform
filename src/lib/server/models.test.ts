@@ -7,15 +7,15 @@ const EXPECTED_MODEL_IDS = [
   "nvidia/nemotron-3.5-lightning:free",
   "nvidia/nemotron-3-super-120b-a12b:free",
   "cohere/north-mini-code:free",
-  "poolside/laguna-s-2.1:free",
-  "poolside/laguna-xs-2.1:free",
+  "dots-studio/dots-3-note-preview:free",
+  "xingchen-agi/xing4.0-29b-a4b:free",
   "liquid/lfm-2.5-2.6b:free",
 ] as const;
 
 const EXPECTED_CODE_MODEL_IDS = [
   "cohere/north-mini-code:free",
-  "poolside/laguna-s-2.1:free",
-  "poolside/laguna-xs-2.1:free",
+  "dots-studio/dots-3-note-preview:free",
+  "xingchen-agi/xing4.0-29b-a4b:free",
 ] as const;
 
 describe("ALLOWED_MODELS", () => {
@@ -39,6 +39,12 @@ describe("ALLOWED_MODELS", () => {
     expect(ALLOWED_MODELS.filter((model) => model.supportsCode).map((model) => model.id)).toEqual(
       EXPECTED_CODE_MODEL_IDS
     );
+  });
+
+  it("never exposes expired Poolside free offers", () => {
+    const ids = ALLOWED_MODELS.map((model) => model.id);
+    expect(ids).not.toContain("poolside/laguna-s-2.1:free");
+    expect(ids).not.toContain("poolside/laguna-xs-2.1:free");
   });
 
   it("keeps the two stable Gemma models first for default Prompt Arena selection", () => {
