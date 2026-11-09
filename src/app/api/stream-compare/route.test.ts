@@ -198,7 +198,7 @@ describe("POST /api/stream-compare blind mode", () => {
     const text = await response.text();
 
     expect(response.status).toBe(200);
-    expect(text).toContain("Модель не вернула ответ.");
+    expect(text).toContain("Провайдер не ответил вовремя.");
     expect(text).not.toContain("secret-token=abc123");
     expect(text).not.toContain("provider trace");
   });
