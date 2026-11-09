@@ -1,5 +1,34 @@
 # 32. Model Catalog Governance - правила управления каталогом AI-моделей
 
+## Актуальное состояние 09.11.2026 — каталог v2.0.0-alpha.1
+
+**Этот раздел заменяет исторические сведения о 8 моделях от сентября 2026 года ниже.**
+Сейчас в production Supabase `public.models` зарегистрировано **11 active/public бесплатных text/chat моделей**.
+Точное соответствие локальному fallback находится в ветке `feat/expand-free-model-catalog-20261109` (draft PR #138, поверх draft PR #137); production-код пока остаётся на `main`.
+
+| OpenRouter ID | Назначение / статус |
+|---|---|
+| `cohere/north-mini-code:free` | Coding; успешные ответы 09.11; теперь первый в селекторе |
+| `dots-studio/dots-3-note-preview:free` | Coding/reasoning; успешные ответы 09.11; второй в селекторе, предложение до 31.12.2026 |
+| `google/gemma-4-26b-a4b-it:free` | General; были RATE_LIMIT 09.11 |
+| `google/gemma-4-31b-it:free` | General/reasoning; были RATE_LIMIT в октябре |
+| `nvidia/nemotron-3.5-lightning:free` | Fast/agentic; успешный ответ в октябре |
+| `nvidia/nemotron-3-super-120b-a12b:free` | Reasoning/experimental; были и успешные ответы, и 404 |
+| `xingchen-agi/xing4.0-29b-a4b:free` | Coding/agentic; был RATE_LIMIT 09.11 |
+| `liquid/lfm-2.5-2.6b:free` | Fast/extraction; текущий runtime inference не проверен |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | Reasoning; **provider-listed, live inference not tested** |
+| `recursive/flint-v1.0:free` | Coding; **provider-listed, live inference not tested** |
+| `liquid/lfm-3-1.7b:free` | Compact; **provider-listed, live inference not tested** |
+
+`GET /api/code-models`: 4 модели с тегом `coding` — North, Dots, Xing, Flint.
+Обе Poolside Laguna 2.1, чья бесплатная поддержка закончилась 31.10.2026, отключены, исторические записи сохранены.
+
+Миграции, применённые в production: `20261109104843_retire_laguna_refresh_free_coding` и `20261109174135_expand_verified_free_catalog_20261109`. Проверка SQL: 11 active/public text, 4 coding, 0 active/public retired Laguna. Внешние модели не являются гарантированно работающими: провайдер может вернуть 429, 404, 402 или timeout. Для 11/11 real inference нужно запустить `npm run models:smoke:live -- --limit=11` с действующим OpenRouter key после настройки секрета без помещения его в репозиторий.
+
+**Блокеры публикации кода:** draft PR #137, #138 и критические уязвимости зависимостей по issue #136. Успешная Vercel Preview-сборка не заменяет CI security gate и проверку реальных ответов. Сведения сентября ниже сохранены только как хронология.
+
+---
+
 Версия: v1.0  
 Статус: рабочий стандарт проекта  
 Проект: New Era AI Platform
