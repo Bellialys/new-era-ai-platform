@@ -8,11 +8,11 @@ describe("bounded free-model inference smoke helper", () => {
     assert.throws(() => extractFreeModels('id: "paid/model"'));
     assert.throws(() => extractFreeModels('id: "a:free", id: "a:free"'));
   });
-  it("limits manual request count to 1..8", () => {
-    assert.equal(parseLimit(["--limit=2"], 8), 2);
-    assert.equal(parseLimit([], 8), 8);
-    assert.throws(() => parseLimit(["--limit=9"], 8));
-    assert.throws(() => parseLimit(["--limit=0"], 8));
+  it("limits manual request count to 1..11", () => {
+    assert.equal(parseLimit(["--limit=2"], 11), 2);
+    assert.equal(parseLimit([], 11), 11);
+    assert.throws(() => parseLimit(["--limit=12"], 11));
+    assert.throws(() => parseLimit(["--limit=0"], 11));
   });
   it("returns safe categorized provider statuses without a response payload", async () => {
     const rate = await checkOneModel("a:free", "secret", async () => ({ ok: false, status: 429 }));

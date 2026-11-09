@@ -19,6 +19,7 @@ const EXPECTED_FALLBACK_CODE_MODEL_IDS = [
   "cohere/north-mini-code:free",
   "dots-studio/dots-3-note-preview:free",
   "xingchen-agi/xing4.0-29b-a4b:free",
+  "recursive/flint-v1.0:free",
 ] as const;
 
 const dbRows = [
