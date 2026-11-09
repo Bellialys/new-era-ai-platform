@@ -16,12 +16,12 @@
 
 ## Безпека змін
 
-Міграція тільки оновлює статусы моделей та додає 2 безкоштовні ідентифікатори. Не змінює history, votes або credentials. Середовище production не повинно запускати code release з критичними advisory до усунення issue #136.
+Міграція тільки оновлює статуси моделей та додає 2 безкоштовні ідентифікатори. Не змінює history, votes або credentials. Середовище production не повинно запускати code release з критичними advisory до усунення issue #136.
 
 ## Тести та докази
 
-- npm run typecheck, npm run lint, npm test, npm run build, npm run state:check, npm run docs:check у GitHub CI: очікує фактичних результатів цього PR.
-- SQL валідація моделей (counts/key/status/role_tags) та повторний GET /api/models: очікує після міграції.
+- npm run typecheck, npm run lint, npm test, npm run build, npm run state:check, npm run docs:check у GitHub CI: перший PR CI #42603431496 PASS (typecheck, lint, unit tests, build, smoke); повторний CI останнього коміту перевірити перед merge.
+- SQL валідація моделей (counts/key/status/role_tags) та повторний GET /api/models: PASS: Supabase міграція 20261109104843 застосована. Публічний GET /api/models повертає HTTP 200 і вісім моделей, включно з Dots3-Note та Xing4.0, без Laguna S/XS; SQL перевірка показує 0 active/public Laguna.
 - Авторизований inference smoke для кожної з восьми моделей, streaming і code arena: не запущено, потрібна реальна сесія/ключ та контроль квот. Не маркувати як PASS.
 - Оцінити privacy/retention політику кожного free endpoint перед передаванням чутливих запитів.
 - Додати monitor і замінити Dots3-Note до закінчення free offer 31.12.2026.
