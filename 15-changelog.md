@@ -19,6 +19,7 @@ v2.0.0-alpha.1 - AI Team Mode
 ## Dependency security updates - 2026-11-11
 
 - Updated Next.js and its ESLint config to `16.4.6`, the Vercel AWS OIDC credentials provider to `3.3.20`, and the affected transitive dependencies for issue #136.
+- Made high and critical dependency audit findings fail the required GitHub Actions validation job.
 
 ## Stage 3 operational and DB hardening - 2026-10-01
 
