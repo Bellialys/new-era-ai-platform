@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   clearGuestInfo,
@@ -12,6 +13,7 @@ import { getSupabaseClient } from "@/lib/supabase";
 export type ArenaIdentityMode = "loading" | "gate" | "guest" | "user";
 
 export function useArenaIdentity() {
+  const router = useRouter();
   const [identityMode, setIdentityMode] = useState<ArenaIdentityMode>("loading");
   const [guestInfo, setGuestInfo] = useState<GuestInfo | null>(null);
   const [guestCreateError, setGuestCreateError] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export function useArenaIdentity() {
   }
 
   function signIn() {
-    window.location.href = "/login";
+    router.push("/login");
   }
 
   function resetToGate() {
