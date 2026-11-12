@@ -1,8 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/model-health",
-      "schedule": "17 3 * * *"
-    }
-  ]
+  "buildCommand": "npm run build && node scripts/stage5-preview-live.mjs"
 }
