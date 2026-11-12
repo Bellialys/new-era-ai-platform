@@ -25,6 +25,8 @@ v2.0.0-alpha.1 - AI Team Mode
 
 - Run the dependency audit and validation workflow on stacked pull requests as well as pull requests targeting `main`.
 - Test Code Arena's rejection of a known general-purpose model independently of fallback catalog ordering.
+- Keep Supabase authoritative while automated model health is enabled so a failed or empty catalog read cannot revive quarantined models.
+- Add column-level write permissions for the server-side model health job before enabling the production schedule.
 
 ## Stage 3 operational and DB hardening - 2026-10-01
 

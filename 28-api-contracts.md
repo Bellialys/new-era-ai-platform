@@ -145,6 +145,15 @@ Fallback режим:
 server-side allowlist -> frontend
 ```
 
+При `ENABLE_MODEL_HEALTH_CRON=true` каталог Supabase определяет доступность
+моделей в Prompt Arena и Code Arena. Если запрос к Supabase успешен и
+доступных строк нет, оба каталога возвращают `200` и `models: []`.
+Если каталог прочитать невозможно, `GET /api/models`, `GET /api/code-models`,
+`GET /api/models/pricing` и запросы сравнения, дошедшие до выбора моделей,
+возвращают `503 MODEL_CATALOG_UNAVAILABLE`. Выбор скрытой модели при доступном
+Supabase по-прежнему возвращает `403 MODEL_NOT_ALLOWED`. В режиме с
+выключенной автопроверкой действует резервный список.
+
 Минимальный ответ:
 
 ```json

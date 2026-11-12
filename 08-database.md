@@ -132,6 +132,13 @@ authenticated UPDATE grant (post security-hardening 2026-07-04):
 
 Список моделей, разрешённых для использования в проекте.
 
+Фоновая автопроверка использует серверную роль `service_role`.
+Миграция `20261112230229_grant_model_health_catalog_columns.sql` разрешает
+этой роли обновлять `is_active`, `is_public`, `raw_metadata` и `updated_at`,
+а также записывать нужные столбцы при вставке найденной модели.
+`id`, `created_at` и вычисляемый `status` заполняет PostgreSQL.
+Для `anon` и `authenticated` продолжает действовать чтение по RLS.
+
 | Поле | Тип | Назначение |
 |---|---|---|
 | `id` | uuid | Публичный ID модели внутри проекта |
