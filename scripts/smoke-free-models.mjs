@@ -3,7 +3,7 @@
  * Manual, bounded OpenRouter inference smoke test for the curated free catalog.
  *
  * No user prompts, no persistence, no credential logging, and no paid model IDs.
- * Uses at most 8 requests, sequentially, with a pause to respect free quotas.
+ * Uses at most 11 requests, sequentially, with a pause to respect free quotas.
  * Failed requests count toward OpenRouter's daily free quota.
  * Usage: npm run models:smoke:live -- --limit=2
  */
@@ -22,8 +22,8 @@ export function extractFreeModels(source) {
   const ids = [...source.matchAll(/\bid:\s*"([^"]+)"/g)].map((match) => match[1]);
   const unique = [...new Set(ids)];
   if (ids.length === 0 || ids.length !== unique.length ||
-      ids.some((id) => !id.endsWith(":free")) || ids.length > 8) {
-    throw new Error("Catalog must contain 1-8 unique free model identifiers.");
+      ids.some((id) => !id.endsWith(":free")) || ids.length > 12) {
+    throw new Error("Catalog must contain 1-12 unique free model identifiers.");
   }
   return unique;
 }

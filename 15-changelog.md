@@ -24,6 +24,7 @@ v2.0.0-alpha.1 - AI Team Mode
 ## Free model catalog release preparation - 2026-11-13
 
 - Run the dependency audit and validation workflow on stacked pull requests as well as pull requests targeting `main`.
+- Test Code Arena's rejection of a known general-purpose model independently of fallback catalog ordering.
 
 ## Stage 3 operational and DB hardening - 2026-10-01
 

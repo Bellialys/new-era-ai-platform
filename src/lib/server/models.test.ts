@@ -2,20 +2,24 @@ import { describe, it, expect } from "vitest";
 import { ALLOWED_MODELS } from "./models";
 
 const EXPECTED_MODEL_IDS = [
+  "cohere/north-mini-code:free",
+  "dots-studio/dots-3-note-preview:free",
   "google/gemma-4-26b-a4b-it:free",
   "google/gemma-4-31b-it:free",
   "nvidia/nemotron-3.5-lightning:free",
   "nvidia/nemotron-3-super-120b-a12b:free",
-  "cohere/north-mini-code:free",
-  "dots-studio/dots-3-note-preview:free",
   "xingchen-agi/xing4.0-29b-a4b:free",
   "liquid/lfm-2.5-2.6b:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "recursive/flint-v1.0:free",
+  "liquid/lfm-3-1.7b:free",
 ] as const;
 
 const EXPECTED_CODE_MODEL_IDS = [
   "cohere/north-mini-code:free",
   "dots-studio/dots-3-note-preview:free",
   "xingchen-agi/xing4.0-29b-a4b:free",
+  "recursive/flint-v1.0:free",
 ] as const;
 
 describe("ALLOWED_MODELS", () => {
@@ -47,10 +51,10 @@ describe("ALLOWED_MODELS", () => {
     expect(ids).not.toContain("poolside/laguna-xs-2.1:free");
   });
 
-  it("keeps the two stable Gemma models first for default Prompt Arena selection", () => {
+  it("prioritizes recent confirmed responders for default Prompt Arena selection", () => {
     expect(ALLOWED_MODELS.slice(0, 2).map((model) => model.id)).toEqual([
-      "google/gemma-4-26b-a4b-it:free",
-      "google/gemma-4-31b-it:free",
+      "cohere/north-mini-code:free",
+      "dots-studio/dots-3-note-preview:free",
     ]);
   });
 
@@ -60,7 +64,6 @@ describe("ALLOWED_MODELS", () => {
       "thinkingmachines/inkling:free",
       "thinkingmachines/inkling-small:free",
       "z-ai/glm-5.2:free",
-      "nvidia/nemotron-3-ultra-550b-a55b:free",
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     ]) {
       expect(ids.has(excluded)).toBe(false);
