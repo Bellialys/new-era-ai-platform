@@ -173,6 +173,7 @@ export default function ProfilePage() {
     if (!supabase) return;
     setIsSigningOut(true);
     await supabase.auth.signOut();
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- A fresh document clears session-specific client state after sign-out.
     window.location.href = "/";
   }
 
