@@ -90,15 +90,30 @@ Before promoting production code:
    npm run state:check and npm run docs:check.
 3. Review the three existing stacked PRs (#137, #138 and this PR) and merge
    in dependency order. Vercel Preview READY is not a substitute for tests.
-4. Confirm Vercel Production env and cron secret configuration.
-5. Enable the feature flag on a reviewed production release, observe the first
+4. Apply `20261112230229_grant_model_health_catalog_columns.sql` and verify
+   the server role can update lifecycle columns and insert pending models.
+5. Confirm Vercel Production env and cron secret configuration.
+6. Enable the feature flag on a reviewed production release, observe the first
    scheduled run and inspect model metadata / seven working baseline models.
-6. Confirm GET /api/models and GET /api/code-models do not expose pending,
+7. Confirm GET /api/models and GET /api/code-models do not expose pending,
    quarantined or nonfree models.
 
 The previous four manual quarantines from 2026-11-09 remain effective until
 the job is enabled and successfully obtains **two** separate real answers.
 Never auto-switch a retired free ID to its paid version.
+
+## Stage 5 validation (2026-11-13)
+
+- Seven eligible free models in the Preview catalog returned a nonempty live
+  response from OpenRouter. Measured request times ranged from 180 to 2196 ms.
+  [Verification deployment](https://vercel.com/bellial-s-projects/new-era-ai-platform/CNQfw8tZAyk21KyqwfjFrWb9VSmU)
+- In the Preview build, synthetic responses exercised the actual cron and both
+  catalog handlers over six simulated days. The checks covered quarantine,
+  recovery with the same UUID, discovery after two successes, neutral 429 and
+  timeout responses, the five-probe cap, and the cron authorization gate.
+- Read-only production inspection found missing catalog write privileges.
+  An isolated PostgreSQL test confirmed that the new grants allow pending
+  inserts and guarded lifecycle updates. The migration is pending deployment.
 
 ## Future stages (not in this MVP)
 
