@@ -92,7 +92,8 @@ describe("model catalog (fallback mode)", () => {
   });
 
   it("rejects a fallback model without explicit code capability", async () => {
-    await expect(resolveSelectedCodeModels([ALLOWED_MODELS[0].id])).rejects.toMatchObject({
+    const generalModelId = "liquid/lfm-2.5-2.6b:free";
+    await expect(resolveSelectedCodeModels([generalModelId])).rejects.toMatchObject({
       statusCode: 400,
       errorCode: "MODEL_NOT_CODE_CAPABLE",
     });
