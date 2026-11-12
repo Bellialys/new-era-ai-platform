@@ -90,7 +90,7 @@ Before promoting production code:
    npm run state:check and npm run docs:check.
 3. Review the three existing stacked PRs (#137, #138 and this PR) and merge
    in dependency order. Vercel Preview READY is not a substitute for tests.
-4. Apply `20261112230229_grant_model_health_catalog_columns.sql` and verify
+4. Apply `20261112234626_grant_model_health_catalog_columns.sql` and verify
    the server role can update lifecycle columns and insert pending models.
 5. Confirm Vercel Production env and cron secret configuration.
 6. Enable the feature flag on a reviewed production release, observe the first
@@ -113,7 +113,7 @@ Never auto-switch a retired free ID to its paid version.
   timeout responses, the five-probe cap, and the cron authorization gate.
 - Read-only production inspection found missing catalog write privileges.
   An isolated PostgreSQL test confirmed that the new grants allow pending
-  inserts and guarded lifecycle updates. The migration is pending deployment.
+  inserts and guarded lifecycle updates. The migration was applied to production on 2026-11-13 (Kyiv time).
 
 ## Future stages (not in this MVP)
 
