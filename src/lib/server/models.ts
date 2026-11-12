@@ -15,7 +15,7 @@ export type LocalArenaModel = ArenaModel & {
   supportsCode: boolean;
 };
 
-// Curated public free OpenRouter text/chat catalog refreshed on 2026-09-17.
+// Curated public free OpenRouter text/chat catalog refreshed on 2026-11-09.
 // Models with research-only/special terms, poor current availability, or a
 // multimodal-specialist role are intentionally kept out of the anonymous
 // fallback catalog even if their provider slug still exists.
@@ -72,22 +72,22 @@ export const ALLOWED_MODELS: LocalArenaModel[] = [
     description: "Бесплатная Cohere-модель для генерации кода, terminal-задач и agentic software engineering.",
   },
   {
-    id: "poolside/laguna-s-2.1:free",
-    name: "Laguna S 2.1",
-    role: "Coding / strong",
+    id: "dots-studio/dots-3-note-preview:free",
+    name: "Dots3-Note Preview",
+    role: "Coding / reasoning",
     provider: "openrouter",
     supportsCode: true,
     badge: "Free Coding",
-    description: "Бесплатная coding-agent модель Poolside для сложных задач программирования.",
+    description: "Бесплатная coding/reasoning-модель Dots Studio. По данным OpenRouter, предложение действует до 31.12.2026.",
   },
   {
-    id: "poolside/laguna-xs-2.1:free",
-    name: "Laguna XS 2.1",
-    role: "Coding / fast",
+    id: "xingchen-agi/xing4.0-29b-a4b:free",
+    name: "Xing4.0 29B A4B",
+    role: "Engineering / agentic",
     provider: "openrouter",
     supportsCode: true,
     badge: "Free Coding",
-    description: "Бесплатная компактная coding-agent модель Poolside для быстрых сравнений кода.",
+    description: "Бесплатная инженерная модель XingChen для задач программирования, многошагового планирования и работы с инструментами.",
   },
 
   // --- Compact / extraction ---

@@ -17,8 +17,8 @@ const mockedGetSupabaseServerClient = vi.mocked(getSupabaseServerClient);
 
 const EXPECTED_FALLBACK_CODE_MODEL_IDS = [
   "cohere/north-mini-code:free",
-  "poolside/laguna-s-2.1:free",
-  "poolside/laguna-xs-2.1:free",
+  "dots-studio/dots-3-note-preview:free",
+  "xingchen-agi/xing4.0-29b-a4b:free",
 ] as const;
 
 const dbRows = [

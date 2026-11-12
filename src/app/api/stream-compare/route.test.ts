@@ -198,8 +198,23 @@ describe("POST /api/stream-compare blind mode", () => {
     const text = await response.text();
 
     expect(response.status).toBe(200);
-    expect(text).toContain("Model response failed. Please try again.");
+    expect(text).toContain("Провайдер не ответил вовремя.");
     expect(text).not.toContain("secret-token=abc123");
     expect(text).not.toContain("provider trace");
+  });
+
+  it("offers safe rate-limit guidance instead of exposing provider details", async () => {
+    const { ApiError } = await import("@/lib/server/utils");
+    streamOpenRouterMock.mockRejectedValue(
+      new ApiError(429, "RATE_LIMIT", "provider private quota info")
+    );
+
+    const response = await POST(makeRequest({}));
+    const text = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(text).toContain("Достигнут лимит запросов");
+    expect(text).toContain("RATE_LIMIT");
+    expect(text).not.toContain("provider private quota info");
   });
 });

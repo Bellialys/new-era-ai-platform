@@ -33,12 +33,13 @@ import {
 export const maxDuration = 60;
 
 import type { ResolvedModel } from "@/lib/server/model-catalog";
+import { publicModelFailureMessage } from "@/lib/server/model-error-guidance";
 
 // ---------------------------------------------------------------------------
 // SSE helpers
 // ---------------------------------------------------------------------------
 const enc = new TextEncoder();
-const PUBLIC_STREAM_MODEL_ERROR_MESSAGE = "Model response failed. Please try again.";
+
 
 function sse(event: string, data: unknown): Uint8Array {
   return enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -168,7 +169,7 @@ async function streamOneModel(
           status: "error",
           answerText: null,
           errorCode,
-          errorMessage: PUBLIC_STREAM_MODEL_ERROR_MESSAGE,
+          errorMessage: publicModelFailureMessage(errorCode),
         },
       })
     );
@@ -180,7 +181,7 @@ async function streamOneModel(
       totalTokens: null,
       success: false,
       errorCode,
-      errorMessage: PUBLIC_STREAM_MODEL_ERROR_MESSAGE,
+      errorMessage: publicModelFailureMessage(errorCode),
     };
   }
 }
