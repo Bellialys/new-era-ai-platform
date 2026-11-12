@@ -16,6 +16,15 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Dependency security updates - 2026-11-11
+
+- Updated Next.js and its ESLint config to `16.4.6`, the Vercel AWS OIDC credentials provider to `3.3.20`, and the affected transitive dependencies for issue #136.
+- Made high and critical dependency audit findings fail the required GitHub Actions validation job.
+
+## Free model catalog release preparation - 2026-11-13
+
+- Run the dependency audit and validation workflow on stacked pull requests as well as pull requests targeting `main`.
+
 ## Stage 3 operational and DB hardening - 2026-10-01
 
 - PR #113 introduced an experimental repository-level Vercel Ignored Build Step for docs/state-only changes; live diagnostics later proved it cannot solve issue #100's deployment-count/build-rate quota. Vercel executes `ignoreCommand`, Node is available, first-branch `VERCEL_GIT_PREVIOUS_SHA` is empty, `HEAD^1` is unavailable in the shallow first-deployment clone, and ignored deployments are still created/counted. The experiment was retired and #100 remains open for a true pre-deployment/path-gated solution.
