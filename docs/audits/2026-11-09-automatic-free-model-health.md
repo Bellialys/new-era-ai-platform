@@ -1,13 +1,22 @@
 # New Era AI Platform — automatic free-model health and discovery (MVP)
 
-Date: 2026-11-09  
+Date: 2026-11-09
+
 State: implementation on feature branch; NOT active in production until reviewed/merged and manually enabled.
 
 ## Purpose and limits
 
 Automatically keep the anonymous text catalog usable without hand-editing
 Supabase after every OpenRouter free-model retirement, transient outage or
-new release. The existing public API routes remain unchanged.
+new release.
+
+With `ENABLE_MODEL_HEALTH_CRON=true`, Prompt Arena and Code Arena use the
+Supabase catalog for listing and validating selections. An empty catalog
+stays empty. A failed catalog read returns `503 MODEL_CATALOG_UNAVAILABLE`
+so the hardcoded list cannot bring back quarantined models. The next
+successful read serves the live catalog again. Turning off the flag restores
+the legacy fallback, which can contain quarantined entries during a database
+outage.
 
 Scheduler: **Vercel Cron daily at 03:17 UTC**, invoking
 GET /api/cron/model-health. This is intentionally a once-daily process.
