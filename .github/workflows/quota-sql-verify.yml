@@ -1,0 +1,55 @@
+name: Quota SQL (isolated PostgreSQL)
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/20261008090000_unified_compare_quota_hardening.sql"
+      - "supabase/tests/compare_quota_*.sql"
+      - "supabase/tests/check_compare_quota_concurrency.sh"
+      - ".github/workflows/quota-sql-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quota-sql:
+    name: PostgreSQL 17 RPC, RLS, replay and concurrency
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_fixture_only
+          POSTGRES_DB: quota_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d quota_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: quota_test
+      PGUSER: postgres
+      PGPASSWORD: ci_fixture_only
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Ensure PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+      - name: Bootstrap isolated Supabase-like schema
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/compare_quota_ci_bootstrap.sql
+      - name: Apply draft migration in CI only
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261008090000_unified_compare_quota_hardening.sql
+      - name: Execute rollback-only RPC / privacy / ACL tests
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/compare_quota_reconciliation.sql
+      - name: Execute parallel transaction quota limit test
+        run: bash supabase/tests/check_compare_quota_concurrency.sh
