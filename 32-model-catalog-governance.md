@@ -353,7 +353,7 @@ Fallback должен быть предсказуемым.
 - любой ID из `src/lib/arena/image-models.ts` отсутствует в image discovery, не объявляет output modality `image` или parameters `aspect_ratio`/`n`;
 - text/image discovery вернул пустой catalog либо локальные каталоги содержат дубликаты или пустые IDs.
 
-Catalog drift завершает verifier с exit code `1`; malformed/nonliteral source, provider network/auth error или другая runtime failure — с exit code `2`. Workflow `.github/workflows/models-verify.yml` выполняет `npm run test:models-verify`, затем `npm run models:verify -- --json` ежедневно в `03:17 UTC` и вручную через `workflow_dispatch`, с `permissions: contents: read` и без `continue-on-error`. GitHub Actions secret `OPENROUTER_API_KEY` scoped только к live verification step; пока secret не добавлен, scheduled/manual monitoring остаётся pending. Pull request CI выполняет только `npm run test:models-verify` с mock discovery и без provider secret. Operational workflow выявляет provider drift, но не является branch-protected PR gate и не заменяет runtime smoke.
+Catalog drift завершает verifier с exit code `1`. Ошибка чтения исходников, сети или авторизации возвращает exit code `2`. Workflow `.github/workflows/models-verify.yml` запускает `npm run test:models-verify` и `npm run models:verify -- --public-catalog --json` ежедневно в `03:17 UTC` и вручную через `workflow_dispatch`. Публичный режим читает метаданные текстовых моделей и моделей изображений без API-ключа. Pull request CI проверяет скрипт на тестовом каталоге. Реальные ответы бесплатных моделей проверяет Vercel Cron через серверный ключ.
 
 ---
 

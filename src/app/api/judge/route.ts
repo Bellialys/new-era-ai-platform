@@ -17,12 +17,14 @@ import {
   isJsonObject,
   ApiError,
   resolveOpenRouterRuntimeCredential,
+  getActiveFreeOpenRouterModelIds,
 } from "@/lib/server";
 import type { JudgeVerdict } from "@/types/arena";
 
 export const maxDuration = 30;
 
 const BLIND_LABELS = ["A", "B", "C", "D", "E"];
+const JUDGE_ATTEMPT_TIMEOUT_MS = 11_000;
 
 const JUDGE_SYSTEM_PROMPT = `You are an impartial AI judge evaluating multiple AI model responses to a user prompt.
 
@@ -98,22 +100,26 @@ function parseJudgeResponse(
 
   const winner = responses[winnerIndex]!;
 
+  const reasoning = raw.reasoning.trim();
   const scores: Record<string, number> = {};
-  if (raw.scores && typeof raw.scores === "object") {
+  if (isJsonObject(raw.scores)) {
     for (const [label, score] of Object.entries(raw.scores)) {
       const idx = BLIND_LABELS.indexOf(label.toUpperCase());
-      if (idx !== -1 && idx < responses.length && typeof score === "number") {
+      if (idx !== -1 && idx < responses.length && typeof score === "number" && Number.isFinite(score)) {
         const model = responses[idx];
         if (model) scores[model.modelId] = Math.min(10, Math.max(1, Math.round(score)));
       }
     }
+  }
+  if (!reasoning || responses.slice(0, BLIND_LABELS.length).some(({ modelId }) => !Object.hasOwn(scores, modelId))) {
+    return null;
   }
 
   return {
     winnerModelId: winner.modelId,
     winnerModelName: winner.modelName,
     winnerLabel,
-    reasoning: raw.reasoning.trim(),
+    reasoning,
     scores,
   };
 }
@@ -208,27 +214,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const gatewayCredential =
-      await resolveOpenRouterRuntimeCredential(identity);
+    const liveModels = await getActiveFreeOpenRouterModelIds(identity);
+    const modelIds = [JUDGE_PRIMARY_MODEL_ID, JUDGE_FALLBACK_MODEL_ID]
+      .filter((id) => liveModels.has(id));
+    if (modelIds.length === 0) {
+      throw new ApiError(
+        503, "JUDGE_MODEL_UNAVAILABLE", "Сейчас нет доступной бесплатной модели для Judge Mode. Попробуйте позже."
+      );
+    }
+
+    const gatewayCredential = await resolveOpenRouterRuntimeCredential(identity);
     const userPrompt = buildJudgeUserPrompt(prompt, judgeable);
-    let judgeText: string;
-    try {
-      const result = await fetchOpenRouterResponse(userPrompt, JUDGE_PRIMARY_MODEL_ID, {
-        systemPrompt: JUDGE_SYSTEM_PROMPT,
-        credential: gatewayCredential,
-        telemetry: {
-          userId: identity.userId,
-          guestId: identity.guestId,
-          modeSlug: "judge",
-          requestKind: "text",
-        },
-      });
-      judgeText = result.text;
-    } catch (primaryErr) {
+    let verdict: JudgeVerdict | null = null;
+    let receivedOutput = false;
+    let firstProviderError: unknown;
+    for (const modelId of modelIds) {
       try {
-        const result = await fetchOpenRouterResponse(userPrompt, JUDGE_FALLBACK_MODEL_ID, {
+        const result = await fetchOpenRouterResponse(userPrompt, modelId, {
           systemPrompt: JUDGE_SYSTEM_PROMPT,
           credential: gatewayCredential,
+          signal: AbortSignal.timeout(JUDGE_ATTEMPT_TIMEOUT_MS),
           telemetry: {
             userId: identity.userId,
             guestId: identity.guestId,
@@ -236,18 +241,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             requestKind: "text",
           },
         });
-        judgeText = result.text;
-      } catch {
-        throw primaryErr;
+        receivedOutput = true;
+        verdict = parseJudgeResponse(result.text, judgeable);
+        if (verdict) break;
+      } catch (error) {
+        // Account-wide failures also affect the other candidate.
+        if (error instanceof ApiError && (error.statusCode === 402 || error.statusCode === 403)) {
+          throw error;
+        }
+        firstProviderError ??= error;
       }
     }
-
-    const verdict = parseJudgeResponse(judgeText, judgeable);
     if (!verdict) {
-      logApiRequest("POST", "/api/judge", 502, Date.now() - startTime, requestId);
-      return NextResponse.json(
-        { status: "error", errorCode: "JUDGE_PARSE_ERROR", message: "Судья вернул неожиданный формат ответа. Попробуйте ещё раз.", requestId },
-        { status: 502 }
+      if (!receivedOutput && firstProviderError) throw firstProviderError;
+      throw new ApiError(
+        502, "JUDGE_PARSE_ERROR", "Судья вернул неожиданный формат ответа. Попробуйте ещё раз."
       );
     }
 
