@@ -31,6 +31,7 @@ export default function SavedPromptsPage() {
   const [busy, setBusy] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const fetchItems = useCallback(async (): Promise<{ unauthorized: boolean; items: SavedPrompt[] }> => {
@@ -49,8 +50,9 @@ export default function SavedPromptsPage() {
         if (!active) return;
         setItems(result.items);
         setUnauthorized(result.unauthorized);
+        setLoadError(null);
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : "Ошибка загрузки.");
+        if (active) setLoadError(cause instanceof Error ? cause.message : "Ошибка загрузки.");
       } finally {
         if (active) setLoading(false);
       }
@@ -151,7 +153,20 @@ export default function SavedPromptsPage() {
         </section>
       ) : null}
 
-      {!loading && !unauthorized ? (
+      {!loading && loadError ? (
+        <section role="alert" className="rounded-2xl border border-red-300/30 bg-red-500/10 p-5 text-sm text-red-100">
+          <p>Не удалось загрузить сохранённые запросы: {loadError}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-3 min-h-11 rounded-full border border-red-200/40 px-5 font-semibold hover:bg-red-500/15 focus-visible:ring-2 focus-visible:ring-red-200"
+          >
+            Повторить загрузку
+          </button>
+        </section>
+      ) : null}
+
+      {!loading && !unauthorized && !loadError ? (
         <>
           <section aria-labelledby="saved-prompt-editor" className="rounded-2xl border border-white/15 bg-white/5 p-5 sm:p-6">
             <h2 id="saved-prompt-editor" className="text-xl font-bold">
