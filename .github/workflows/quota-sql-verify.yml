@@ -45,11 +45,24 @@ jobs:
             sudo apt-get install -y postgresql-client
           fi
           psql --version
+      - name: Detect draft quota migration
+        id: quota-files
+        run: |
+          if [[ -f supabase/migrations/20261008090000_unified_compare_quota_hardening.sql ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Draft quota SQL is absent on the default branch; no test DB writes."
+          fi
       - name: Bootstrap isolated Supabase-like schema
+        if: steps.quota-files.outputs.present == 'true'
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/compare_quota_ci_bootstrap.sql
       - name: Apply draft migration in CI only
+        if: steps.quota-files.outputs.present == 'true'
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261008090000_unified_compare_quota_hardening.sql
       - name: Execute rollback-only RPC / privacy / ACL tests
+        if: steps.quota-files.outputs.present == 'true'
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/compare_quota_reconciliation.sql
       - name: Execute parallel transaction quota limit test
+        if: steps.quota-files.outputs.present == 'true'
         run: bash supabase/tests/check_compare_quota_concurrency.sh
