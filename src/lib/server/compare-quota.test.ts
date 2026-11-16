@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSupabaseServerClient } from "./supabase";
 import {
@@ -113,5 +114,20 @@ describe("completeCompareQuota", () => {
       p_response_payload: { status: "error" },
       p_response_status: 200,
     });
+  });
+});
+
+describe("Compare quota migration — legacy backfill scope", () => {
+  it("only counts Prompt Arena tasks, not Code Arena or AI Team Mode", () => {
+    const migration = readFileSync(
+      new URL("../../../supabase/migrations/20261008090000_unified_compare_quota_hardening.sql", import.meta.url),
+      "utf8"
+    );
+    const backfill = migration.split("create or replace function public.backfill_compare_quota_current_day()")[1];
+    expect(backfill).toBeDefined();
+    expect(backfill).toMatch(
+      /from public\.tasks\s+where created_at >= v_day_bucket[\s\S]*?and mode_slug = 'prompt-arena'[\s\S]*?group by 1/
+    );
+    expect(backfill).not.toMatch(/mode_slug\s+in\s*\([^)]*'ai-team-mode'/);
   });
 });
