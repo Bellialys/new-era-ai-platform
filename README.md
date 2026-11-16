@@ -26,6 +26,12 @@
 
 Статус синхронизирован с `.project/state.json`; порядок будущих этапов описан в `14-roadmap.md`.
 
+## VS Code Copilot engineering agents — Draft prototype (16.11.2026)
+
+Для будущего перехода с устаревающего Local harness создан отдельный набор четырёх конфигураций в `.github/agents/copilot-*.agent.md` на ветке `feat/copilot-native-agent-prototype-20261116`. Он использует Copilot-native `task` через инструмент `agent`, не содержит неподдерживаемого Local-поля `agents` и **не активирует** пользовательский AI Team Mode или production-квоты.
+
+Инструкция и сценарий ручной приёмки: `docs/engineering/copilot-harness-agent-team.md`; тесты конфигураций: `src/lib/server/copilot-agent-profile-safety.test.ts`. До реального read-only вызова двух подагентов в VS Code это **Draft, не operational PASS**. Блокеры: [#158](https://github.com/Bellialys/new-era-ai-platform/issues/158) и [#160](https://github.com/Bellialys/new-era-ai-platform/issues/160).
+
 ## Database migration reconciliation — 16.11.2026
 
 The previously missing `20261109095503_lab05_saved_prompts.sql` was copied unchanged from draft PR #135 into `main`, after verifying remote `saved_prompts` schema, RLS and indexes. **No production migration was re-run**. The baseline below predates this fix. Separately, `20260929022500_stage34_atomic_openrouter_activation.sql` is intentionally absent from remote migrations and remains an unapproved production Stage 3.2 activation gate.
