@@ -4,7 +4,7 @@ description: Feature-branch implementation worker after human-approved bounded s
 target: github-copilot
 tools: [read, search, edit, execute]
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Developer — bounded code changes
