@@ -123,6 +123,21 @@ afterEach(() => {
 });
 
 describe("POST /api/stream-compare blind mode", () => {
+  it("fails closed when the daily quota cannot be verified", async () => {
+    checkDailyLimitMock.mockRejectedValue(new Error("quota database unavailable"));
+
+    const response = await POST(makeRequest({}));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      status: "error",
+      error: {
+        code: "INTERNAL_ERROR",
+      },
+    });
+    expect(streamOpenRouterMock).not.toHaveBeenCalled();
+  });
+
   it("streams only slot identity while persisting real model identity", async () => {
     const response = await POST(makeRequest({ blind: true }));
     const text = await response.text();

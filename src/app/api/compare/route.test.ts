@@ -159,6 +159,18 @@ describe("POST /api/compare — rate limiting", () => {
     expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
   });
 
+  it("fails closed when the daily quota cannot be verified", async () => {
+    checkDailyLimitMock.mockRejectedValue(
+      new Error("quota database unavailable")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(500);
+    expect((await res.json() as { errorCode?: string }).errorCode).toBe("INTERNAL_ERROR");
+    expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
+  });
+
   it("returns 429 RATE_LIMIT when the rate limit is exceeded", async () => {
     checkRateLimitMock.mockResolvedValue(RATE_LIMITED);
 
