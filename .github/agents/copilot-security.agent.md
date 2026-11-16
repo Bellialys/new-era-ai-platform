@@ -4,7 +4,7 @@ description: Independent read-only threat model and security change reviewer.
 target: github-copilot
 tools: [read, search]
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Security — read-only independent audit
