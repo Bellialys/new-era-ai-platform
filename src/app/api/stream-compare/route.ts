@@ -208,7 +208,26 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  const dailyCheck = await checkDailyLimit(identity.userId, identity.guestId);
+  let dailyCheck;
+  try {
+    dailyCheck = await checkDailyLimit(identity.userId, identity.guestId);
+  } catch (error) {
+    const safeError =
+      error instanceof ApiError
+        ? error
+        : new ApiError(503, "INTERNAL_ERROR", "Usage limit verification is temporarily unavailable.");
+    logApiRequest("POST", "/api/stream-compare", safeError.statusCode, Date.now() - startTime);
+    return new Response(
+      JSON.stringify({
+        status: "error",
+        error: {
+          code: safeError.errorCode,
+          message: safeError.message,
+        },
+      }),
+      { status: safeError.statusCode, headers: { "Content-Type": "application/json" } }
+    );
+  }
   if (!dailyCheck.allowed) {
     logApiRequest("POST", "/api/stream-compare", 429, Date.now() - startTime);
     return new Response(

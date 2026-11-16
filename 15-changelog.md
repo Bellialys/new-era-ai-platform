@@ -38,6 +38,12 @@ v2.0.0-alpha.1 - AI Team Mode
 - Reserve one run per UTC date in Supabase and record outcome, partial progress and model lifecycle counts.
 - Enforce the live Supabase catalog in production when scheduled checks are paused.
 
+## Reliability audit hardening - 2026-11-16
+
+- Enforced the existing daily usage quota on non-streaming `POST /api/compare`, matching the streaming route.
+- Mapped external Code Arena timeout failures to a controlled `504 TIMEOUT` response.
+- Removed withdrawn model identifiers from active catalog documentation and synthetic regression fixtures; immutable migrations and dated audit snapshots retain historical evidence.
+
 ## Dependency security updates - 2026-11-11
 
 - Updated Next.js and its ESLint config to `16.4.6`, the Vercel AWS OIDC credentials provider to `3.3.20`, and the affected transitive dependencies for issue #136.

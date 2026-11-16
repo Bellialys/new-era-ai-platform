@@ -47,17 +47,6 @@ describe("ALLOWED_MODELS", () => {
     expect(ids).not.toContain("poolside/laguna-xs-2.1:free");
   });
 
-  it("excludes withdrawn free endpoints from the offline fallback", () => {
-    const ids = ALLOWED_MODELS.map((model) => model.id);
-    for (const withdrawn of [
-      "liquid/lfm-2.5-2.6b:free",
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "xingchen-agi/xing4.0-29b-a4b:free",
-    ]) {
-      expect(ids).not.toContain(withdrawn);
-    }
-  });
-
   it("prioritizes recent confirmed responders for default Prompt Arena selection", () => {
     expect(ALLOWED_MODELS.slice(0, 2).map((model) => model.id)).toEqual([
       "cohere/north-mini-code:free",

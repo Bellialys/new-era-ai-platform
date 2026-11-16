@@ -25,6 +25,7 @@ import {
   resolveRequestIdentity,
   applyGuestCookie,
   resolveOpenRouterRuntimeCredential,
+  checkDailyLimit,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -289,6 +290,26 @@ export async function POST(request: NextRequest): Promise<Response> {
           new ApiError(401, "AUTH_REQUIRED", "Please sign in or continue as a guest before comparing models.")
         ),
         { status: 401 }
+      );
+    }
+
+    const dailyCheck = await checkDailyLimit(identity.userId, identity.guestId);
+    if (!dailyCheck.allowed) {
+      logApiRequest("POST", "/api/compare", 429, Date.now() - startTime);
+      return NextResponse.json(
+        createErrorResponse(
+          new ApiError(
+            429,
+            "DAILY_LIMIT_EXCEEDED",
+            "Daily request limit reached. Please try again later."
+          )
+        ),
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "86400",
+          },
+        }
       );
     }
 

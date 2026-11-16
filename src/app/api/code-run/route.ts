@@ -157,6 +157,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ stdout, stderr, exitCode, cpuTime, language });
   } catch (error) {
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      const timeoutError = new ApiError(
+        504,
+        "TIMEOUT",
+        "Code execution service timed out. Please try again."
+      );
+      logApiRequest("POST", "/api/code-run", timeoutError.statusCode, Date.now() - startTime);
+      return NextResponse.json(createErrorResponse(timeoutError), {
+        status: timeoutError.statusCode,
+      });
+    }
+
     const statusCode = error instanceof ApiError ? error.statusCode : 500;
     console.error("POST /api/code-run error:", error);
     logApiRequest("POST", "/api/code-run", statusCode, Date.now() - startTime);

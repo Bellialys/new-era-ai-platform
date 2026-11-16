@@ -215,6 +215,8 @@ Streaming-запрос:
 
 Правила:
 
+- Требует user session или guest session и проверяет дневную квоту до обращения к OpenRouter.
+- При исчерпанной дневной квоте возвращает `429 DAILY_LIMIT_EXCEEDED` и `Retry-After: 86400`.
 - `prompt` должен пройти ограничения длины MVP;
 - `modelIds` должен содержать 2-3 модели;
 - `modeSlug` сейчас должен быть `prompt-arena`;

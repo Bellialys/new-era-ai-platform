@@ -156,11 +156,11 @@ describe("discovery prioritization and safety", () => {
     expect(targets.active.map(({ id }) => id)).toEqual([firstFailure.id, older[0].id, older[1].id]);
   });
 
-  it("rechecks retired LFM first and quarantines it after a second NOT_LISTED", () => {
+  it("rechecks a retired model first and quarantines it after a second NOT_LISTED", () => {
     // Snapshot of live Supabase model state observed 2026-11-16.
     // Synthetic test only: never mutate the real model or its UUID.
-    const lfm = {
-      ...row("liquid/lfm-2.5-2.6b:free", true, {
+    const retiredModel = {
+      ...row("provider/retired-free-model:free", true, {
         auto_health: {
           state: "healthy",
           managed: true,
@@ -179,13 +179,17 @@ describe("discovery prioritization and safety", () => {
     ];
     const nextCron = new Date("2026-11-17T03:17:00.000Z");
 
-    expect(shouldProbe(lfm, nextCron)).toBe(true);
-    const selected = selectHealthTargets([...olderHealthy, lfm], [], nextCron);
-    expect(selected.active[0]?.id).toBe(lfm.id);
-    expect(selected.active[0]?.model_key).toBe("liquid/lfm-2.5-2.6b:free");
+    expect(shouldProbe(retiredModel, nextCron)).toBe(true);
+    const selected = selectHealthTargets([...olderHealthy, retiredModel], [], nextCron);
+    expect(selected.active[0]?.id).toBe(retiredModel.id);
+    expect(selected.active[0]?.model_key).toBe("provider/retired-free-model:free");
 
     // Only a second confirmed hard failure may retire the same model.
-    const afterSecondMiss = transitionHealth(lfm, "NOT_LISTED", nextCron.toISOString());
+    const afterSecondMiss = transitionHealth(
+      retiredModel,
+      "NOT_LISTED",
+      nextCron.toISOString()
+    );
     expect(afterSecondMiss).toMatchObject({
       is_active: false,
       is_public: false,
@@ -200,7 +204,7 @@ describe("discovery prioritization and safety", () => {
       },
     });
     // Provider-wide soft failures must not act as the second hard failure.
-    expect(transitionHealth(lfm, "RATE_LIMIT", nextCron.toISOString())).toMatchObject({
+    expect(transitionHealth(retiredModel, "RATE_LIMIT", nextCron.toISOString())).toMatchObject({
       is_active: true,
       is_public: true,
       raw_metadata: { auto_health: { failure_streak: 1 } },
