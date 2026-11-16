@@ -16,6 +16,12 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Model health run reliability - 2026-11-16
+
+- Prioritize one active model with a confirmed first failure and defer repeated temporary failures for pending discoveries.
+- Reserve one run per UTC date in Supabase and record outcome, partial progress and model lifecycle counts.
+- Enforce the live Supabase catalog in production when scheduled checks are paused.
+
 ## Dependency security updates - 2026-11-11
 
 - Updated Next.js and its ESLint config to `16.4.6`, the Vercel AWS OIDC credentials provider to `3.3.20`, and the affected transitive dependencies for issue #136.

@@ -9,6 +9,8 @@ const CATALOG_URL = "https://openrouter.ai/api/v1/models";
 const COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions";
 const PROBE_PROMPT = "Reply with exactly one word: OK";
 const COOLDOWN_MS = 20 * 60 * 60 * 1000;
+const PENDING_RETRY_COOLDOWN_MS = 2 * COOLDOWN_MS;
+const OPENROUTER_TIMEOUT_MS = 9_000;
 const MAX_ACTIVE_PROBES = 3;
 const MAX_QUARANTINED_PROBES = 1;
 const MAX_DISCOVERY_PROBES = 1;
@@ -51,12 +53,22 @@ export interface HealthChange {
 }
 
 export interface HealthSummary {
+  inferenceCalls: number;
   checked: number;
   healthy: number;
   hidden: number;
   restored: number;
   discovered: number;
+  published: number;
   skipped: number;
+}
+
+/** Counters shared with the run journal so a failed run can record progress. */
+export function createHealthSummary(): HealthSummary {
+  return {
+    inferenceCalls: 0, checked: 0, healthy: 0, hidden: 0,
+    restored: 0, discovered: 0, published: 0, skipped: 0,
+  };
 }
 
 function isObject(value: unknown): value is ObjectValue {
@@ -117,8 +129,12 @@ function lastProbeAt(row: CatalogRow): number {
 
 export function shouldProbe(row: CatalogRow, now: Date): boolean {
   const meta = asObject(row.raw_metadata);
+  const health = healthOf(row.raw_metadata);
+  const reportsRepeatedTemporaryFailure = health.state === "pending" &&
+    getNumber(health.temporary_streak) >= 2;
+  const cooldown = reportsRepeatedTemporaryFailure ? PENDING_RETRY_COOLDOWN_MS : COOLDOWN_MS;
   return meta.auto_health_exempt !== true &&
-    now.getTime() - lastProbeAt(row) >= COOLDOWN_MS;
+    now.getTime() - lastProbeAt(row) >= cooldown;
 }
 
 function healthStatusCounts(status: ProbeStatus): "ok" | "hard" | "neutral" {
@@ -142,6 +158,9 @@ export function transitionHealth(
   const failureStreak = classification === "hard"
     ? getNumber(previous.failure_streak) + 1
     : classification === "ok" ? 0 : getNumber(previous.failure_streak);
+  const temporaryStreak = classification === "neutral"
+    ? getNumber(previous.temporary_streak) + 1
+    : 0;
   const discovered = previous.discovered === true;
   let active = row.is_active;
   let isPublic = row.is_public;
@@ -175,6 +194,7 @@ export function transitionHealth(
         state,
         success_streak: successStreak,
         failure_streak: failureStreak,
+        temporary_streak: temporaryStreak,
         checked_at: checkedAt,
         last_status: status,
       },
@@ -197,10 +217,16 @@ export function extractText(value: unknown): string {
   return "";
 }
 
+function openRouterSignal(runSignal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(OPENROUTER_TIMEOUT_MS);
+  return runSignal ? AbortSignal.any([runSignal, timeout]) : timeout;
+}
+
 export async function probeFreeModel(
   modelId: string,
   apiKey: string,
   callFetch: typeof fetch = fetch,
+  runSignal?: AbortSignal,
 ): Promise<ProbeStatus> {
   if (!freeModelSlug(modelId)) return "NOT_FREE";
   try {
@@ -220,7 +246,7 @@ export async function probeFreeModel(
         stream: false,
       }),
       cache: "no-store",
-      signal: AbortSignal.timeout(9000),
+      signal: openRouterSignal(runSignal),
     });
     if (response.status === 429) return "RATE_LIMIT";
     if (response.status === 404) return "NOT_FOUND";
@@ -235,11 +261,11 @@ export async function probeFreeModel(
   }
 }
 
-async function fetchEligibleModels(apiKey: string): Promise<FreeTextModel[]> {
+async function fetchEligibleModels(apiKey: string, runSignal: AbortSignal): Promise<FreeTextModel[]> {
   const response = await fetch(CATALOG_URL, {
     headers: { Authorization: "Bearer " + apiKey },
     cache: "no-store",
-    signal: AbortSignal.timeout(9000),
+    signal: openRouterSignal(runSignal),
   });
   if (!response.ok) throw new Error("OpenRouter catalog is unavailable (HTTP " + response.status + ").");
   const payload: unknown = await response.json();
@@ -260,10 +286,15 @@ export function selectHealthTargets(
 ): { active: CatalogRow[]; quarantined: CatalogRow[]; pending: CatalogRow[]; fresh: FreeTextModel[] } {
   const eligibleRows = rows.filter((row) => shouldProbe(row, now) &&
     freeModelSlug(row.model_key) && row.price_label === "free");
-  const active = chooseLeastRecent(
-    eligibleRows.filter((row) => row.is_active && row.is_public),
-    MAX_ACTIVE_PROBES,
+  const activeRows = eligibleRows.filter((row) => row.is_active && row.is_public);
+  const priority = chooseLeastRecent(
+    activeRows.filter((row) => getNumber(healthOf(row.raw_metadata).failure_streak) === 1),
+    1,
   );
+  const active = [
+    ...priority,
+    ...chooseLeastRecent(activeRows.filter((row) => row.id !== priority[0]?.id), MAX_ACTIVE_PROBES - priority.length),
+  ];
   const quarantined = chooseLeastRecent(
     eligibleRows.filter((row) => {
       const meta = asObject(row.raw_metadata);
@@ -294,6 +325,7 @@ async function updateExisting(
   row: CatalogRow,
   result: HealthChange,
   checkedAt: string,
+  signal: AbortSignal,
 ): Promise<boolean> {
   // Optimistic compare-and-swap: a stale cron run cannot overwrite a newer
   // admin/catalog update. One model's in-flight result never touches others.
@@ -306,7 +338,8 @@ async function updateExisting(
     })
     .eq("id", row.id)
     .eq("updated_at", row.updated_at)
-    .select("id");
+    .select("id")
+    .abortSignal(signal);
   if (error) throw new Error("Failed to persist model health update.");
   return Array.isArray(data) && data.length === 1;
 }
@@ -315,6 +348,7 @@ async function insertDiscovery(
   db: SupabaseClient,
   model: FreeTextModel,
   result: HealthChange,
+  signal: AbortSignal,
 ): Promise<boolean> {
   const { error } = await db.from("models").insert({
     provider: "openrouter",
@@ -332,42 +366,53 @@ async function insertDiscovery(
     output_price_per_million: 0,
     sort_order: 1000,
     raw_metadata: result.raw_metadata,
-  });
+  }).abortSignal(signal);
   // A concurrent discovery may have inserted the exact same model.
   if (error?.code === "23505") return false;
   if (error) throw new Error("Failed to persist discovered model.");
   return true;
 }
 
-export async function runModelHealthSync(db: SupabaseClient, apiKey: string): Promise<HealthSummary> {
+/** Check the next bounded batch and retain counters for each saved change. */
+export async function runModelHealthSync(
+  db: SupabaseClient,
+  apiKey: string,
+  {
+    signal = new AbortController().signal,
+    summary = createHealthSummary(),
+  }: { signal?: AbortSignal; summary?: HealthSummary } = {},
+): Promise<HealthSummary> {
   if (!apiKey.trim()) throw new Error("Missing OpenRouter credential.");
+  signal.throwIfAborted();
   const now = new Date();
   const checkedAt = now.toISOString();
   const { data, error } = await db.from("models")
     .select("id, model_key, display_name, is_active, is_public, price_label, updated_at, raw_metadata")
     .eq("provider", "openrouter")
-    .limit(MAX_CATALOG_ROWS);
+    .limit(MAX_CATALOG_ROWS)
+    .abortSignal(signal);
   if (error || !data) throw new Error("Unable to load model catalog from Supabase.");
   const rows = data as CatalogRow[];
-  const catalog = await fetchEligibleModels(apiKey);
+  const catalog = await fetchEligibleModels(apiKey, signal);
+  signal.throwIfAborted();
   // Fail closed on malformed/empty provider catalogs to avoid mass removal.
   if (catalog.length === 0) throw new Error("OpenRouter returned no eligible free models.");
   const { active, quarantined, pending, fresh } = selectHealthTargets(rows, catalog, now);
   const listing = new Map(catalog.map((model) => [model.id, model]));
-  const summary: HealthSummary = {
-    checked: 0, healthy: 0, hidden: 0, restored: 0, discovered: 0, skipped: 0,
-  };
-
   for (const row of [...active, ...quarantined, ...pending]) {
-    const status = listing.has(row.model_key)
-      ? await probeFreeModel(row.model_key, apiKey)
+    signal.throwIfAborted();
+    const isListed = listing.has(row.model_key);
+    if (isListed) summary.inferenceCalls++;
+    const status = isListed
+      ? await probeFreeModel(row.model_key, apiKey, fetch, signal)
       : "NOT_LISTED";
+    signal.throwIfAborted();
     if (status === "AUTH_ERROR" || status === "NO_CREDITS") {
       // Account-wide failures must not change individual models.
       throw new Error("Provider credential or credits unavailable; model states unchanged for this probe.");
     }
     const change = transitionHealth(row, status, checkedAt);
-    const saved = await updateExisting(db, row, change, checkedAt);
+    const saved = await updateExisting(db, row, change, checkedAt, signal);
     if (!saved) {
       summary.skipped++;
       continue;
@@ -375,11 +420,17 @@ export async function runModelHealthSync(db: SupabaseClient, apiKey: string): Pr
     summary.checked++;
     if (status === "OK") summary.healthy++;
     if (row.is_active && !change.is_active) summary.hidden++;
-    if (!row.is_active && change.is_active) summary.restored++;
+    if (!row.is_active && change.is_active) {
+      if (healthOf(row.raw_metadata).state === "pending") summary.published++;
+      else summary.restored++;
+    }
   }
 
   for (const model of fresh) {
-    const status = await probeFreeModel(model.id, apiKey);
+    signal.throwIfAborted();
+    summary.inferenceCalls++;
+    const status = await probeFreeModel(model.id, apiKey, fetch, signal);
+    signal.throwIfAborted();
     if (status === "AUTH_ERROR" || status === "NO_CREDITS") {
       throw new Error("Provider credential or credits unavailable during discovery.");
     }
@@ -397,10 +448,15 @@ export async function runModelHealthSync(db: SupabaseClient, apiKey: string): Pr
       { is_active: false, is_public: false, raw_metadata: initial },
       status, checkedAt,
     );
-    if (await insertDiscovery(db, model, change)) summary.discovered++;
+    if (!await insertDiscovery(db, model, change, signal)) {
+      summary.skipped++;
+      continue;
+    }
+    summary.discovered++;
     summary.checked++;
     summary.healthy++;
   }
 
+  signal.throwIfAborted();
   return summary;
 }

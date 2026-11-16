@@ -145,14 +145,14 @@ Fallback режим:
 server-side allowlist -> frontend
 ```
 
-При `ENABLE_MODEL_HEALTH_CRON=true` каталог Supabase определяет доступность
-моделей в Prompt Arena и Code Arena. Если запрос к Supabase успешен и
+В production каталог Supabase определяет доступность моделей в Prompt Arena
+и Code Arena при любом значении `ENABLE_MODEL_HEALTH_CRON`. Если запрос к Supabase успешен и
 доступных строк нет, оба каталога возвращают `200` и `models: []`.
 Если каталог прочитать невозможно, `GET /api/models`, `GET /api/code-models`,
 `GET /api/models/pricing` и запросы сравнения, дошедшие до выбора моделей,
 возвращают `503 MODEL_CATALOG_UNAVAILABLE`. Выбор скрытой модели при доступном
-Supabase по-прежнему возвращает `403 MODEL_NOT_ALLOWED`. В режиме с
-выключенной автопроверкой действует резервный список.
+Supabase возвращает `403 MODEL_NOT_ALLOWED`. Резервный список для работы
+без базы доступен вне production при выключенной автопроверке.
 
 Минимальный ответ:
 
@@ -169,6 +169,24 @@ Supabase по-прежнему возвращает `403 MODEL_NOT_ALLOWED`. В 
   ]
 }
 ```
+
+## `GET /api/cron/model-health`
+
+Служебный маршрут Vercel Cron принимает `Authorization: Bearer <CRON_SECRET>`
+и требует `ENABLE_MODEL_HEALTH_CRON=true`. Заголовок
+`x-vercel-cron-schedule` отмечает плановый источник в журнале. Проверка
+авторизации предшествует резервированию и запросам OpenRouter.
+
+| HTTP | Результат |
+|---|---|
+| `200` | `status: success`, дата UTC `runDate` и итоговый `summary` |
+| `200` | `status: skipped` и `MODEL_HEALTH_ALREADY_RUN`, если дата уже занята |
+| `401` | `UNAUTHORIZED` при отсутствии действующего bearer |
+| `503` | `CRON_NOT_CONFIGURED`, `MODEL_HEALTH_DISABLED`, `MODEL_HEALTH_CREDENTIALS_MISSING`, `MODEL_HEALTH_SYNC_FAILED`, `MODEL_HEALTH_DEADLINE_EXCEEDED` или `MODEL_HEALTH_JOURNAL_UNAVAILABLE` |
+
+Сводка содержит `inferenceCalls`, `checked`, `healthy`, `hidden`, `restored`,
+`discovered`, `published` и `skipped`. Запись по дате UTC ограничивает
+вызовы до пяти запросов к моделям. Ручные запуски используют тот же лимит.
 
 ## `POST /api/compare`
 
