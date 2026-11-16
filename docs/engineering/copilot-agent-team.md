@@ -1,5 +1,9 @@
 # VS Code Copilot Agent Team — инженерная иерархия
 
+## Новый Copilot harness — отдельная безопасная конфигурация
+
+Предложена в ветке `feat/copilot-native-agent-harness-20261116` параллельная четвёрка профилей `Copilot Coordinator/Architect/Developer/Security`, каждый с `target: github-copilot`. Старые Local-профили не переписаны и продолжают использовать `target: vscode`. Подробные различия, тесты, ручная приёмка и ограничения — в [Copilot harness migration](./copilot-native-harness.md). Статические тесты не доказывают реального делегирования; [issue #158](https://github.com/Bellialys/new-era-ai-platform/issues/158) остаётся открытой. Нельзя считать Copilot-профили operational PASS до проверки в VS Code.
+
 ## Проверка 16.11.2026 — Local, не универсальный Copilot
 
 **Текущий harness:** четыре `.agent.md` профиля содержат `target: vscode` и `agents` (allowlist). В VS Code это **Local harness**; Microsoft объявила его устаревшим с удалением в **феврале 2027**. В новом Copilot harness `target: github-copilot`, но поле `agents` для ограничения локальных подагентов не поддерживается. **Не менять `target` простым поиском/заменой**: это не сохранит те же гарантии делегирования. [Custom agent file reference](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference), [Subagents](https://code.visualstudio.com/docs/agents/run/subagents).
