@@ -36,6 +36,21 @@ export class CompareIdempotencyMismatchError extends ApiError {
   }
 }
 
+export class CompareInProgressError extends ApiError {
+  constructor(public readonly retryAfterSeconds: number) {
+    super(409, "COMPARE_IN_PROGRESS", "A request with this idempotency key is still processing. Retry later.");
+    this.name = "CompareInProgressError";
+  }
+}
+
+export class CompareResultExpiredError extends ApiError {
+  constructor() {
+    super(409, "IDEMPOTENCY_RESULT_UNAVAILABLE",
+      "The prior result is no longer available. Submit a new comparison to start another request.");
+    this.name = "CompareResultExpiredError";
+  }
+}
+
 interface RpcReservationRow {
   reservation_id: string;
   outcome:
@@ -43,6 +58,8 @@ interface RpcReservationRow {
     | "replayed"
     | "quota_exceeded"
     | "idempotency_mismatch"
+    | "in_progress"
+    | "result_expired"
     | "authority_error";
   retry_after_seconds: number | null;
   response_payload: unknown | null;
@@ -112,9 +129,18 @@ export async function reserveCompareQuota(input: {
   if (result.outcome === "idempotency_mismatch") {
     throw new CompareIdempotencyMismatchError();
   }
-  if (result.outcome === "authority_error") {
+  if (result.outcome === "in_progress") {
+    throw new CompareInProgressError(Math.max(result.retry_after_seconds ?? 5, 1));
+  }
+  if (result.outcome === "result_expired") {
+    throw new CompareResultExpiredError();
+  }
+  if (result.outcome !== "accepted" && result.outcome !== "replayed") {
+    // Fail closed on unknown backend outcomes, rather than invoking a model
+    // without evidence of a successful atomic quota reservation.
     throw new CompareQuotaAuthorityError();
   }
+  if (!result.reservation_id) throw new CompareQuotaAuthorityError();
 
   return {
     outcome: result.outcome,
@@ -137,16 +163,32 @@ export async function completeCompareQuota(input: {
   const supabase = getSupabaseServerClient();
   if (!supabase) throw new CompareQuotaAuthorityError();
 
-  const { error } = await supabase.rpc("complete_compare_quota", {
+  const params = {
     p_reservation_id: input.reservationId,
     p_response_payload: input.responsePayload,
     p_response_status: input.responseStatus,
-  });
+  };
 
-  if (error) {
-    console.error("Compare quota completion RPC failed", { code: error.code });
-    throw new CompareQuotaAuthorityError();
+  // RPC POST isn't retried automatically. PostgreSQL now accepts an exact
+  // duplicate completion as success, so a lost acknowledgement is safe to
+  // retry without repeating paid inference. No retry for explicit DB vetoes.
+  let lastCode: string | null = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const { error } = await supabase.rpc("complete_compare_quota", params);
+      if (!error) return;
+      lastCode = error.code ?? "UNKNOWN";
+      if (["P0001", "22023", "42501", "23514", "PGRST202"].includes(lastCode)) break;
+    } catch {
+      lastCode = "NETWORK_ERROR";
+    }
+    if (attempt === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
   }
+
+  console.error("Compare quota completion RPC failed", { code: lastCode });
+  throw new CompareQuotaAuthorityError();
 }
 
 export function getCompareIdempotencyKey(request: {
@@ -172,5 +214,7 @@ export function createCompareFingerprint(input: {
 }
 
 export function getCompareRetryAfterSeconds(error: unknown): number | null {
-  return error instanceof CompareQuotaExceededError ? error.retryAfterSeconds : null;
+  return error instanceof CompareQuotaExceededError || error instanceof CompareInProgressError
+    ? error.retryAfterSeconds
+    : null;
 }
