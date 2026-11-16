@@ -54,7 +54,7 @@ describe("Copilot-native agent configuration — static only", () => {
     const p = load("coordinator");
     expect(p.tools).toEqual(["read", "search", "agent", "todo"]);
     expect(p.invocable).toBe("true");
-    expect(p.source).toContain("not a hard security boundary");
+    expect(p.source).toContain("NOT an enforced allowlist or security boundary");
     expect(p.source).toContain("Manual permissions");
   });
 
