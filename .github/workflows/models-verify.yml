@@ -1,6 +1,9 @@
 name: OpenRouter model catalog verification
 
 on:
+  push:
+    branches:
+      - test/stage8-catalog-preview-20261116
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
