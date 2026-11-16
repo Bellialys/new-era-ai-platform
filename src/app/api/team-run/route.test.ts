@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/server/utils";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -468,6 +469,79 @@ describe("POST /api/team-run — error paths", () => {
     expect(body.taskId).toBeNull();
     expect(body.steps).toHaveLength(4);
     expect(typeof body.finalAnswer).toBe("string");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Transient OpenRouter failures — one bounded extra call per team run
+// ---------------------------------------------------------------------------
+
+describe("POST /api/team-run — bounded provider recovery", () => {
+  it("retries one upstream 502 and completes all four roles on recovery", async () => {
+    fetchOpenRouterMock
+      .mockRejectedValueOnce(new ApiError(502, "PROVIDER_UNAVAILABLE", "Provider is down."))
+      .mockResolvedValue({ text: "recovered", latencyMs: 1, usage: NULL_USAGE });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { steps?: unknown[]; finalAnswer?: string };
+
+    expect(res.status).toBe(200);
+    expect(body.steps).toHaveLength(4);
+    expect(body.finalAnswer).toBe("recovered");
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(5);
+    expect(fetchOpenRouterMock.mock.calls.every(call => call[1] === TEAM_DEFAULT_MODEL_ID)).toBe(true);
+  });
+
+  it("retries a transient upstream 503 once", async () => {
+    fetchOpenRouterMock
+      .mockRejectedValueOnce(new ApiError(503, "PROVIDER_OVERLOADED", "Provider overloaded."))
+      .mockResolvedValue({ text: "ok", latencyMs: 1, usage: NULL_USAGE });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("does not retry a second persistent 502 and returns a controlled error", async () => {
+    fetchOpenRouterMock.mockRejectedValue(
+      new ApiError(502, "PROVIDER_UNAVAILABLE", "Provider is still unavailable.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { errorCode?: string; requestId?: string };
+
+    expect(res.status).toBe(502);
+    expect(body.errorCode).toBe("PROVIDER_UNAVAILABLE");
+    expect(typeof body.requestId).toBe("string");
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    [403, "AUTH_ERROR"],
+    [402, "INSUFFICIENT_CREDITS"],
+    [429, "RATE_LIMIT"],
+    [504, "TIMEOUT"],
+  ])("does not retry non-transient %i (%s) errors", async (statusCode, errorCode) => {
+    fetchOpenRouterMock.mockRejectedValue(
+      new ApiError(statusCode, errorCode, "Controlled provider error.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(statusCode);
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes a cancellable per-step deadline to OpenRouter", async () => {
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(4);
+    for (const call of fetchOpenRouterMock.mock.calls) {
+      const options = call[2] as { signal?: AbortSignal };
+      expect(options.signal).toBeInstanceOf(AbortSignal);
+      expect(options.signal?.aborted).toBe(false);
+    }
   });
 });
 
