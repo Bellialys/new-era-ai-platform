@@ -23,3 +23,4 @@ export * from "./funding-resolver";
 export * from "./openrouter-credentials";
 export * from "./openrouter-integration-config";
 export * from "./openrouter-runtime-credential";
+export * from "./compare-quota";
