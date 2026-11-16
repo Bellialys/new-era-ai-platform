@@ -93,45 +93,67 @@ async function verify() {
     assert(cookiesByName.size > 0, "Supabase SSR did not set session cookies");
     const cookie = [...cookiesByName.entries()].map(([name, value]) => name + "=" + encodeURIComponent(value)).join("; ");
 
-    const started = performance.now();
-    const response = await fetch(origin + "/api/team-run", {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        cookie,
-        origin,
-        "user-agent": "NewEra-Stage10-Release-Check/1.0",
-      },
-      body: JSON.stringify({ task }),
-      redirect: "error",
-      signal: AbortSignal.timeout(70_000),
-    });
-    const data = await response.json().catch(() => ({}));
-    const elapsedMs = Math.round(performance.now() - started);
-    const steps = Array.isArray(data.steps) ? data.steps : [];
-    const allRoles = steps.length === roles.length && roles.every((role, i) =>
-      steps[i]?.roleId === role &&
-      typeof steps[i].output === "string" &&
-      steps[i].output.trim().length > 0 &&
-      steps[i].output !== "[No response]" &&
-      Number.isFinite(steps[i].latencyMs)
-    );
-    const answerCorrect = typeof data.finalAnswer === "string" &&
-      /\b12\b/.test(data.finalAnswer) &&
-      data.finalAnswer === steps.at(-1)?.output;
-    const taskId = safeValue(data.taskId);
-    log("production-team-run", {
-      http: response.status,
-      errorCode: safeValue(data.errorCode),
-      elapsedMs,
-      taskId,
-      roles: roles.filter((role, i) => steps[i]?.roleId === role),
-      roleLatencyMs: steps.map((step) => Number.isFinite(step.latencyMs) ? step.latencyMs : null),
-      allRoles,
-      answerCorrect,
-    });
-    assert(response.ok && allRoles && answerCorrect && Boolean(taskId), "Production Team Mode did not complete");
+    const models = [
+      { label: "default", key: "nvidia/nemotron-3.5-lightning:free" },
+      { label: "alternate", key: "cohere/north-mini-code:free", id: "aa843e64-c967-4ed7-a786-8962fbed2472" },
+    ];
+    let taskId;
+    let expectedModel;
+    for (const model of models) {
+      const started = performance.now();
+      const response = await fetch(origin + "/api/team-run", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          cookie,
+          origin,
+          "user-agent": "NewEra-Stage10-Release-Check/1.0",
+        },
+        body: JSON.stringify(model.id ? { task, modelId: model.id } : { task }),
+        redirect: "error",
+        signal: AbortSignal.timeout(70_000),
+      });
+      const data = await response.json().catch(() => ({}));
+      const elapsedMs = Math.round(performance.now() - started);
+      const steps = Array.isArray(data.steps) ? data.steps : [];
+      const allRoles = steps.length === roles.length && roles.every((role, i) =>
+        steps[i]?.roleId === role &&
+        typeof steps[i].output === "string" &&
+        steps[i].output.trim().length > 0 &&
+        steps[i].output !== "[No response]" &&
+        Number.isFinite(steps[i].latencyMs)
+      );
+      const answerCorrect = typeof data.finalAnswer === "string" &&
+        /\b12\b/.test(data.finalAnswer) &&
+        data.finalAnswer === steps.at(-1)?.output;
+      const errorReasons = new Map([
+        ["AI provider returned an empty response.", "empty-completion"],
+        ["AI provider returned a non-JSON response.", "non-json"],
+        ["AI provider returned a non-JSON error response.", "non-json-error"],
+        ["AI provider service error. Please try again.", "upstream-5xx"],
+      ]);
+      taskId = safeValue(data.taskId);
+      log("production-team-run", {
+        selection: model.label,
+        model: model.key,
+        http: response.status,
+        errorCode: safeValue(data.errorCode),
+        errorReason: errorReasons.get(data.message) ?? null,
+        elapsedMs,
+        taskId,
+        roles: roles.filter((role, i) => steps[i]?.roleId === role),
+        roleLatencyMs: steps.map((step) => Number.isFinite(step.latencyMs) ? step.latencyMs : null),
+        allRoles,
+        answerCorrect,
+      });
+      if (response.ok && allRoles && answerCorrect && taskId) {
+        expectedModel = model.key;
+        break;
+      }
+      if (![429, 502, 503, 504].includes(response.status)) break;
+    }
+    assert(taskId && expectedModel, "Production Team Mode did not complete");
 
     const [savedTask, savedResponses] = await Promise.all([
       admin.from("tasks").select("id,mode_slug,task_text").eq("id", taskId).eq("user_id", fixtureId).single(),
@@ -142,8 +164,8 @@ async function verify() {
     const persistedRoles = !savedResponses.error && responses.length === roles.length &&
       ["Planner", "Researcher", "Critic", "Finalizer"].every((label) =>
         responses.some((row) => row.display_name === label && row.status === "success" && Boolean(row.response_text)));
-    const model = responses.every((row) => row.model_key === "nvidia/nemotron-3.5-lightning:free")
-      && responses.length === roles.length ? "nvidia/nemotron-3.5-lightning:free" : null;
+    const model = responses.every((row) => row.model_key === expectedModel)
+      && responses.length === roles.length ? expectedModel : null;
     log("production-team-persistence", { taskId, persistedTask, persistedRoles, model });
     assert(persistedTask && persistedRoles && model, "Team run persistence or default model check failed");
   } finally {
