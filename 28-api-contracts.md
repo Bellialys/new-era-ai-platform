@@ -145,6 +145,15 @@ Fallback режим:
 server-side allowlist -> frontend
 ```
 
+В production каталог Supabase определяет доступность моделей в Prompt Arena
+и Code Arena при любом значении `ENABLE_MODEL_HEALTH_CRON`. Если запрос к Supabase успешен и
+доступных строк нет, оба каталога возвращают `200` и `models: []`.
+Если каталог прочитать невозможно, `GET /api/models`, `GET /api/code-models`,
+`GET /api/models/pricing` и запросы сравнения, дошедшие до выбора моделей,
+возвращают `503 MODEL_CATALOG_UNAVAILABLE`. Выбор скрытой модели при доступном
+Supabase возвращает `403 MODEL_NOT_ALLOWED`. Резервный список для работы
+без базы доступен вне production при выключенной автопроверке.
+
 Минимальный ответ:
 
 ```json
@@ -160,6 +169,24 @@ server-side allowlist -> frontend
   ]
 }
 ```
+
+## `GET /api/cron/model-health`
+
+Служебный маршрут Vercel Cron принимает `Authorization: Bearer <CRON_SECRET>`
+и требует `ENABLE_MODEL_HEALTH_CRON=true`. Заголовок
+`x-vercel-cron-schedule` отмечает плановый источник в журнале. Проверка
+авторизации предшествует резервированию и запросам OpenRouter.
+
+| HTTP | Результат |
+|---|---|
+| `200` | `status: success`, дата UTC `runDate` и итоговый `summary` |
+| `200` | `status: skipped` и `MODEL_HEALTH_ALREADY_RUN`, если дата уже занята |
+| `401` | `UNAUTHORIZED` при отсутствии действующего bearer |
+| `503` | `CRON_NOT_CONFIGURED`, `MODEL_HEALTH_DISABLED`, `MODEL_HEALTH_CREDENTIALS_MISSING`, `MODEL_HEALTH_SYNC_FAILED`, `MODEL_HEALTH_DEADLINE_EXCEEDED` или `MODEL_HEALTH_JOURNAL_UNAVAILABLE` |
+
+Сводка содержит `inferenceCalls`, `checked`, `healthy`, `hidden`, `restored`,
+`discovered`, `published` и `skipped`. Запись по дате UTC ограничивает
+вызовы до пяти запросов к моделям. Ручные запуски используют тот же лимит.
 
 ## `POST /api/compare`
 
@@ -408,11 +435,12 @@ Rules:
 - `prompt` must be at least 3 characters;
 - `responses` must contain at least 2 items with non-empty `answerText`;
 - model names are used only for UI/result mapping; judge prompt uses blind labels;
-- provider routing is fixed server-side: primary `google/gemma-4-31b-it:free`, fallback `google/gemma-4-26b-a4b-it:free`;
-- fallback выполняется только после контролируемой ошибки primary и не принимает произвольный provider model key из запроса;
+- основной кандидат — `nvidia/nemotron-3.5-lightning:free`, резервный — `dots-studio/dots-3-note-preview:free`; сервер сверяет каждого с активным публичным каталогом Supabase и уровнем доступа вызывающего;
+- если основной кандидат скрыт, недоступен у провайдера или вернул неполный вердикт, сервер использует доступного резервного кандидата. Ошибка учётных данных или средств завершает запрос;
+- если оба кандидата отсутствуют в доступном каталоге, API возвращает `503 JUDGE_MODEL_UNAVAILABLE`. При недоступности Supabase возвращается `503 MODEL_CATALOG_UNAVAILABLE`;
 - rate limit: authenticated users 3 requests/min, guests 1 request/min;
 - verdict/reasoning является AI-generated structured output: backend должен валидировать его строгой схемой, а frontend рендерит как недоверенный текст по `25-production-excellence.md`, раздел `9.1`;
-- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_BODY`, `INVALID_PROMPT`, `INVALID_RESPONSES`, `INSUFFICIENT_RESPONSES`, `JUDGE_PARSE_ERROR`, `INTERNAL_ERROR`.
+- safe errors include `AUTH_REQUIRED`, `RATE_LIMIT`, `INVALID_BODY`, `INVALID_PROMPT`, `INVALID_RESPONSES`, `INSUFFICIENT_RESPONSES`, `JUDGE_MODEL_UNAVAILABLE`, `MODEL_CATALOG_UNAVAILABLE`, `JUDGE_PARSE_ERROR`, `INTERNAL_ERROR`.
 
 ## `POST /api/code-run` (v1.7)
 
@@ -783,7 +811,7 @@ Query-параметры (все необязательные):
 }
 ```
 
-Поле `modelId` необязательно — при отсутствии или если ID не входит в `ALLOWED_MODELS`, используется `TEAM_DEFAULT_MODEL_ID = "google/gemma-4-26b-a4b-it:free"`.
+Поле `modelId` необязательно. Сервер сопоставляет UUID (или OpenRouter ID для старых клиентов) с активными публичными бесплатными моделями из Supabase и проверяет `ALLOWED_MODELS`. При отсутствии подходящего выбора сервер использует `cohere/north-mini-code:free`, если он доступен, иначе берёт первую подходящую модель из серверного списка.
 
 Минимальный ответ:
 
@@ -820,12 +848,12 @@ Rules:
 
 - requires a real Supabase authenticated user (`kind === "user"`); guest or unauthenticated → `401 AUTH_REQUIRED`;
 - `task` must be 10–4000 characters;
-- `modelId` is validated against `ALLOWED_MODELS` allowlist; unknown IDs fall back to `google/gemma-4-26b-a4b-it:free`;
+- отсутствие подходящей модели возвращает `503 TEAM_MODEL_UNAVAILABLE`. При недоступности Supabase возвращается `503 MODEL_CATALOG_UNAVAILABLE`;
 - rate limit: 3 requests per 10 minutes per user UUID (Upstash Redis in production, in-memory locally);
 - context window between steps is truncated to 2000 characters to prevent token overflow;
 - best-effort persistence: current runtime saves `tasks` (mode_slug = `ai-team-mode`) and role rows in `model_responses`; `team_runs`/`team_run_steps` are DB v2 future storage until the v2.1 migration task switches writes to those tables;
-- OpenRouter is called server-side only; `modelId` from frontend is a `selectionId`, never a raw provider key;
-- safe errors include `SERVICE_UNAVAILABLE`, `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INVALID_JSON`, `INTERNAL_ERROR`.
+- OpenRouter is called server-side only. Frontend selections use the Supabase UUID;
+- safe errors include `SERVICE_UNAVAILABLE`, `AUTH_REQUIRED`, `RATE_LIMIT`, `VALIDATION_ERROR`, `INVALID_JSON`, `TEAM_MODEL_UNAVAILABLE`, `MODEL_CATALOG_UNAVAILABLE`, `INTERNAL_ERROR`.
 
 ## `GET /api/image-models` (v2.0, alpha)
 

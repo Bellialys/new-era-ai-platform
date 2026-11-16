@@ -323,8 +323,8 @@ describe("team-mode security invariants", () => {
 // ---------------------------------------------------------------------------
 
 describe("TEAM_DEFAULT_MODEL_ID — allowlist consistency", () => {
-  it("uses the refreshed stable provider-recovery default", () => {
-    expect(TEAM_DEFAULT_MODEL_ID).toBe("google/gemma-4-26b-a4b-it:free");
+  it("uses the model verified for all four roles in production", () => {
+    expect(TEAM_DEFAULT_MODEL_ID).toBe("cohere/north-mini-code:free");
   });
 
   it("TEAM_DEFAULT_MODEL_ID is present in ALLOWED_MODELS", () => {

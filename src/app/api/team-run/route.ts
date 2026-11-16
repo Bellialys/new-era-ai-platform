@@ -8,6 +8,7 @@ import {
   isJsonObject,
   ApiError,
   resolveOpenRouterRuntimeCredential,
+  getActiveFreeOpenRouterModelIds,
 } from "@/lib/server";
 import {
   runTeamMode,
@@ -23,8 +24,14 @@ import { ALLOWED_MODELS } from "@/lib/server/models";
 
 const TEAM_ALLOWED_MODEL_IDS = new Set(ALLOWED_MODELS.map((m) => m.id));
 
-// 4 sequential LLM calls — allow up to 60s.
+// Four sequential LLM calls fit a 60-second Vercel function budget.
+// Keep time for auth/rate-limit checks and best-effort persistence; abort
+// provider requests instead of letting a single slow role consume the run.
 export const maxDuration = 60;
+const TEAM_INFERENCE_BUDGET_MS = 52_000;
+const TEAM_STEP_TIMEOUT_MS = 12_000;
+const TEAM_TRANSIENT_RETRY_DELAY_MS = 200;
+const TEAM_TRANSIENT_RETRY_MIN_REMAINING_MS = TEAM_STEP_TIMEOUT_MS + 1_000;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
@@ -140,32 +147,77 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // modelId is optional — accepted only when it matches the allowlist; otherwise the
-    // server default is used. This prevents callers from forcing arbitrary OpenRouter keys.
     const requestedModelId = typeof b.modelId === "string" ? b.modelId.trim() : "";
-    const modelId = TEAM_ALLOWED_MODEL_IDS.has(requestedModelId)
-      ? requestedModelId
-      : TEAM_DEFAULT_MODEL_ID;
+    const liveModels = await getActiveFreeOpenRouterModelIds(identity);
+    const available = [...TEAM_ALLOWED_MODEL_IDS].filter((id) => liveModels.has(id));
+    const requested = available.find((id) => id === requestedModelId || liveModels.get(id) === requestedModelId);
+    const modelId = requested ?? available.find((id) => id === TEAM_DEFAULT_MODEL_ID) ?? available[0];
+    if (!modelId) {
+      throw new ApiError(
+        503, "TEAM_MODEL_UNAVAILABLE", "Сейчас нет доступной бесплатной модели для AI Team. Попробуйте позже."
+      );
+    }
     const gatewayCredential =
       await resolveOpenRouterRuntimeCredential(identity);
 
-    // Execute team mode. callModel wraps fetchOpenRouterResponse with the server-side API key.
-    // System prompts are defined in team-mode.ts — they are not read from the request body.
+    // Execute team mode with a bounded provider budget and at most one
+    // additional inference call for a transient 502/503 over the ENTIRE run.
+    // This never retries auth, credits, rate-limit, or timeout failures.
+    // System prompts are server-defined and are never read from the client.
+    let transientRetryUsed = false;
+    const inferenceDeadline = startTime + TEAM_INFERENCE_BUDGET_MS;
     const result = await runTeamMode(
       { task: rawTask, modelId },
       {
         callModel: async (prompt, systemPrompt, mId) => {
-          const { text } = await fetchOpenRouterResponse(prompt, mId, {
-            systemPrompt,
-            credential: gatewayCredential,
-            telemetry: {
-              userId: identity.userId,
-              guestId: null,
-              modeSlug: MODE_SLUG_AI_TEAM,
-              requestKind: "text",
-            },
-          });
-          return text;
+          const invoke = async () => {
+            const remainingMs = inferenceDeadline - Date.now();
+            if (remainingMs <= 1_000) {
+              throw new ApiError(
+                504,
+                "TEAM_RUN_TIMEOUT",
+                "AI Team exceeded its response time budget. Please try again."
+              );
+            }
+            return fetchOpenRouterResponse(prompt, mId, {
+              systemPrompt,
+              credential: gatewayCredential,
+              signal: AbortSignal.timeout(Math.min(TEAM_STEP_TIMEOUT_MS, remainingMs)),
+              telemetry: {
+                userId: identity.userId,
+                guestId: null,
+                modeSlug: MODE_SLUG_AI_TEAM,
+                requestKind: "text",
+              },
+            });
+          };
+
+          try {
+            return (await invoke()).text;
+          } catch (error) {
+            const retryable =
+              error instanceof ApiError &&
+              (error.statusCode === 502 || error.statusCode === 503);
+            if (
+              !retryable ||
+              transientRetryUsed ||
+              inferenceDeadline - Date.now() <= TEAM_TRANSIENT_RETRY_MIN_REMAINING_MS
+            ) {
+              throw error;
+            }
+
+            transientRetryUsed = true;
+            // Do not log the prompt, API key, authorization, or provider error body.
+            console.warn("[/api/team-run] Retrying transient upstream failure", {
+              modelId: mId,
+              httpStatus: error.statusCode,
+              retriesUsed: 1,
+            });
+            await new Promise((resolve) =>
+              setTimeout(resolve, TEAM_TRANSIENT_RETRY_DELAY_MS)
+            );
+            return (await invoke()).text;
+          }
         },
       }
     );

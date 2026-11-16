@@ -439,8 +439,31 @@ test("missing key emits JSON runtime error before reading files or fetching", as
   assert.deepEqual(JSON.parse(output[0]), {
     status: "error",
     reason: "runtime_error",
-    message: "OPENROUTER_API_KEY is not set. Add it to .env.local or repository secrets.",
+    message: "OPENROUTER_API_KEY is not set. Configure the local environment or use --public-catalog.",
   });
+});
+
+test("public discovery works without credentials and reports actual missing model IDs", async () => {
+  const output = [];
+  const urls = [];
+  const code = await runCli(["--public-catalog", "--json"], {
+    env: { OPENROUTER_API_KEY: "unused-test-key" },
+    loadEnvironment: false,
+    stdout: (message) => output.push(message),
+    readCatalog: async () => CATALOG,
+    fetchImpl: async (url, init) => {
+      urls.push(url);
+      assert.equal(init.headers.authorization, undefined);
+      const models = url === OPENROUTER_TEXT_MODELS_URL
+        ? textModels(["provider/alpha:free"])
+        : imageModels();
+      return { ok: true, json: async () => ({ data: [...models.values()] }) };
+    },
+  });
+
+  assert.deepEqual(urls.sort(), [OPENROUTER_IMAGE_MODELS_URL, OPENROUTER_TEXT_MODELS_URL].sort());
+  assert.equal(code, EXIT_CODES.MISSING);
+  assert.deepEqual(JSON.parse(output[0]).text.missing, ["provider/beta:free"]);
 });
 
 test("importing the verifier has no CLI side effects", () => {

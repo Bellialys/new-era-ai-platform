@@ -3,7 +3,7 @@
  *
  * Supabase models is the primary source of available models for both
  * /api/models and /api/compare. The hardcoded list in models.ts is an offline
- * fallback and must mirror the latest forward-only model catalog migration.
+ * fallback while automatic health checks are disabled.
  *
  * Access level filtering (v0.6.2):
  *   anonymous  → guests and authenticated users see these models
@@ -13,8 +13,7 @@
  * The client only ever sees and echoes back a `selectionId`:
  *   - DB mode:       selectionId = models.id (UUID), modelKey stays server-side
  *   - fallback mode: selectionId = OpenRouter model_key
- * The OpenRouter `model_key` is resolved server-side from the selectionId, so
- * the browser never needs to know the raw provider key.
+ * The OpenRouter `model_key` is resolved server-side from the selectionId.
  */
 
 import type { ArenaModel } from "@/types/arena";
@@ -110,10 +109,21 @@ async function fetchUserPlan(userId: string): Promise<string | null> {
   }
 }
 
-function fallbackCatalog(identity: RequestIdentity | null): ResolvedModel[] {
-  // The hardcoded fallback only contains free/anonymous models, so we
-  // always return everything regardless of identity in fallback mode.
-  void identity;
+function allowsHardcodedCatalog(): boolean {
+  const environment = process.env.VERCEL_ENV || process.env.NODE_ENV;
+  return environment !== "production" && process.env.ENABLE_MODEL_HEALTH_CRON !== "true";
+}
+
+function fallbackCatalog(requireSupabase = false): ResolvedModel[] {
+  if (requireSupabase || !allowsHardcodedCatalog()) {
+    // The static list cannot reflect runtime quarantines.
+    throw new ApiError(
+      503,
+      "MODEL_CATALOG_UNAVAILABLE",
+      "The model catalog is temporarily unavailable. Please try again later."
+    );
+  }
+
   return ALLOWED_MODELS.map((model) => ({
     selectionId: model.id,
     modelId: null,
@@ -138,43 +148,47 @@ function logModelCatalogFailure(reason: string, error: unknown): void {
 
 /**
  * Load the active/public catalog filtered by identity access level.
- * Supabase is preferred, but the app keeps working with the hardcoded fallback
- * if the database is unavailable.
+ * Supabase owns model visibility in production and wherever model health is enabled.
+ * An empty result stays empty and an unavailable catalog raises a 503.
  *
  * @param identity - The resolved request identity (null = treat as guest).
+ * @param options - Free OpenRouter reads require a live Supabase catalog.
  */
 export async function loadModelCatalog(
-  identity: RequestIdentity | null = null
+  identity: RequestIdentity | null = null,
+  { freeOpenRouterOnly = false }: { freeOpenRouterOnly?: boolean } = {}
 ): Promise<ResolvedModel[]> {
   const supabase = getSupabaseServerClient();
   if (!supabase) {
-    return fallbackCatalog(identity);
+    return fallbackCatalog(freeOpenRouterOnly);
   }
 
   const plan = identity?.kind === "user" ? await fetchUserPlan(identity.userId) : null;
   const levels = allowedLevelsFor(identity, plan);
 
   try {
+    let query = supabase
+      .from("models")
+      .select("id, model_key, display_name, description, role_tags, price_label, access_level")
+      .eq("is_active", true)
+      .eq("is_public", true)
+      .in("access_level", levels);
+    if (freeOpenRouterOnly) {
+      query = query.eq("provider", "openrouter").eq("price_label", "free");
+    }
     const { data, error } = await withTimeout(
-      supabase
-        .from("models")
-        .select("id, model_key, display_name, description, role_tags, price_label, access_level")
-        .eq("is_active", true)
-        .eq("is_public", true)
-        .in("access_level", levels)
-        .order("sort_order", { ascending: true }),
+      query.order("sort_order", { ascending: true }),
       MODEL_CATALOG_QUERY_TIMEOUT_MS,
       "models catalog query"
     );
 
-    if (error) {
-      logModelCatalogFailure("models table query failed; using hardcoded catalog", error);
-      return fallbackCatalog(identity);
+    if (error || !data) {
+      throw error ?? new Error("models table returned no result.");
     }
 
-    if (!data || data.length === 0) {
+    if (data.length === 0 && !freeOpenRouterOnly && allowsHardcodedCatalog()) {
       console.warn("models table returned no active public models; using hardcoded catalog.");
-      return fallbackCatalog(identity);
+      return fallbackCatalog();
     }
 
     return (data as DbModelRow[]).map((row) => ({
@@ -189,13 +203,26 @@ export async function loadModelCatalog(
       supportsCode: row.role_tags?.includes("coding") ?? false,
     }));
   } catch (caught) {
-    logModelCatalogFailure("models table is unavailable; using hardcoded catalog", caught);
-    return fallbackCatalog(identity);
+    logModelCatalogFailure("Supabase model catalog query failed.", caught);
+    return fallbackCatalog(freeOpenRouterOnly);
   }
 }
 
 /**
- * Public catalog for the client. Never exposes the OpenRouter model_key.
+ * Map selectable free OpenRouter model keys to their Supabase selection IDs.
+ * @throws {ApiError} If the live Supabase catalog cannot be read.
+ */
+export async function getActiveFreeOpenRouterModelIds(
+  identity: RequestIdentity
+): Promise<ReadonlyMap<string, string>> {
+  const catalog = await loadModelCatalog(identity, { freeOpenRouterOnly: true });
+  return new Map(catalog
+    .filter(({ modelKey }) => modelKey.endsWith(":free"))
+    .map(({ modelKey, selectionId }) => [modelKey, selectionId]));
+}
+
+/**
+ * Public catalog for the client. Uses opaque Supabase IDs in DB mode.
  *
  * @param identity - The resolved request identity for access filtering.
  */
@@ -239,6 +266,7 @@ export async function getAvailableCodeModels(
  * Resolve client-selected ids to server-side models (incl. OpenRouter keys).
  * Throws 403 if any id is not part of the current catalog OR if the caller
  * does not have the required access level for a model.
+ * Throws 503 if the managed catalog cannot be read.
  *
  * @param ids - selectionIds sent by the client.
  * @param identity - The resolved request identity for access validation.
@@ -253,8 +281,7 @@ export async function resolveSelectedModels(
   let allModels: ResolvedModel[];
 
   if (!supabase) {
-    // Fallback: all hardcoded models are anonymous, always allowed
-    allModels = fallbackCatalog(null);
+    allModels = fallbackCatalog();
   } else {
     try {
       const { data, error } = await withTimeout(
@@ -269,21 +296,20 @@ export async function resolveSelectedModels(
       );
 
       if (error || !data) {
-        // Fallback to full catalog resolution
-        allModels = await loadModelCatalog(null);
-      } else {
-        allModels = (data as DbModelRow[]).map((row) => ({
-          selectionId: row.id,
-          modelId: row.id,
-          modelKey: row.model_key,
-          name: row.display_name,
-          role: roleFromTags(row.role_tags),
-          badge: badgeFromTags(row.role_tags, row.price_label),
-          description: row.description ?? undefined,
-          accessLevel: (row.access_level ?? "anonymous") as "anonymous" | "registered" | "premium",
-          supportsCode: row.role_tags?.includes("coding") ?? false,
-        }));
+        throw error ?? new Error("models table returned no result for selected ids.");
       }
+
+      allModels = (data as DbModelRow[]).map((row) => ({
+        selectionId: row.id,
+        modelId: row.id,
+        modelKey: row.model_key,
+        name: row.display_name,
+        role: roleFromTags(row.role_tags),
+        badge: badgeFromTags(row.role_tags, row.price_label),
+        description: row.description ?? undefined,
+        accessLevel: (row.access_level ?? "anonymous") as "anonymous" | "registered" | "premium",
+        supportsCode: row.role_tags?.includes("coding") ?? false,
+      }));
     } catch {
       allModels = await loadModelCatalog(null);
     }

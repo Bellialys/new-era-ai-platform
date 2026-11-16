@@ -23,6 +23,17 @@
 <!-- SYNC:PROJECT_VERSION_END -->
 
 
+## Проверенный operational status — 16.11.2026
+
+Этот раздел актуальнее хронологических заметок ниже и не меняет версию `v2.0.0-alpha.1`.
+
+- PR #145 merged в `main`: 8 разрешённых offline fallback ID; 3 отозванных OpenRouter ID исключены. GitHub CI [#43873426310](https://github.com/Bellialys/new-era-ai-platform/actions/runs/43873426310) и Vercel production deployment успешны.
+- Production API `/api/health`, `/api/models`, `/api/code-models`: HTTP 200; live Supabase показывает 8 free/public моделей, 3 coding. LFM 2.5 2.6B ещё активна: этап 7 ждёт подтверждения автоматического скрытия и проверки старого UUID.
+- Daily Vercel cron: `03:17 UTC`; журнал `public.model_health_runs` 16.11 пуст. Этап 10 не закрывать до записей `scheduled/succeeded` в две последовательные даты (17–18 ноября).
+- Security issue #136 закрыта; Next.js patch и блокирующий high/critical audit внедрены. `#108` (leaked password protection) и `#100` (Vercel build quotas) остаются открытыми.
+- DB drift: migration `20261109095503_lab05_saved_prompts` применена в Supabase, но находится только в draft PR #135; файл ещё отсутствует в `main`. Нужна контролируемая миграционная синхронизация, не повторное исполнение SQL.
+- `.project/state.json`: `V201-16` активна; Stage 3.2 live gate следует проверять отдельно, статус не изменён этим аудитом.
+
 ```text
 v2.0.0-alpha.1 - AI Team Mode
 # текущая рабочая ветка: AI Team Mode; 4 роли (Planner → Researcher → Critic → Finalizer) за feature flag
