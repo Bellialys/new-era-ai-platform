@@ -7,7 +7,7 @@
 `promptfooconfig.yaml` отправляет одинаковые тесты напрямую в OpenRouter и сравнивает две актуальные бесплатные модели:
 
 - `google/gemma-4-26b-a4b-it:free`;
-- `nvidia/nemotron-3-super-120b-a12b:free`.
+- `cohere/north-mini-code:free`.
 
 Полный baseline выполняет 3 теста для каждой модели, то есть 6 LLM-запросов.
 
