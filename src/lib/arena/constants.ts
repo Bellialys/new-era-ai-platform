@@ -65,10 +65,9 @@ export const ARENA_CONSTANTS = {
   GUEST_JUDGE_RATE_LIMIT_WINDOW_MS: 60_000,
   GUEST_JUDGE_RATE_LIMIT_MAX_REQUESTS: 1,
   JUDGE_MAX_TOKENS: 800,
-  // Primary: stable free general/reasoning model from the refreshed public catalog.
-  JUDGE_PRIMARY_MODEL_ID: "google/gemma-4-31b-it:free",
-  // Fallback: independently verified baseline model with structured output support.
-  JUDGE_FALLBACK_MODEL_ID: "google/gemma-4-26b-a4b-it:free",
+  // Candidates are used only while the live catalog permits the free variant.
+  JUDGE_PRIMARY_MODEL_ID: "nvidia/nemotron-3.5-lightning:free",
+  JUDGE_FALLBACK_MODEL_ID: "dots-studio/dots-3-note-preview:free",
   JUDGE_RESPONSE_TRUNCATE_CHARS: 1500,
 };
 

@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/server/utils";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -11,12 +12,14 @@ const {
   fetchOpenRouterMock,
   saveArenaRunMock,
   resolveRuntimeCredentialMock,
+  getLiveModelsMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   fetchOpenRouterMock: vi.fn(),
   saveArenaRunMock: vi.fn(),
   resolveRuntimeCredentialMock: vi.fn(),
+  getLiveModelsMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -29,6 +32,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     fetchOpenRouterResponse: fetchOpenRouterMock,
     saveArenaRun: saveArenaRunMock,
     resolveOpenRouterRuntimeCredential: resolveRuntimeCredentialMock,
+    getActiveFreeOpenRouterModelIds: getLiveModelsMock,
   };
 });
 
@@ -49,6 +53,7 @@ import { ALLOWED_MODELS } from "@/lib/server/models";
 
 const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const TASK_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const ALTERNATIVE_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 
 // Minimal task that satisfies the min-length constraint.
 const VALID_TASK = "Build a REST API with authentication and rate limiting.";
@@ -90,6 +95,10 @@ beforeEach(() => {
   fetchOpenRouterMock.mockReset();
   saveArenaRunMock.mockReset();
   resolveRuntimeCredentialMock.mockReset();
+  getLiveModelsMock.mockReset().mockResolvedValue(new Map([
+    [TEAM_DEFAULT_MODEL_ID, "team-default-id"],
+    [ALLOWED_MODELS[1].id, ALTERNATIVE_ID],
+  ]));
 
   // Enable team mode for all tests — individual tests that check the 503 gate
   // must delete or override this before calling POST().
@@ -364,7 +373,7 @@ describe("POST /api/team-run — successful execution", () => {
     }
   });
 
-  it("uses caller-supplied modelId when it is in ALLOWED_MODELS", async () => {
+  it("uses a caller-supplied model when it is allowlisted and active", async () => {
     const allowedId = ALLOWED_MODELS[1].id; // second model from the allowlist
     await POST(makeRequest({ ...VALID_BODY, modelId: allowedId }));
 
@@ -373,12 +382,42 @@ describe("POST /api/team-run — successful execution", () => {
     }
   });
 
+  it("resolves a caller-supplied Supabase UUID to an eligible model", async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, modelId: ALTERNATIVE_ID }));
+
+    expect(res.status).toBe(200);
+    expect(fetchOpenRouterMock.mock.calls.map((call) => call[1])).toEqual(Array(4).fill(ALLOWED_MODELS[1].id));
+  });
+
   it("falls back to TEAM_DEFAULT_MODEL_ID when caller supplies a model not in ALLOWED_MODELS", async () => {
     await POST(makeRequest({ ...VALID_BODY, modelId: "anthropic/claude-haiku" }));
 
     for (const call of fetchOpenRouterMock.mock.calls as [string, string][]) {
       expect(call[1]).toBe(TEAM_DEFAULT_MODEL_ID);
     }
+  });
+
+  it("runs all four roles with a live alternative when the requested model and default are hidden", async () => {
+    const alternative = ALLOWED_MODELS[1].id;
+    getLiveModelsMock.mockResolvedValue(new Map([[alternative, ALTERNATIVE_ID]]));
+
+    const res = await POST(makeRequest({ ...VALID_BODY, modelId: "google/gemma-4-26b-a4b-it:free" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.steps).toHaveLength(4);
+    expect(fetchOpenRouterMock.mock.calls.map((call) => call[1])).toEqual(Array(4).fill(alternative));
+  });
+
+  it("returns a controlled error before calling OpenRouter when no compatible model is active", async () => {
+    getLiveModelsMock.mockResolvedValue(new Map([["provider/unreviewed:free", "other-model-id"]]));
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ errorCode: "TEAM_MODEL_UNAVAILABLE" });
+    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
+    expect(fetchOpenRouterMock).not.toHaveBeenCalled();
   });
 
   it("calls fetchOpenRouterResponse exactly 4 times", async () => {
@@ -430,6 +469,79 @@ describe("POST /api/team-run — error paths", () => {
     expect(body.taskId).toBeNull();
     expect(body.steps).toHaveLength(4);
     expect(typeof body.finalAnswer).toBe("string");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Transient OpenRouter failures — one bounded extra call per team run
+// ---------------------------------------------------------------------------
+
+describe("POST /api/team-run — bounded provider recovery", () => {
+  it("retries one upstream 502 and completes all four roles on recovery", async () => {
+    fetchOpenRouterMock
+      .mockRejectedValueOnce(new ApiError(502, "PROVIDER_UNAVAILABLE", "Provider is down."))
+      .mockResolvedValue({ text: "recovered", latencyMs: 1, usage: NULL_USAGE });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { steps?: unknown[]; finalAnswer?: string };
+
+    expect(res.status).toBe(200);
+    expect(body.steps).toHaveLength(4);
+    expect(body.finalAnswer).toBe("recovered");
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(5);
+    expect(fetchOpenRouterMock.mock.calls.every(call => call[1] === TEAM_DEFAULT_MODEL_ID)).toBe(true);
+  });
+
+  it("retries a transient upstream 503 once", async () => {
+    fetchOpenRouterMock
+      .mockRejectedValueOnce(new ApiError(503, "PROVIDER_OVERLOADED", "Provider overloaded."))
+      .mockResolvedValue({ text: "ok", latencyMs: 1, usage: NULL_USAGE });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("does not retry a second persistent 502 and returns a controlled error", async () => {
+    fetchOpenRouterMock.mockRejectedValue(
+      new ApiError(502, "PROVIDER_UNAVAILABLE", "Provider is still unavailable.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { errorCode?: string; requestId?: string };
+
+    expect(res.status).toBe(502);
+    expect(body.errorCode).toBe("PROVIDER_UNAVAILABLE");
+    expect(typeof body.requestId).toBe("string");
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    [403, "AUTH_ERROR"],
+    [402, "INSUFFICIENT_CREDITS"],
+    [429, "RATE_LIMIT"],
+    [504, "TIMEOUT"],
+  ])("does not retry non-transient %i (%s) errors", async (statusCode, errorCode) => {
+    fetchOpenRouterMock.mockRejectedValue(
+      new ApiError(statusCode, errorCode, "Controlled provider error.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(statusCode);
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes a cancellable per-step deadline to OpenRouter", async () => {
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(4);
+    for (const call of fetchOpenRouterMock.mock.calls) {
+      const options = call[2] as { signal?: AbortSignal };
+      expect(options.signal).toBeInstanceOf(AbortSignal);
+      expect(options.signal?.aborted).toBe(false);
+    }
   });
 });
 

@@ -5,8 +5,9 @@ on:
     branches:
       - main
   pull_request:
-    branches:
-      - main
+
+permissions:
+  contents: read
 
 jobs:
   validate:
@@ -41,7 +42,6 @@ jobs:
 
       - name: Security audit
         run: npm audit --audit-level=high
-        continue-on-error: true
 
       - name: Typecheck
         run: npm run typecheck
@@ -73,6 +73,7 @@ jobs:
         env:
           ALLOW_DEGRADED: "1"
           SMOKE_BASE_URL: http://127.0.0.1:3000
+          VERCEL_ENV: development
         run: |
           npm run start > /tmp/new-era-next.log 2>&1 &
           SERVER_PID=$!

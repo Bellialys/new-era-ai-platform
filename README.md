@@ -26,7 +26,19 @@
 
 Статус синхронизирован с `.project/state.json`; порядок будущих этапов описан в `14-roadmap.md`.
 
-Актуальный Stage 3 engineering status на 2026-09-29:
+## Database migration reconciliation — 16.11.2026
+
+The previously missing `20261109095503_lab05_saved_prompts.sql` was copied unchanged from draft PR #135 into `main`, after verifying remote `saved_prompts` schema, RLS and indexes. **No production migration was re-run**. The baseline below predates this fix. Separately, `20260929022500_stage34_atomic_openrouter_activation.sql` is intentionally absent from remote migrations and remains an unapproved production Stage 3.2 activation gate.
+
+## Production snapshot — 16.11.2026
+
+- GitHub `main`: `a9e795d2b895901eb0ac27a05fcd15d0f166dcbc`, PR #145 merged; [CI #43873426310](https://github.com/Bellialys/new-era-ai-platform/actions/runs/43873426310) succeeded, Vercel production deployment succeeded; `/api/health`, `/api/models`, `/api/code-models` returned HTTP 200.
+- The offline fallback lists **8** OpenRouter IDs after removal of 3 withdrawn free IDs. Supabase production has **8** active/public free models, **3** coding. Live DB content and fallback are independent; LFM 2.5 2.6B is still publicly visible pending automatic quarantine evidence (Stage 7).
+- `/api/cron/model-health` runs at 03:17 UTC (05:17 Kyiv in November). `model_health_runs` has no rows as of this snapshot; Stage 10 requires `scheduled/succeeded` on two successive days (expected 17 and 18 November).
+- Security issue [#136](https://github.com/Bellialys/new-era-ai-platform/issues/136) is closed (Next.js upgrade, blocking high/critical audit). Supabase migration `20261109095503_lab05_saved_prompts` was applied remotely but its SQL file is **only in draft PR #135**, not `main`; reproducible migration history is incomplete.
+- Project version remains `v2.0.0-alpha.1` and `.project/state.json` still lists active task `V201-16`. Earlier sections below may reflect historical snapshots rather than current production.
+
+Исторический снимок Stage 3 engineering от 2026-09-29 (не текущий production-статус):
 
 - Stage 3.3 Pricing + Actual Usage — завершён и merged;
 - Stage 3.4 OpenRouter OAuth User Beta — код merged и production build READY, но rollout flags выключены;
@@ -80,6 +92,12 @@
 - live smoke внешнего runner и admin routes на целевом окружении;
 - Image Arena;
 - AI Team Mode активирован в production alpha за feature flags; стабильным пользовательским этапом станет только после мониторинга и оставшихся release checks.
+
+## Saved Prompts — Lab05 MVP (16.11.2026)
+
+Реализован изолированный пользовательский CRUD для сохранённых текстовых промптов: страница `/saved-prompts` и маршруты `GET/POST /api/saved-prompts`, `GET/PATCH/DELETE /api/saved-prompts/[id]`. Доступ только для вошедшего пользователя; каждое действие привязано к проверенному `user_id`, используется CSRF Origin guard и `Cache-Control: private, no-store`. Ограничены длины полей, частота обращений и список до 50 последних записей.
+
+Миграция `20261109095503_lab05_saved_prompts.sql` **уже применена в production** и находится в `main` после PR #148; эта функция не применяет её повторно. Двухпользовательская изоляция проверяется автоматическими тестами с изолированной фикстурой Supabase; настоящая проверка двух production-аккаунтов и viewport/a11y-аудит ещё требуются. Описания и результаты тестов: [PR #135](https://github.com/Bellialys/new-era-ai-platform/pull/135) и `docs/audits/2026-11-09-lab05-implementation.md`.
 
 ## Главная цель
 
