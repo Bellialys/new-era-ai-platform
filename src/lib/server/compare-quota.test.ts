@@ -213,6 +213,17 @@ describe("Compare quota migration — orphan fencing and privacy retention", () 
     "utf8"
   );
 
+  it("keeps all four PostgreSQL function bodies dollar-quoted and balanced", () => {
+    // A prior draft accidentally committed AS $ ... $ instead of AS $ ... $.
+    // TypeScript/Next.js builds cannot detect a broken PL/pgSQL delimiter.
+    const opens = migration.match(/\bas \$\$(?:\r?\n)/g) ?? [];
+    const closes = migration.match(/(?:\r?\n)\$\$;/g) ?? [];
+    expect(opens).toHaveLength(4);
+    expect(closes).toHaveLength(4);
+    expect(migration).not.toMatch(/\bas \$(?:\r?\n)/);
+    expect(migration).not.toMatch(/(?:\r?\n)\$;/);
+  });
+
   it("distinguishes pending and abandoned idempotency states without charging again", () => {
     expect(migration).toContain("check (status in ('reserved', 'completed', 'abandoned'))");
     expect(migration).toContain("'in_progress'::text");
