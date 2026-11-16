@@ -5,8 +5,6 @@ import {
   PROMPT_MAX_LENGTH,
   MODEL_MIN_SELECT,
   MODEL_MAX_SELECT,
-  COMPARE_RATE_LIMIT_MAX_REQUESTS,
-  COMPARE_RATE_LIMIT_WINDOW_MS,
   MODE_SLUG_PROMPT_ARENA,
 } from "@/lib/arena/constants";
 import {
@@ -21,10 +19,14 @@ import {
   streamOpenRouterResponse,
   ApiError,
   savePromptArenaRun,
-  checkRateLimit,
   resolveRequestIdentity,
   applyGuestCookie,
   resolveOpenRouterRuntimeCredential,
+  reserveCompareQuota,
+  completeCompareQuota,
+  createCompareFingerprint,
+  getCompareIdempotencyKey,
+  getCompareRetryAfterSeconds,
 } from "@/lib/server";
 
 // Vercel: allow up to 60s for OpenRouter AI calls
@@ -88,6 +90,7 @@ function createStreamingCompareResponse({
   selectedModels,
   identity,
   gatewayCredential,
+  reservationId,
   startTime,
 }: {
   cleanPrompt: string;
@@ -96,6 +99,7 @@ function createStreamingCompareResponse({
   gatewayCredential: Awaited<
     ReturnType<typeof resolveOpenRouterRuntimeCredential>
   >;
+  reservationId: string;
   startTime: number;
 }): NextResponse {
   const stream = new ReadableStream<Uint8Array>({
@@ -234,11 +238,17 @@ function createStreamingCompareResponse({
         );
 
         logApiRequest("POST", "/api/compare", 200, Date.now() - startTime);
-        writeSse(controller, "complete", {
+        const completePayload = {
           status: hasAnySuccess ? "success" : "error",
           taskId: savedRun.taskId,
           responses: savedArenaResponses,
+        };
+        await completeCompareQuota({
+          reservationId,
+          responsePayload: completePayload,
+          responseStatus: 200,
         });
+        writeSse(controller, "complete", completePayload);
       } catch (error) {
         const statusCode = error instanceof ApiError ? error.statusCode : 500;
         console.error("POST /api/compare stream error:", error);
@@ -289,35 +299,6 @@ export async function POST(request: NextRequest): Promise<Response> {
           new ApiError(401, "AUTH_REQUIRED", "Please sign in or continue as a guest before comparing models.")
         ),
         { status: 401 }
-      );
-    }
-
-    const rateLimitSubKey =
-      identity.kind === "user"
-        ? `user:${identity.userId}`
-        : `guest:${identity.guestId}`;
-    const rateLimitKey = `compare:${rateLimitSubKey}`;
-    const rateLimit = await checkRateLimit(
-      rateLimitKey,
-      COMPARE_RATE_LIMIT_MAX_REQUESTS,
-      COMPARE_RATE_LIMIT_WINDOW_MS
-    );
-
-    if (rateLimit.limited) {
-      logApiRequest("POST", "/api/compare", 429, Date.now() - startTime);
-      return NextResponse.json(
-        createErrorResponse(
-          new ApiError(429, "RATE_LIMIT", "Too many compare requests. Please try again later.")
-        ),
-        {
-          status: 429,
-          headers: {
-            "Retry-After": Math.max(
-              Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
-              1
-            ).toString(),
-          },
-        }
       );
     }
 
@@ -413,6 +394,42 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
+    const reservation = await reserveCompareQuota({
+      identity,
+      idempotencyKey: getCompareIdempotencyKey(request),
+      fingerprint: createCompareFingerprint({
+        prompt: cleanPrompt,
+        modelIds: selectedModelIds,
+        modeSlug: modeValidation.value ?? MODE_SLUG_PROMPT_ARENA,
+        blind: false,
+      }),
+    });
+
+    if (reservation.outcome === "replayed") {
+      if (reservation.responsePayload === null || reservation.responseStatus === null) {
+        throw new ApiError(503, "QUOTA_AUTHORITY_UNAVAILABLE", "Compare quota is temporarily unavailable.");
+      }
+      if (shouldStream) {
+        const replayResponse = new NextResponse(
+          `event: complete\ndata: ${JSON.stringify(reservation.responsePayload)}\n\n`,
+          {
+            status: reservation.responseStatus,
+            headers: {
+              "Content-Type": "text/event-stream; charset=utf-8",
+              "Cache-Control": "no-cache, no-transform",
+            },
+          }
+        );
+        if (identity.kind === "guest") {
+          applyGuestCookie(replayResponse, identity.guestId);
+        }
+        return replayResponse;
+      }
+      return NextResponse.json(reservation.responsePayload, {
+        status: reservation.responseStatus,
+      });
+    }
+
     const gatewayCredential =
       await resolveOpenRouterRuntimeCredential(identity);
 
@@ -422,6 +439,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         selectedModels,
         identity,
         gatewayCredential,
+        reservationId: reservation.reservationId,
         startTime,
       });
     }
@@ -509,6 +527,12 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const successResponse = NextResponse.json(successBody, { status: 200 });
 
+    await completeCompareQuota({
+      reservationId: reservation.reservationId,
+      responsePayload: successBody,
+      responseStatus: 200,
+    });
+
     if (identity.kind === "guest") {
       applyGuestCookie(successResponse, identity.guestId);
     }
@@ -518,6 +542,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     const statusCode = error instanceof ApiError ? error.statusCode : 500;
     console.error("POST /api/compare error:", error);
     logApiRequest("POST", "/api/compare", statusCode, Date.now() - startTime);
-    return NextResponse.json(createErrorResponse(error), { status: statusCode });
+    const retryAfter = getCompareRetryAfterSeconds(error);
+    return NextResponse.json(createErrorResponse(error), {
+      status: statusCode,
+      headers: retryAfter ? { "Retry-After": retryAfter.toString() } : undefined,
+    });
   }
 }
