@@ -45,6 +45,7 @@ import {
   COMPARE_RATE_LIMIT_WINDOW_MS,
   PROMPT_MIN_LENGTH,
 } from "@/lib/arena/constants";
+import { ApiError } from "@/lib/server";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -167,6 +168,18 @@ describe("POST /api/compare — rate limiting", () => {
     const res = await POST(makeRequest(VALID_BODY));
 
     expect(res.status).toBe(500);
+    expect((await res.json() as { errorCode?: string }).errorCode).toBe("INTERNAL_ERROR");
+    expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when quota verification is unavailable", async () => {
+    checkDailyLimitMock.mockRejectedValue(
+      new ApiError(503, "INTERNAL_ERROR", "Usage limit verification is temporarily unavailable.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(503);
     expect((await res.json() as { errorCode?: string }).errorCode).toBe("INTERNAL_ERROR");
     expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
   });
