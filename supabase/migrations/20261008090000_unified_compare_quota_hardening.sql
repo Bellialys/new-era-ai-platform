@@ -21,7 +21,7 @@ create table if not exists public.compare_quota_reservations (
   day_bucket timestamptz not null,
   minute_bucket timestamptz not null,
   status text not null default 'reserved'
-    check (status in ('reserved', 'completed')),
+    check (status in ('reserved', 'completed', 'abandoned')),
   response_payload jsonb,
   response_status integer check (response_status between 200 and 599),
   created_at timestamptz not null default now(),
@@ -31,6 +31,14 @@ create table if not exists public.compare_quota_reservations (
 
 create index if not exists idx_compare_quota_reservations_created
   on public.compare_quota_reservations (created_at desc);
+
+-- Keep the maintenance sweep efficient without indexing the sensitive JSON.
+create index if not exists idx_compare_quota_reservations_unfinished
+  on public.compare_quota_reservations (created_at)
+  where status = 'reserved';
+create index if not exists idx_compare_quota_reservations_payload_expiry
+  on public.compare_quota_reservations (completed_at)
+  where status = 'completed' and response_payload is not null;
 
 alter table public.compare_quota_buckets enable row level security;
 alter table public.compare_quota_reservations enable row level security;
@@ -115,9 +123,28 @@ begin
   if found then
     if v_existing.fingerprint <> p_fingerprint then
       return query select v_existing.id, 'idempotency_mismatch'::text, null::integer, null::jsonb, null::integer;
+    elsif v_existing.status = 'completed' then
+      if v_existing.response_payload is not null and v_existing.response_status is not null then
+        return query select v_existing.id, 'replayed'::text, null::integer,
+          v_existing.response_payload, v_existing.response_status;
+      else
+        -- A retained idempotency key must NOT result in a new paid inference
+        -- once the cached answer was scrubbed by the privacy retention job.
+        return query select v_existing.id, 'result_expired'::text, null::integer, null::jsonb, null::integer;
+      end if;
+    elsif v_existing.status = 'abandoned' then
+      return query select v_existing.id, 'result_expired'::text, null::integer, null::jsonb, null::integer;
+    elsif v_existing.created_at < v_now - interval '15 minutes' then
+      -- Self-heal a reservation orphaned by a crash or a completion outage.
+      -- Do not refund quota or repeat paid provider work for the same key.
+      update public.compare_quota_reservations
+         set status = 'abandoned'
+       where id = v_existing.id and status = 'reserved';
+      return query select v_existing.id, 'result_expired'::text, null::integer, null::jsonb, null::integer;
     else
-      return query select v_existing.id, 'replayed'::text, null::integer,
-        v_existing.response_payload, v_existing.response_status;
+      -- The original request may still be working. The caller can poll
+      -- using the same idempotency key and MUST NOT start new provider calls.
+      return query select v_existing.id, 'in_progress'::text, 5::integer, null::jsonb, null::integer;
     end if;
     return;
   end if;
@@ -180,10 +207,18 @@ create or replace function public.complete_compare_quota(
   p_response_status integer
 )
 returns void
-language sql
+language plpgsql
 security definer
 set search_path = pg_catalog, public
-as $$
+as $
+declare
+  v_existing public.compare_quota_reservations%rowtype;
+begin
+  if p_reservation_id is null or p_response_payload is null
+     or p_response_status not between 200 and 599 then
+    raise exception 'invalid quota completion payload' using errcode = '22023';
+  end if;
+
   update public.compare_quota_reservations
      set status = 'completed',
          response_payload = p_response_payload,
@@ -191,7 +226,26 @@ as $$
          completed_at = clock_timestamp()
    where id = p_reservation_id
      and status = 'reserved';
-$$;
+  if found then
+    return;
+  end if;
+
+  -- A network timeout can happen *after* the first DB transaction committed.
+  -- Exact duplicate completion is successful, so the application can retry
+  -- the RPC safely without creating another inference request.
+  select * into v_existing from public.compare_quota_reservations
+   where id = p_reservation_id;
+  if found and v_existing.status = 'completed'
+     and v_existing.response_status = p_response_status
+     and v_existing.response_payload = p_response_payload then
+    return;
+  end if;
+
+  -- A missing, abandoned, scrubbed or mismatched result is not silently
+  -- accepted. This never creates or refunds a new reservation.
+  raise exception 'quota reservation is not completable' using errcode = 'P0001';
+end;
+$;
 
 revoke all on function public.complete_compare_quota(uuid, jsonb, integer) from public, anon, authenticated;
 grant execute on function public.complete_compare_quota(uuid, jsonb, integer) to service_role;
@@ -235,7 +289,56 @@ $$;
 revoke all on function public.backfill_compare_quota_current_day() from public, anon, authenticated;
 grant execute on function public.backfill_compare_quota_current_day() to service_role;
 
+-- Maintenance is service-role-only and deliberately NOT scheduled by this
+-- draft migration. The release runbook must configure an audited daily job.
+-- In-flight work has 15 minutes (well beyond request timeouts); after that,
+-- orphaned requests become unreplayable without refunding provider quota.
+-- Full response JSON is retained no longer than 24 hours after completion.
+-- Idempotency metadata is deleted after 30 days. UTC buckets older than
+-- three days no longer affect any active daily/minute quota.
+drop function if exists public.maintain_compare_quota();
+create or replace function public.maintain_compare_quota()
+returns table (
+  abandoned_count bigint,
+  scrubbed_count bigint,
+  deleted_reservations bigint,
+  deleted_buckets bigint
+)
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $
+declare
+  v_now timestamptz := clock_timestamp();
+begin
+  update public.compare_quota_reservations
+     set status = 'abandoned'
+   where status = 'reserved' and created_at < v_now - interval '15 minutes';
+  get diagnostics abandoned_count = row_count;
+
+  update public.compare_quota_reservations
+     set response_payload = null
+   where status = 'completed'
+     and completed_at < v_now - interval '24 hours'
+     and response_payload is not null;
+  get diagnostics scrubbed_count = row_count;
+
+  delete from public.compare_quota_reservations
+   where created_at < v_now - interval '30 days';
+  get diagnostics deleted_reservations = row_count;
+
+  delete from public.compare_quota_buckets
+   where bucket_start < v_now - interval '3 days';
+  get diagnostics deleted_buckets = row_count;
+
+  return next;
+end;
+$;
+
+revoke all on function public.maintain_compare_quota() from public, anon, authenticated;
+grant execute on function public.maintain_compare_quota() to service_role;
+
 comment on table public.compare_quota_reservations is
-  'Atomic logical compare reservations and idempotent terminal responses; provider failures never release usage.';
+  'Atomic compare reservations; in-progress/abandoned states never repeat paid inference or refund quota. Cached JSON expires after 24h.';
 comment on function public.backfill_compare_quota_current_day() is
   'Release-gated local/test cutover helper. Never run against production without approval and verification.';
