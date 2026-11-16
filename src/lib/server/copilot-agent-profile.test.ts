@@ -40,7 +40,7 @@ describe("native Copilot harness agent profiles — static contracts", () => {
       expect(profile.frontmatter).not.toContain("runSubagent");
       expect(profile.tools).not.toContain("*");
       expect(profile.tools).not.toContain("agent/runSubagent");
-      expect(profile.source).toContain("Manual permissions");
+      // Read-only workers do not need shell permission controls themselves; Coordinator and Developer do.
     }
   });
 
@@ -54,6 +54,7 @@ describe("native Copilot harness agent profiles — static contracts", () => {
     expect(p.source).toContain("Copilot Security");
     expect(p.source).toContain("Copilot Developer");
     expect(p.source).toContain("not a runtime allowlist");
+    expect(p.source).toContain("Manual permissions");
   });
 
   it.each([
@@ -79,6 +80,7 @@ describe("native Copilot harness agent profiles — static contracts", () => {
     expect(p.disableModelInvocation).toBe("false");
     expect(p.source).toContain("explicitly approved");
     expect(p.source).toContain("production");
+    expect(p.source).toContain("Manual permissions");
   });
 
   it("preserves the original Local configuration instead of silently converting it", () => {
