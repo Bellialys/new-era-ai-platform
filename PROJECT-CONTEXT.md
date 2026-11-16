@@ -16,6 +16,10 @@
 Исторический production baseline Vercel quota investigation: `main = eaee3fb113be44fb0f1e6a38145367fe502c345a` (PR #119).
 Baseline SHA является исторической отметкой, а не неизменяемым источником истины: перед новой работой всегда перечитывать текущий `main`.
 
+## Lab05 migration reconciliation — 16.11.2026
+
+Exact migration SQL `20261109095503_lab05_saved_prompts.sql` was restored from draft PR #135 to current `main` after read-only confirmation that production schema, policies, indexes and history already have it. **No SQL was run in production**. The older snapshot below records the pre-reconciliation state. Separate historical `20260929022500_stage34_atomic_openrouter_activation.sql` remains present in repository but is **not applied** to production: maintain controlled Stage 3.2 activation gate, never apply automatically.
+
 ## Production snapshot — 16.11.2026
 
 - GitHub `main`: `a9e795d2b895901eb0ac27a05fcd15d0f166dcbc`, PR #145 merged; [CI #43873426310](https://github.com/Bellialys/new-era-ai-platform/actions/runs/43873426310) succeeded, Vercel production deployment succeeded; `/api/health`, `/api/models`, `/api/code-models` returned HTTP 200.
