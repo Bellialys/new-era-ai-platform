@@ -7,9 +7,6 @@ const EXPECTED_MODEL_IDS = [
   "google/gemma-4-26b-a4b-it:free",
   "google/gemma-4-31b-it:free",
   "nvidia/nemotron-3.5-lightning:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "xingchen-agi/xing4.0-29b-a4b:free",
-  "liquid/lfm-2.5-2.6b:free",
   "nvidia/nemotron-3-ultra-550b-a55b:free",
   "recursive/flint-v1.0:free",
   "liquid/lfm-3-1.7b:free",
@@ -18,7 +15,6 @@ const EXPECTED_MODEL_IDS = [
 const EXPECTED_CODE_MODEL_IDS = [
   "cohere/north-mini-code:free",
   "dots-studio/dots-3-note-preview:free",
-  "xingchen-agi/xing4.0-29b-a4b:free",
   "recursive/flint-v1.0:free",
 ] as const;
 
@@ -49,6 +45,17 @@ describe("ALLOWED_MODELS", () => {
     const ids = ALLOWED_MODELS.map((model) => model.id);
     expect(ids).not.toContain("poolside/laguna-s-2.1:free");
     expect(ids).not.toContain("poolside/laguna-xs-2.1:free");
+  });
+
+  it("excludes withdrawn free endpoints from the offline fallback", () => {
+    const ids = ALLOWED_MODELS.map((model) => model.id);
+    for (const withdrawn of [
+      "liquid/lfm-2.5-2.6b:free",
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "xingchen-agi/xing4.0-29b-a4b:free",
+    ]) {
+      expect(ids).not.toContain(withdrawn);
+    }
   });
 
   it("prioritizes recent confirmed responders for default Prompt Arena selection", () => {
