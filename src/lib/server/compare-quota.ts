@@ -52,7 +52,7 @@ export class CompareResultExpiredError extends ApiError {
 }
 
 interface RpcReservationRow {
-  reservation_id: string;
+  reservation_id: string | null;
   outcome:
     | "accepted"
     | "replayed"
@@ -86,12 +86,14 @@ function parseReservation(data: unknown): RpcReservationRow | null {
   if (!row || typeof row !== "object") return null;
   const candidate = row as Partial<RpcReservationRow>;
   if (
-    typeof candidate.reservation_id !== "string" ||
-    typeof candidate.outcome !== "string"
+    typeof candidate.outcome !== "string" ||
+    (candidate.reservation_id != null && typeof candidate.reservation_id !== "string")
   ) {
     return null;
   }
-  return candidate as RpcReservationRow;
+  // Quota-rejected/authority-error outcomes intentionally have NULL IDs.
+  // Only 'accepted' or 'replayed' require a real reservation identifier.
+  return { ...candidate, reservation_id: candidate.reservation_id ?? null } as RpcReservationRow;
 }
 
 /**
@@ -140,11 +142,12 @@ export async function reserveCompareQuota(input: {
     // without evidence of a successful atomic quota reservation.
     throw new CompareQuotaAuthorityError();
   }
-  if (!result.reservation_id) throw new CompareQuotaAuthorityError();
+  const reservationId = result.reservation_id;
+  if (!reservationId) throw new CompareQuotaAuthorityError();
 
   return {
     outcome: result.outcome,
-    reservationId: result.reservation_id,
+    reservationId,
     retryAfterSeconds: result.retry_after_seconds,
     responsePayload: result.response_payload,
     responseStatus: result.response_status,
