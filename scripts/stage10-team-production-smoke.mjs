@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
@@ -48,8 +48,8 @@ async function verify() {
   assert(!journalError, "Cannot read the production journal over the Data API");
 
   const run = randomUUID();
-  const email = "stage10-" + run + "@example.invalid";
-  const password = "S10!" + randomUUID() + randomUUID();
+  const email = "stage10-" + run + "@example.com";
+  const password = "S10!a" + randomBytes(24).toString("base64url");
   const task = "Stage 10 release smoke " + run + ". What is 7 + 5? Explain the calculation briefly.";
   const cookiesByName = new Map();
   const session = createServerClient(url, publicKey, {
@@ -74,7 +74,14 @@ async function verify() {
       email_confirm: true,
       user_metadata: { purpose: "stage10-release-smoke", fixture_run: run },
     });
-    if (created.error) log("fixture-creation-error", { code: safeValue(created.error.code), http: created.error.status });
+    if (created.error) {
+      const message = created.error.message || "";
+      log("fixture-creation-error", {
+        code: safeValue(created.error.code),
+        http: created.error.status,
+        field: /password/i.test(message) ? "password" : /email/i.test(message) ? "email" : null,
+      });
+    }
     assert(!created.error && created.data.user, "Could not create the smoke fixture");
     fixtureId = created.data.user.id;
     log("fixture-created", { fixtureId, run });
