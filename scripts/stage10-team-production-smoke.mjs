@@ -93,10 +93,7 @@ async function verify() {
     assert(cookiesByName.size > 0, "Supabase SSR did not set session cookies");
     const cookie = [...cookiesByName.entries()].map(([name, value]) => name + "=" + encodeURIComponent(value)).join("; ");
 
-    const models = [
-      { label: "default", key: "nvidia/nemotron-3.5-lightning:free" },
-      { label: "alternate", key: "cohere/north-mini-code:free", id: "aa843e64-c967-4ed7-a786-8962fbed2472" },
-    ];
+    const models = [{ label: "default", key: "cohere/north-mini-code:free" }];
     let taskId;
     let expectedModel;
     for (const model of models) {

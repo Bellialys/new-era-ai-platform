@@ -96,7 +96,6 @@ beforeEach(() => {
   resolveRuntimeCredentialMock.mockReset();
   getLiveModelsMock.mockReset().mockResolvedValue(new Map([
     [TEAM_DEFAULT_MODEL_ID, "team-default-id"],
-    [ALLOWED_MODELS[0].id, "another-model-id"],
     [ALLOWED_MODELS[1].id, ALTERNATIVE_ID],
   ]));
 
