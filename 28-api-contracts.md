@@ -35,7 +35,8 @@ Frontend вызывает только backend route handlers.
 | Endpoint | Лимит | Окно | Ключ |
 |---|---|---|---|
 | `GET /api/models` | 60 req | 60 сек | IP-адрес |
-| `POST /api/compare` | 10 req | 60 сек | user UUID или guest cookie `na_guest` |
+| `POST /api/compare` | guest 5/min; authenticated 10/min; daily policy below | UTC minute/day buckets | server-resolved user UUID or verified guest cookie `na_guest` |
+| `POST /api/stream-compare` | guest 5/min; authenticated 10/min; daily policy below | UTC minute/day buckets | server-resolved user UUID or verified guest cookie `na_guest` |
 | `POST /api/vote` | 30 req | 60 сек | user UUID или guest cookie `na_guest` |
 | `POST /api/profile/email` | 3 req | 3600 сек | user UUID |
 | `POST /api/integrations/openrouter/connect` | 6 req | 10 min | user UUID |
@@ -56,13 +57,17 @@ Frontend вызывает только backend route handlers.
 | `PATCH /api/admin/models/[id]` | 10 req | 60 сек | admin user UUID |
 | `PATCH /api/admin/users/[id]` | 10 req | 60 сек | admin user UUID |
 
+Для Prompt Arena используется общий PostgreSQL reservation namespace `prompt-arena-compare`. Один принятый запрос с 2-5 моделями расходует одну logical comparison unit. Daily limits: guest `5`, free `20`, pro `100`, admin `9999`; reset происходит в `00:00 UTC`. Daily и minute checks выполняются одной атомарной service-role-only RPC-транзакцией. При недоступности quota authority production возвращает `503 QUOTA_AUTHORITY_UNAVAILABLE` и не вызывает provider.
+
+`Idempotency-Key` — необязательный заголовок длиной до 128 символов. Повтор с тем же ключом и fingerprint возвращает сохранённый terminal response без нового reservation/provider call; другой fingerprint получает `409 IDEMPOTENCY_KEY_REUSED`.
+
 Ответ при превышении:
 
 ```json
 {
   "status": "error",
-  "errorCode": "RATE_LIMIT",
-  "message": "Too many requests. Please try again later."
+  "errorCode": "QUOTA_EXCEEDED",
+  "message": "Compare quota exceeded. Please try again later."
 }
 ```
 

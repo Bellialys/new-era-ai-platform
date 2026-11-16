@@ -16,6 +16,13 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Unified Prompt Arena quota — DRAFT validation, 16.11.2026
+
+- Tested quota SQL on isolated PostgreSQL 17 through GitHub Actions (12 concurrent requests: 5 accepted, 7 rate-limited); full application CI/Preview passed on patched-main QA branch.
+- Fixed mode-scoped legacy backfill, nullable reservation IDs, client idempotency, bounded completion retries, orphan fencing and service-role retention RPC.
+- Restored valid PL/pgSQL dollar-quoting, added SQL/test check and future SQL CI gate (PR #157).
+- **NOT DEPLOYED:** PR #134 remains Draft and stacked behind PR #133. Production quota migration and pg_cron cleanup are prohibited until owner-reviewed Stage 3.2/security, isolated production-compatible staging, maintenance monitoring and budgeted canary.
+
 ## Saved Prompts Lab05 — 2026-11-16
 
 - Added authenticated owner-scoped CRUD in `/saved-prompts` and five API methods (GET list/item, POST, PATCH, DELETE), with safe DTO mapping, same-origin writes, rate limiting and no-store responses.
