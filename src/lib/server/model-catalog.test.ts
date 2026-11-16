@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   getAvailableCodeModels,
   getAvailableModels,
+  getActiveFreeOpenRouterModelIds,
   resolveSelectedCodeModels,
   resolveSelectedModels,
 } from "./model-catalog";
@@ -122,6 +123,41 @@ describe("model catalog (fallback mode)", () => {
       statusCode: 403,
     });
     await expect(resolveSelectedModels(["evil/model"])).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe("live free OpenRouter catalog", () => {
+  const guest = { kind: "guest", guestId: "guest-id", userId: null } as const;
+
+  it("queries only selectable OpenRouter rows labeled free and accepts only free variant keys", async () => {
+    const { client, query } = createMockSupabase({
+      data: [dbRows[0], { ...dbRows[1], model_key: "provider/paid-model" }],
+      error: null,
+    });
+    mockedGetSupabaseServerClient.mockReturnValue(client as unknown as ReturnType<typeof getSupabaseServerClient>);
+
+    expect([...await getActiveFreeOpenRouterModelIds(guest)]).toEqual([[dbRows[0].model_key, dbRows[0].id]]);
+    expect(query.eq).toHaveBeenCalledWith("is_active", true);
+    expect(query.eq).toHaveBeenCalledWith("is_public", true);
+    expect(query.eq).toHaveBeenCalledWith("provider", "openrouter");
+    expect(query.eq).toHaveBeenCalledWith("price_label", "free");
+    expect(query.in).toHaveBeenCalledWith("access_level", ["anonymous"]);
+  });
+
+  it("keeps an empty live catalog empty when cron is disabled", async () => {
+    const { client } = createMockSupabase({ data: [], error: null });
+    mockedGetSupabaseServerClient.mockReturnValue(client as unknown as ReturnType<typeof getSupabaseServerClient>);
+
+    expect((await getActiveFreeOpenRouterModelIds(guest)).size).toBe(0);
+  });
+
+  it("does not enable fallback models if the database cannot be read", async () => {
+    const { client } = createMockSupabase({ data: null, error: { code: "DB_ERROR" } });
+    mockedGetSupabaseServerClient.mockReturnValue(client as unknown as ReturnType<typeof getSupabaseServerClient>);
+
+    await expect(getActiveFreeOpenRouterModelIds(guest)).rejects.toMatchObject({
+      statusCode: 503, errorCode: "MODEL_CATALOG_UNAVAILABLE",
+    });
   });
 });
 

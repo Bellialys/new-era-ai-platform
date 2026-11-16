@@ -30,7 +30,5 @@ jobs:
       - name: Test model verifier
         run: npm run test:models-verify
 
-      - name: Verify live OpenRouter catalogs
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: npm run models:verify -- --json
+      - name: Verify public OpenRouter catalogs
+        run: npm run models:verify -- --public-catalog --json

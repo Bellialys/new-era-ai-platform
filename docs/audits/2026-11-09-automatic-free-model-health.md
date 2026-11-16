@@ -80,7 +80,7 @@ saved results, hiding, restoration, discovery and first publication.
 - `succeeded` with zero checks records a valid run without matching work.
 
 The sync has a 46-second time limit and reserves time for the journal.
-Apply `20261116100037_model_health_runs.sql` before the scheduled route
+Apply `20261116104715_model_health_runs.sql` before the scheduled route
 starts running this code in production.
 
 ## Credentials and activation gate

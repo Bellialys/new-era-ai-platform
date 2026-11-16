@@ -114,8 +114,8 @@ function allowsHardcodedCatalog(): boolean {
   return environment !== "production" && process.env.ENABLE_MODEL_HEALTH_CRON !== "true";
 }
 
-function fallbackCatalog(): ResolvedModel[] {
-  if (!allowsHardcodedCatalog()) {
+function fallbackCatalog(requireSupabase = false): ResolvedModel[] {
+  if (requireSupabase || !allowsHardcodedCatalog()) {
     // The static list cannot reflect runtime quarantines.
     throw new ApiError(
       503,
@@ -152,27 +152,32 @@ function logModelCatalogFailure(reason: string, error: unknown): void {
  * An empty result stays empty and an unavailable catalog raises a 503.
  *
  * @param identity - The resolved request identity (null = treat as guest).
+ * @param options - Free OpenRouter reads require a live Supabase catalog.
  */
 export async function loadModelCatalog(
-  identity: RequestIdentity | null = null
+  identity: RequestIdentity | null = null,
+  { freeOpenRouterOnly = false }: { freeOpenRouterOnly?: boolean } = {}
 ): Promise<ResolvedModel[]> {
   const supabase = getSupabaseServerClient();
   if (!supabase) {
-    return fallbackCatalog();
+    return fallbackCatalog(freeOpenRouterOnly);
   }
 
   const plan = identity?.kind === "user" ? await fetchUserPlan(identity.userId) : null;
   const levels = allowedLevelsFor(identity, plan);
 
   try {
+    let query = supabase
+      .from("models")
+      .select("id, model_key, display_name, description, role_tags, price_label, access_level")
+      .eq("is_active", true)
+      .eq("is_public", true)
+      .in("access_level", levels);
+    if (freeOpenRouterOnly) {
+      query = query.eq("provider", "openrouter").eq("price_label", "free");
+    }
     const { data, error } = await withTimeout(
-      supabase
-        .from("models")
-        .select("id, model_key, display_name, description, role_tags, price_label, access_level")
-        .eq("is_active", true)
-        .eq("is_public", true)
-        .in("access_level", levels)
-        .order("sort_order", { ascending: true }),
+      query.order("sort_order", { ascending: true }),
       MODEL_CATALOG_QUERY_TIMEOUT_MS,
       "models catalog query"
     );
@@ -181,7 +186,7 @@ export async function loadModelCatalog(
       throw error ?? new Error("models table returned no result.");
     }
 
-    if (data.length === 0 && allowsHardcodedCatalog()) {
+    if (data.length === 0 && !freeOpenRouterOnly && allowsHardcodedCatalog()) {
       console.warn("models table returned no active public models; using hardcoded catalog.");
       return fallbackCatalog();
     }
@@ -199,8 +204,21 @@ export async function loadModelCatalog(
     }));
   } catch (caught) {
     logModelCatalogFailure("Supabase model catalog query failed.", caught);
-    return fallbackCatalog();
+    return fallbackCatalog(freeOpenRouterOnly);
   }
+}
+
+/**
+ * Map selectable free OpenRouter model keys to their Supabase selection IDs.
+ * @throws {ApiError} If the live Supabase catalog cannot be read.
+ */
+export async function getActiveFreeOpenRouterModelIds(
+  identity: RequestIdentity
+): Promise<ReadonlyMap<string, string>> {
+  const catalog = await loadModelCatalog(identity, { freeOpenRouterOnly: true });
+  return new Map(catalog
+    .filter(({ modelKey }) => modelKey.endsWith(":free"))
+    .map(({ modelKey, selectionId }) => [modelKey, selectionId]));
 }
 
 /**

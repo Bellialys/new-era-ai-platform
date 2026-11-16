@@ -234,6 +234,7 @@ export async function fetchOpenRouterResponse(
     credential:
       options?.credential ?? resolveLegacyPlatformOpenRouterCredential(),
     telemetry: options?.telemetry,
+    signal: options?.signal,
   });
 }
 
@@ -241,7 +242,7 @@ export async function fetchOpenRouterResponseWithApiKey(
   apiKey: string,
   prompt: string,
   modelId: string,
-  options?: { systemPrompt?: string }
+  options?: { systemPrompt?: string; signal?: AbortSignal }
 ): Promise<OpenRouterCallResult> {
   const normalizedApiKey = normalizeOpenRouterApiKey(apiKey);
 
@@ -260,6 +261,9 @@ export async function fetchOpenRouterResponseWithApiKey(
   };
 
   const controller = new AbortController();
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, controller.signal])
+    : controller.signal;
   const timeoutMs = getOpenRouterTimeoutMs();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const startTime = Date.now();
@@ -274,7 +278,7 @@ export async function fetchOpenRouterResponseWithApiKey(
         "X-Title": "New Era AI Platform",
       },
       body: JSON.stringify(request),
-      signal: controller.signal,
+      signal,
     });
 
     const data = await readOpenRouterJson(response);
@@ -337,8 +341,11 @@ export async function fetchOpenRouterResponseWithApiKey(
           : null,
     };
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new ApiError(504, "TIMEOUT", `AI provider request timed out after ${timeoutMs}ms.`);
+    if (signal.aborted || (error instanceof Error && error.name === "AbortError")) {
+      const message = options?.signal?.aborted
+        ? "AI provider request exceeded its time limit."
+        : `AI provider request timed out after ${timeoutMs}ms.`;
+      throw new ApiError(504, "TIMEOUT", message);
     }
     if (error instanceof ApiError) {
       throw error;
