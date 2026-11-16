@@ -1,3 +1,8 @@
 {
-  "buildCommand": "npm run build && node scripts/stage10-team-production-smoke.mjs"
+  "crons": [
+    {
+      "path": "/api/cron/model-health",
+      "schedule": "17 3 * * *"
+    }
+  ]
 }
