@@ -2,7 +2,8 @@
 
 Date: 2026-11-09
 
-State: implementation on feature branch; NOT active in production until reviewed/merged and manually enabled.
+The original daily job is active in production. The run journal and revised
+model selection are prepared for the Stage 10 release.
 
 ## Purpose and limits
 
@@ -10,22 +11,21 @@ Automatically keep the anonymous text catalog usable without hand-editing
 Supabase after every OpenRouter free-model retirement, transient outage or
 new release.
 
-With `ENABLE_MODEL_HEALTH_CRON=true`, Prompt Arena and Code Arena use the
-Supabase catalog for listing and validating selections. An empty catalog
-stays empty. A failed catalog read returns `503 MODEL_CATALOG_UNAVAILABLE`
-so the hardcoded list cannot bring back quarantined models. The next
-successful read serves the live catalog again. Turning off the flag restores
-the legacy fallback, which can contain quarantined entries during a database
-outage.
+Production Prompt Arena and Code Arena use Supabase for listing and
+validating selections. An empty catalog stays empty. A failed catalog read
+returns `503 MODEL_CATALOG_UNAVAILABLE`. The next successful read serves the
+live catalog again. `ENABLE_MODEL_HEALTH_CRON` controls scheduled checks.
+Development and Preview can use the legacy offline fallback while the flag
+is off.
 
 Scheduler: **Vercel Cron daily at 03:17 UTC**, invoking
 GET /api/cron/model-health. This is intentionally a once-daily process.
-According to OpenRouter's free-tier documentation, most accounts receive
-50 free requests/day, failed attempts included; a 5-request monitoring budget
-limits monitoring to 10% of that base allowance before user traffic.
+The five-request monitoring budget reserves capacity for interactive traffic.
 
 Per scheduled run:
-- 3 least-recently-probed active free models;
+- up to 3 active free models with one slot reserved for the least-recently
+  probed model that has a confirmed first failure and has cleared the cooldown.
+  The other slots follow the oldest check date;
 - 1 quarantined free model that is explicitly marked for retesting;
 - 1 new candidate from the allowlisted providers, or 1 pending new model;
 - maximum **5 inference calls per run**; each call is text-only, max 384
@@ -41,6 +41,9 @@ Per scheduled run:
 - Second confirmed hard failure: is_active=false and is_public=false.
 - 429, timeout, network failure or generic upstream 5xx:
   inconclusive, not grounds to hide an otherwise working model.
+- Two consecutive temporary results for a pending discovery extend its
+  cooldown to 40 hours. The discovery slot can check another candidate in
+  the intervening daily run.
 - Missing or invalid credentials: fail the run; never bulk-disable.
 - Quarantined -> first successful nonempty text answer: retain quarantine.
 - Quarantined -> second successful answer, at least 20h after previous
@@ -54,12 +57,31 @@ Per scheduled run:
 - Discovery never automatically enables paid models or changes existing
   prices/billing policy.
 
-All transitions are logged in models.raw_metadata.auto_health with
-success/failure streaks, last status and check timestamp, and use
-optimistic updated_at checks to avoid overwriting concurrent admin changes.
-This is an MVP with best-effort concurrency control, not a global distributed
-lock. If the operator explicitly retires a model, mark it exempt or remove
-verification_retest_required so the scheduler does not revive it.
+All transitions are logged in `models.raw_metadata.auto_health` with
+success, failure and temporary-result streaks, last status and check
+timestamp. Updates keep the optimistic `updated_at` condition for concurrent
+admin changes. Set `auto_health_exempt=true` on a deliberately retired model
+to keep it out of scheduled retests.
+
+## Run journal
+
+The job first inserts the UTC date into `public.model_health_runs`. A duplicate
+date returns HTTP 200 with `MODEL_HEALTH_ALREADY_RUN` before any OpenRouter
+request. Manual calls use the same daily slot. The journal records the
+invocation source, start and end times, outcome, and counts for inference,
+saved results, hiding, restoration, discovery and first publication.
+
+- No row after the expected window means the job never reserved a run.
+  Inspect Vercel for a missed invocation, a disabled schedule or failures
+  that prevented journal access.
+- `running` beyond the 60-second function limit means the handler could not
+  record an outcome. The next date has its own reservation.
+- `failed` records the safe error code and any saved progress.
+- `succeeded` with zero checks records a valid run without matching work.
+
+The sync has a 46-second time limit and reserves time for the journal.
+Apply `20261116100037_model_health_runs.sql` before the scheduled route
+starts running this code in production.
 
 ## Credentials and activation gate
 
@@ -117,8 +139,7 @@ Never auto-switch a retired free ID to its paid version.
 
 ## Future stages (not in this MVP)
 
-- Centralized distributed lock and dedicated health-events audit table
-  for concurrent invocations and a persistent dashboard.
+- Dashboard for run-level and per-model history.
 - Account-wide quota telemetry to adjust run budgets dynamically.
 - Privacy/region/provider-policy review for new automatically listed providers.
 - Admin UI for manual override, model testing, reactivation and alerts.

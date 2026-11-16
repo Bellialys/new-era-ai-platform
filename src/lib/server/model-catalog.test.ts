@@ -17,6 +17,7 @@ const mockedGetSupabaseServerClient = vi.mocked(getSupabaseServerClient);
 
 beforeEach(() => {
   vi.stubEnv("ENABLE_MODEL_HEALTH_CRON", undefined);
+  vi.stubEnv("VERCEL_ENV", undefined);
 });
 
 afterEach(() => {
@@ -205,7 +206,11 @@ describe("model catalog (DB mode)", () => {
   });
 });
 
-describe("model catalog with automatic health checks enabled", () => {
+describe.each([
+  { scenario: "Preview with cron enabled", deployment: "preview", node: "test", cron: "true" },
+  { scenario: "Vercel production with cron disabled", deployment: "production", node: "test", cron: "false" },
+  { scenario: "production without Vercel system variables", deployment: undefined, node: "production", cron: undefined },
+])("managed model catalog in $scenario", ({ deployment, node, cron }) => {
   const catalogs = [
     { name: "Prompt Arena", list: getAvailableModels, resolve: resolveSelectedModels },
     { name: "Code Arena", list: getAvailableCodeModels, resolve: resolveSelectedCodeModels },
@@ -216,7 +221,9 @@ describe("model catalog with automatic health checks enabled", () => {
   };
 
   beforeEach(() => {
-    vi.stubEnv("ENABLE_MODEL_HEALTH_CRON", "true");
+    vi.stubEnv("VERCEL_ENV", deployment);
+    vi.stubEnv("NODE_ENV", node);
+    vi.stubEnv("ENABLE_MODEL_HEALTH_CRON", cron);
     mockedGetSupabaseServerClient.mockReset();
   });
 

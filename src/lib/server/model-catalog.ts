@@ -110,7 +110,8 @@ async function fetchUserPlan(userId: string): Promise<string | null> {
 }
 
 function allowsHardcodedCatalog(): boolean {
-  return process.env.ENABLE_MODEL_HEALTH_CRON !== "true";
+  const environment = process.env.VERCEL_ENV || process.env.NODE_ENV;
+  return environment !== "production" && process.env.ENABLE_MODEL_HEALTH_CRON !== "true";
 }
 
 function fallbackCatalog(): ResolvedModel[] {
@@ -147,7 +148,7 @@ function logModelCatalogFailure(reason: string, error: unknown): void {
 
 /**
  * Load the active/public catalog filtered by identity access level.
- * With automatic health checks enabled, Supabase owns model visibility.
+ * Supabase owns model visibility in production and wherever model health is enabled.
  * An empty result stays empty and an unavailable catalog raises a 503.
  *
  * @param identity - The resolved request identity (null = treat as guest).

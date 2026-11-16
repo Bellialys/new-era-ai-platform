@@ -139,6 +139,23 @@ describe("discovery prioritization and safety", () => {
     expect(result.pending).toHaveLength(0);
   });
 
+  it("reserves one active slot for a confirmed first failure without starving older models", () => {
+    const older = [row("google/old-a:free"), row("google/old-b:free"), row("google/old-c:free")];
+    const firstFailure = row("google/recheck:free", true, {
+      auto_health: { failure_streak: 1, checked_at: "2026-11-08T06:17:00Z" },
+    });
+    const secondInQueue = row("google/recheck-later:free", true, {
+      auto_health: { failure_streak: 1, checked_at: "2026-11-08T07:17:00Z" },
+    });
+    const coolingDown = row("google/recent-failure:free", true, {
+      auto_health: { failure_streak: 1, checked_at: "2026-11-08T10:17:00Z" },
+    });
+
+    const targets = selectHealthTargets([...older, firstFailure, secondInQueue, coolingDown], [], TODAY);
+
+    expect(targets.active.map(({ id }) => id)).toEqual([firstFailure.id, older[0].id, older[1].id]);
+  });
+
   it("probes pending discovery instead of inserting duplicates", () => {
     const pending = row("google/pending:free", false, {
       auto_health: { discovered: true, managed: true, state: "pending" },
@@ -148,6 +165,31 @@ describe("discovery prioritization and safety", () => {
     );
     expect(result.pending).toHaveLength(1);
     expect(result.fresh).toHaveLength(0);
+  });
+
+  it("leaves an intervening run for discovery after a pending candidate has two temporary failures", () => {
+    const pending = row("google/pending:free", false, {
+      auto_health: { discovered: true, state: "pending", success_streak: 1 },
+    });
+    const limited = transitionHealth(pending, "RATE_LIMIT", "2026-11-07T03:17:00Z");
+    const timedOut = transitionHealth(limited, "TIMEOUT", "2026-11-08T03:17:00Z");
+    const recent = { ...pending, ...timedOut };
+    const nextModel = listing("google/next:free");
+    const nextRun = selectHealthTargets([recent], [nextModel], TODAY);
+
+    expect(recent.raw_metadata.auto_health).toMatchObject({
+      temporary_streak: 2, success_streak: 1, failure_streak: 0,
+    });
+    expect(nextRun.pending).toEqual([]);
+    expect(nextRun.fresh).toEqual([nextModel]);
+
+    const retryRun = selectHealthTargets([recent], [nextModel], new Date("2026-11-10T03:17:00Z"));
+    expect(retryRun.pending).toEqual([recent]);
+    expect(retryRun.fresh).toEqual([]);
+    expect(transitionHealth(recent, "OK", "2026-11-10T03:17:00Z")).toMatchObject({
+      is_public: true,
+      raw_metadata: { auto_health: { success_streak: 2, temporary_streak: 0 } },
+    });
   });
 
   it("does not automatically reactivate deliberate historical disabled rows", () => {
