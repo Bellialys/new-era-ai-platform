@@ -16,6 +16,14 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Saved Prompts Lab05 — 2026-11-16
+
+- Added authenticated owner-scoped CRUD in `/saved-prompts` and five API methods (GET list/item, POST, PATCH, DELETE), with safe DTO mapping, same-origin writes, rate limiting and no-store responses.
+- Added two-account simulated ownership tests covering BOLA/IDOR, CSRF, read/update/delete isolation, and user-id spoofing. These do not replace live signed-in E2E.
+- Fixed misleading empty editor display on failed initial list loading; user can retry.
+- Migrated Lab05 branch onto current Next.js/security baseline. The SQL migration had already been applied to production and restored to main in PR #148; no repeat migration required.
+- Feature is introduced by [PR #135](https://github.com/Bellialys/new-era-ai-platform/pull/135). Live production CRUD with a logged-in account and cross-account manual check remain post-release acceptance gates.
+
 ## Documentation and production alignment — 2026-11-16
 
 - Cross-checked GitHub `main` (`a9e795d`), successful CI [#43873426310](https://github.com/Bellialys/new-era-ai-platform/actions/runs/43873426310), successful Vercel production deployment, HTTP 200 for health/models/code-models, and Supabase live catalog (8 public free; 3 coding).
