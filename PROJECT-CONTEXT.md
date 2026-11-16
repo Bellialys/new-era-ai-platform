@@ -12,9 +12,17 @@
 
 Не восстанавливать состояние проекта по старому чату, если оно противоречит GitHub, `.project/state.json` или этому документу.
 
-Последняя ручная синхронизация контекста: 2026-10-01.
-Последний подтверждённый production baseline перед завершением Vercel quota investigation: `main = eaee3fb113be44fb0f1e6a38145367fe502c345a` (PR #119).
+Последняя ручная синхронизация контекста: 2026-11-16.
+Исторический production baseline Vercel quota investigation: `main = eaee3fb113be44fb0f1e6a38145367fe502c345a` (PR #119).
 Baseline SHA является исторической отметкой, а не неизменяемым источником истины: перед новой работой всегда перечитывать текущий `main`.
+
+## Production snapshot — 16.11.2026
+
+- GitHub `main`: `a9e795d2b895901eb0ac27a05fcd15d0f166dcbc`, PR #145 merged; [CI #43873426310](https://github.com/Bellialys/new-era-ai-platform/actions/runs/43873426310) succeeded, Vercel production deployment succeeded; `/api/health`, `/api/models`, `/api/code-models` returned HTTP 200.
+- The offline fallback lists **8** OpenRouter IDs after removal of 3 withdrawn free IDs. Supabase production has **8** active/public free models, **3** coding. Live DB content and fallback are independent; LFM 2.5 2.6B is still publicly visible pending automatic quarantine evidence (Stage 7).
+- `/api/cron/model-health` runs at 03:17 UTC (05:17 Kyiv in November). `model_health_runs` has no rows as of this snapshot; Stage 10 requires `scheduled/succeeded` on two successive days (expected 17 and 18 November).
+- Security issue [#136](https://github.com/Bellialys/new-era-ai-platform/issues/136) is closed (Next.js upgrade, blocking high/critical audit). Supabase migration `20261109095503_lab05_saved_prompts` was applied remotely but its SQL file is **only in draft PR #135**, not `main`; reproducible migration history is incomplete.
+- Project version remains `v2.0.0-alpha.1` and `.project/state.json` still lists active task `V201-16`. Earlier sections below may reflect historical snapshots rather than current production.
 
 ## Источники истины и приоритет
 

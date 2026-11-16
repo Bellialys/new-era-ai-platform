@@ -17,8 +17,16 @@ v2.0.0-alpha.1
 # tasks.judge_verdict хранит JSON-вердикт POST /api/judge
 # public.audit_log хранит admin/governance audit events и не открыт anon/authenticated напрямую
 # tasks.is_blind migration is applied in production as 20260704025200_tasks_is_blind.sql
-# Migration history aligned through 20260705223814_enforce_models_access_level_rls
+# Applied migrations through 20261116104715_model_health_runs; exception: remotely applied 20261109095503_lab05_saved_prompts exists in draft PR #135, not main
 ```
+
+## Production verification — 16.11.2026
+
+- Supabase project `jbeecpbcsnowcaygteoj` was healthy; remote migrations include `20261116104715_model_health_runs` and `20261109095503_lab05_saved_prompts`. The latter exists only in draft PR #135, and is not included in current `main`. Do **not** mark repo ↔ remote migration history as identical or reapply the already executed migration.
+- The live catalog contains **8** active/public free OpenRouter models, **3** coding. LFM 2.5 2.6B is still active; its first `NOT_LISTED` incident is recorded, but Stage 7 automatic quarantine is not confirmed.
+- `public.model_health_runs` exists with zero entries as of the check. Stage 10 requires two daily `scheduled / succeeded` entries. A lack of rows is **not** a passed health check.
+- Security Advisor reports `auth_leaked_password_protection` disabled (issue #108; plan-dependent), and INFO `rls_enabled_no_policy` on `model_health_runs`. RLS enabled without policies intentionally denies general client access; verify service-role access rather than creating broad public policies.
+- Reconfirm grants, RLS and migration history before merge of Lab05 PR #135 or subsequent production migrations.
 
 ## Главная идея базы
 
@@ -52,8 +60,8 @@ Backend по models.id находит models.model_key.
 Fallback режим:
 
 ```text
-Если Supabase не настроен или каталог моделей недоступен, GET /api/models возвращает hardcoded allowlist.
-# в fallback-режиме selectionId может быть временно равен OpenRouter model key из server-side списка
+Production uses Supabase as authoritative catalog; failed Supabase read returns 503 MODEL_CATALOG_UNAVAILABLE (fail closed, no revival of quarantined IDs).
+# В dev/Preview разрешён локальный fallback, если runtime flags допускают его; выбор может использовать OpenRouter ID
 ```
 
 В обоих режимах backend повторно проверяет выбранные модели и не принимает произвольный model key от клиента.
