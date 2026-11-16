@@ -68,8 +68,9 @@ jobs:
           npm run state:check
           npm run docs:check
 
+      # Health/model schema smoke is mandatory, though CI permits degraded health
+      # because placeholder (non-secret) environment values are used here.
       - name: Smoke
-        continue-on-error: true
         env:
           ALLOW_DEGRADED: "1"
           SMOKE_BASE_URL: http://127.0.0.1:3000
