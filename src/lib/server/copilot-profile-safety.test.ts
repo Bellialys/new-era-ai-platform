@@ -49,6 +49,24 @@ describe("Copilot harness profiles — static contract only", () => {
     }
   });
 
+  it("rejects unsupported or editor-only fields that would imply unenforced runtime security", () => {
+    // VS Code may highlight fields that its Copilot SDK conversion does not
+    // actually forward. Avoid pretending those keys enforce a permission rule.
+    const explicitlySupported = [
+      "name",
+      "description",
+      "target",
+      "tools",
+      "user-invocable",
+      "disable-model-invocation",
+    ].sort();
+    for (const profile of Object.values(config)) {
+      expect([...profile.keys].sort()).toEqual(explicitlySupported);
+      expect(new Set(profile.keys).size).toBe(profile.keys.length);
+      expect(profile.tools).not.toContain("*");
+    }
+  });
+
   it("gives Coordinator task delegation but no edit or shell and no model-callable role", () => {
     expect(config.coordinator).toMatchObject({
       name: "Copilot Coordinator", userInvocable: "true", disableModelInvocation: "true",
