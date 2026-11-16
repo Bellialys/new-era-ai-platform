@@ -216,6 +216,9 @@ begin
            count(*)::bigint as units
       from public.tasks
      where created_at >= v_day_bucket
+       -- This namespace only meters Prompt Arena compares. Code Arena,
+       -- AI Team and other task modes use independent cost/usage policies.
+       and mode_slug = 'prompt-arena'
        and (user_id is not null or anonymous_session_id is not null)
      group by 1
   loop
