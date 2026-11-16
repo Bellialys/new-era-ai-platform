@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSupabaseServerClient } from "./supabase";
 import {
   CompareIdempotencyMismatchError,
+  CompareInProgressError,
+  CompareResultExpiredError,
   CompareQuotaAuthorityError,
   completeCompareQuota,
   createCompareFingerprint,
+  getCompareRetryAfterSeconds,
   reserveCompareQuota,
 } from "./compare-quota";
 
@@ -91,6 +94,42 @@ describe("reserveCompareQuota", () => {
       .rejects.toBeInstanceOf(CompareIdempotencyMismatchError);
   });
 
+  it("returns 409 and Retry-After while original reservation is still pending", async () => {
+    const { client } = createClient({
+      data: [{ reservation_id: "res-1", outcome: "in_progress", retry_after_seconds: 5 }],
+      error: null,
+    });
+    getClientMock.mockReturnValue(client);
+
+    const promise = reserveCompareQuota({ identity, fingerprint: "same", idempotencyKey: "same-key" });
+    await expect(promise).rejects.toBeInstanceOf(CompareInProgressError);
+    await expect(promise).rejects.toMatchObject({
+      statusCode: 409, errorCode: "COMPARE_IN_PROGRESS", retryAfterSeconds: 5,
+    });
+    expect(getCompareRetryAfterSeconds(new CompareInProgressError(5))).toBe(5);
+  });
+
+  it("rejects a previously abandoned or scrubbed reservation without extra inference", async () => {
+    const { client } = createClient({
+      data: [{ reservation_id: "res-1", outcome: "result_expired" }],
+      error: null,
+    });
+    getClientMock.mockReturnValue(client);
+
+    await expect(reserveCompareQuota({ identity, fingerprint: "same", idempotencyKey: "old-key" }))
+      .rejects.toBeInstanceOf(CompareResultExpiredError);
+  });
+
+  it("fails closed on unrecognized RPC outcomes", async () => {
+    const { client } = createClient({
+      data: [{ reservation_id: "res-1", outcome: "mystery_state" }],
+      error: null,
+    });
+    getClientMock.mockReturnValue(client);
+    await expect(reserveCompareQuota({ identity, fingerprint: "same" }))
+      .rejects.toBeInstanceOf(CompareQuotaAuthorityError);
+  });
+
   it("fails closed when the quota authority is unavailable", async () => {
     getClientMock.mockReturnValue(null);
     await expect(reserveCompareQuota({ identity, fingerprint: "same" }))
@@ -99,6 +138,37 @@ describe("reserveCompareQuota", () => {
 });
 
 describe("completeCompareQuota", () => {
+  it("retries a lost completion acknowledgement without invoking a model", async () => {
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ data: null, error: { code: "PGRST000" } })
+      .mockResolvedValueOnce({ data: null, error: null });
+    getClientMock.mockReturnValue({ rpc } as never);
+
+    await completeCompareQuota({
+      reservationId: "res-1", responsePayload: { status: "success" }, responseStatus: 200,
+    });
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls[0]).toEqual(rpc.mock.calls[1]);
+  });
+
+  it("does not repeat a completion rejected by PostgreSQL as invalid/abandoned", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: "P0001" } });
+    getClientMock.mockReturnValue({ rpc } as never);
+    await expect(completeCompareQuota({
+      reservationId: "res-1", responsePayload: { status: "success" }, responseStatus: 200,
+    })).rejects.toBeInstanceOf(CompareQuotaAuthorityError);
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("limits completion retries to two attempts on repeated transient errors", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST000" } });
+    getClientMock.mockReturnValue({ rpc } as never);
+    await expect(completeCompareQuota({
+      reservationId: "res-1", responsePayload: { status: "error" }, responseStatus: 200,
+    })).rejects.toBeInstanceOf(CompareQuotaAuthorityError);
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
   it("does not release a reservation and stores the terminal response", async () => {
     const { client, rpc } = createClient({ data: null, error: null });
     getClientMock.mockReturnValue(client);
@@ -114,6 +184,39 @@ describe("completeCompareQuota", () => {
       p_response_payload: { status: "error" },
       p_response_status: 200,
     });
+  });
+});
+
+describe("Compare quota migration — orphan fencing and privacy retention", () => {
+  const migration = readFileSync(
+    new URL("../../../supabase/migrations/20261008090000_unified_compare_quota_hardening.sql", import.meta.url),
+    "utf8"
+  );
+
+  it("distinguishes pending and abandoned idempotency states without charging again", () => {
+    expect(migration).toContain("check (status in ('reserved', 'completed', 'abandoned'))");
+    expect(migration).toContain("'in_progress'::text");
+    expect(migration).toContain("'result_expired'::text");
+    expect(migration).toContain("interval '15 minutes'");
+    expect(migration).toMatch(/if found then[\s\S]*?v_existing\.fingerprint <> p_fingerprint/);
+  });
+
+  it("accepts an exact duplicated completion but rejects a changed or missing terminal answer", () => {
+    expect(migration).toContain("v_existing.response_payload = p_response_payload");
+    expect(migration).toContain("v_existing.response_status = p_response_status");
+    expect(migration).toContain("raise exception 'quota reservation is not completable'");
+  });
+
+  it("applies fixed 24h payload, 30d metadata, 3d bucket retention without a quota refund", () => {
+    const maintenance = migration.split("create or replace function public.maintain_compare_quota()")[1];
+    expect(maintenance).toBeDefined();
+    expect(maintenance).toContain("interval '24 hours'");
+    expect(maintenance).toContain("interval '30 days'");
+    expect(maintenance).toContain("interval '3 days'");
+    expect(maintenance).toContain("set response_payload = null");
+    expect(maintenance).not.toMatch(/set\s+units\s*=\s*units\s*-/);
+    expect(migration).toContain("revoke all on function public.maintain_compare_quota() from public, anon, authenticated");
+    expect(migration).toContain("grant execute on function public.maintain_compare_quota() to service_role");
   });
 });
 
