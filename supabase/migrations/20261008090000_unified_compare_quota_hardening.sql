@@ -210,7 +210,7 @@ returns void
 language plpgsql
 security definer
 set search_path = pg_catalog, public
-as $
+as $$
 declare
   v_existing public.compare_quota_reservations%rowtype;
 begin
@@ -245,7 +245,7 @@ begin
   -- accepted. This never creates or refunds a new reservation.
   raise exception 'quota reservation is not completable' using errcode = 'P0001';
 end;
-$;
+$$;
 
 revoke all on function public.complete_compare_quota(uuid, jsonb, integer) from public, anon, authenticated;
 grant execute on function public.complete_compare_quota(uuid, jsonb, integer) to service_role;
@@ -307,7 +307,7 @@ returns table (
 language plpgsql
 security definer
 set search_path = pg_catalog, public
-as $
+as $$
 declare
   v_now timestamptz := clock_timestamp();
 begin
@@ -333,7 +333,7 @@ begin
 
   return next;
 end;
-$;
+$$;
 
 revoke all on function public.maintain_compare_quota() from public, anon, authenticated;
 grant execute on function public.maintain_compare_quota() to service_role;
