@@ -2,8 +2,11 @@
 
 Date: 2026-11-09
 
-The original daily job is active in production. The run journal and revised
-model selection are prepared for the Stage 10 release.
+As of 2026-11-16 the scheduled route and journal migration are deployed, but
+there are no recorded `model_health_runs` rows yet. LFM 2.5 2.6B remains
+public and Stage 7 is still unconfirmed; Stage 10 requires two consecutive
+`scheduled` / `succeeded` daily records (17 and 18 November are expected).
+Do not claim operational success solely from deployment or job configuration.
 
 ## Purpose and limits
 

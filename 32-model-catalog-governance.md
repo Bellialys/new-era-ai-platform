@@ -7,11 +7,11 @@
 Read-only проверка production Supabase от 16.11: **8** активных публичных бесплатных моделей, причём LFM 2.5 2.6B ещё активна; две другие исключённые модели уже отключены. Для этапа 7 LFM намеренно не выключается вручную: требуется проверить автоматическое скрытие cron и неизменность доступа по старому UUID. Этап 10 требует двух плановых запусков с `source=scheduled` и `status=succeeded` в разные последовательные даты.
 
 
-## Актуальное состояние 09.11.2026 — каталог v2.0.0-alpha.1
+## Исторический срез каталога 09.11.2026 — v2.0.0-alpha.1 (не текущий production)
 
-**Этот раздел заменяет исторические сведения о 8 моделях от сентября 2026 года ниже.**
-Сейчас в production Supabase `public.models` зарегистрировано **11 active/public бесплатных text/chat моделей**.
-Точное соответствие локальному fallback находится в ветке `feat/expand-free-model-catalog-20261109` (draft PR #138, поверх draft PR #137); production-код пока остаётся на `main`.
+**Сведения раздела относятся к 09.11.2026 и не заменяют operational-снимок от 16.11 выше.**
+На 09.11.2026 в production Supabase `public.models` числилось **11 active/public бесплатных text/chat моделей**. На 16.11 подтверждено 8 public free, 3 coding.
+На дату этого среза изменения каталогов готовились в ветке `feat/expand-free-model-catalog-20261109` (PR #138 поверх #137); оба PR позже объединены с `main`.
 
 | OpenRouter ID | Назначение / статус |
 |---|---|
@@ -27,12 +27,12 @@ Read-only проверка production Supabase от 16.11: **8** активны�
 | `recursive/flint-v1.0:free` | Coding; **provider-listed, live inference not tested** |
 | `liquid/lfm-3-1.7b:free` | Compact; **provider-listed, live inference not tested** |
 
-`GET /api/code-models`: 4 модели с тегом `coding` — North, Dots, Xing, Flint.
+Исторически на 09.11 `GET /api/code-models` выдавал 4 coding-модели — North, Dots, Xing, Flint. На 16.11 production выдаёт 3: North, Dots, Flint.
 Обе Poolside Laguna 2.1, чья бесплатная поддержка закончилась 31.10.2026, отключены, исторические записи сохранены.
 
-Миграции, применённые в production: `20261109104843_retire_laguna_refresh_free_coding` и `20261109174135_expand_verified_free_catalog_20261109`. Проверка SQL: 11 active/public text, 4 coding, 0 active/public retired Laguna. Внешние модели не являются гарантированно работающими: провайдер может вернуть 429, 404, 402 или timeout. Для 11/11 real inference нужно запустить `npm run models:smoke:live -- --limit=11` с действующим OpenRouter key после настройки секрета без помещения его в репозиторий.
+Миграции, применённые в production: `20261109104843_retire_laguna_refresh_free_coding` и `20261109174135_expand_verified_free_catalog_20261109`. Историческая SQL-проверка от 09.11: 11 active/public text, 4 coding, 0 active/public retired Laguna. Внешние модели не являются гарантированно работающими: провайдер может вернуть 429, 404, 402 или timeout. Для 11/11 real inference нужно запустить `npm run models:smoke:live -- --limit=11` с действующим OpenRouter key после настройки секрета без помещения его в репозиторий.
 
-**Блокеры публикации кода:** draft PR #137, #138 и критические уязвимости зависимостей по issue #136. Успешная Vercel Preview-сборка не заменяет CI security gate и проверку реальных ответов. Сведения сентября ниже сохранены только как хронология.
+**Исторические блокеры на 09.11:** draft PR #137, #138 и security issue #136. На 16.11 PR #137/#138 merged, issue #136 closed. Успешная Vercel Preview-сборка по-прежнему не заменяет CI security gate и проверку реальных ответов. Сведения сентября ниже сохранены только как хронология.
 
 ---
 

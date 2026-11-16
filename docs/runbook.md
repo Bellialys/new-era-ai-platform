@@ -1,4 +1,4 @@
-# Runbook — New Era AI Platform v1.1
+# Runbook — New Era AI Platform v2.0.0-alpha.1 (reviewed 2026-11-16)
 
 ## Быстрые команды
 
@@ -37,9 +37,11 @@ npm run verify
 
 ## Проверка Supabase
 
-- Dashboard: https://supabase.com/dashboard/project/[project-id]
+- Dashboard: https://supabase.com/dashboard/project/jbeecpbcsnowcaygteoj
 - Логи: Database → Logs
-- API health: `GET /api/health` → поле `services.supabase.reachable`
+- HTTP health: `GET /api/health` → `{"status":"ok"}` (это **не** независимая проверка Supabase).
+- Supabase read-only: посмотреть `public.models` и `public.model_health_runs`, сравнить активные UUID с `GET /api/models`, проверить миграции, RLS и Security Advisor.
+- 16.11.2026: в production 8 активных публичных бесплатных моделей (3 coding); `model_health_runs` ещё не имела записей. Отдельно контролировать Stage 7 и Stage 10.
 
 ## Проверка OpenRouter
 
@@ -49,8 +51,15 @@ npm run verify
 
 ## Секреты и переменные окружения
 
-Все секреты хранятся **только** в Vercel Environment Variables (Settings → Environment Variables).
+Production runtime secrets хранятся в Vercel Environment Variables; локальные — только в `.env.local`, GitHub Actions secrets — в GitHub, AWS/KMS — в предназначенных защищённых настройках. Никогда не переносить их в коммиты, отчёты или публичные логи.
 Никогда не коммитить в git. Список нужных переменных: `.env.example`.
+
+## Автопроверка моделей
+
+- `vercel.json` настраивает `GET /api/cron/model-health` ежедневно на `03:17 UTC` (в ноябре — 05:17 Киев).
+- В таблице `public.model_health_runs` проверить `run_date`, `source`, `status`, `finished_at`; две последовательные даты `scheduled/succeeded` нужны для Stage 10.
+- LFM 2.5 2.6B остаётся отдельным Stage 7 gate: только автоматическая quarantine + отсутствие модели в селекторах и отклонение старого UUID доказывают завершение.
+- Проверка `models:verify` в GitHub Actions — другая задача, она проверяет provider catalog, но **не** подменяет production cron.
 
 ## Git emergency rollback
 
