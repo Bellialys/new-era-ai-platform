@@ -28,6 +28,10 @@ Exact migration SQL `20261109095503_lab05_saved_prompts.sql` was restored from d
 - Security issue [#136](https://github.com/Bellialys/new-era-ai-platform/issues/136) is closed (Next.js upgrade, blocking high/critical audit). Supabase migration `20261109095503_lab05_saved_prompts` was applied remotely but its SQL file is **only in draft PR #135**, not `main`; reproducible migration history is incomplete.
 - Project version remains `v2.0.0-alpha.1` and `.project/state.json` still lists active task `V201-16`. Earlier sections below may reflect historical snapshots rather than current production.
 
+## Saved Prompts feature — 16.11.2026
+
+Feature PR #135 adds authenticated owner-scoped `/saved-prompts` and REST CRUD. The previously applied migration is already tracked via PR #148. Security issue #136 is closed, blocking audit is enforced, and new simulated two-account BOLA tests are included. **Do not equate passing mocked tests or Preview HTTP 200 with a verified post-release signed-in production E2E**; browser CRUD and cross-account tests remain acceptance checks. Full details in `docs/audits/2026-11-09-lab05-implementation.md`.
+
 ## Источники истины и приоритет
 
 При конфликте использовать следующий порядок:
