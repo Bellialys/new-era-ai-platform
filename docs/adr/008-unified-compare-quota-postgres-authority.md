@@ -40,6 +40,15 @@ The RPCs are `SECURITY DEFINER` with a fixed search path, explicit public/anon/a
 
 Unit and route regression tests cover identity/plan matrix through RPC parameters, shared helper usage, one unit for 2-5 models, reject ordering, Retry-After, authority failure, replay and fingerprint mismatch. SQL execution is release-gated and must use an isolated local/test database only; no remote production migration or backfill is performed by this branch.
 
+## Updated audit — 2026-11-16 (draft, test-only)
+
+- Confirmed current production Supabase has **no** `compare_quota_buckets` or `compare_quota_reservations` table and no `reserve_compare_quota` RPC. This PR is **not live**, and must not be merged or applied to production without a controlled release gate.
+- Found and corrected a backfill overcounting bug: production `public.tasks` contains Prompt Arena, Code Arena and AI Team records. The backfill previously counted *all* modes in the `prompt-arena-compare` namespace, which could consume a user's Prompt Arena quota for unrelated activity. It now explicitly filters `mode_slug = 'prompt-arena'`; a migration-source regression test enforces this.
+- Verified the live `profiles` table has `role` and `plan` columns with constrained values (`user/admin`, `free/pro`). No production data was modified.
+- No development database branch currently exists for this Supabase project. The Supabase branch feature can incur hourly charges, so no new test branch or paid resource was created. **SQL execution and concurrency testing still need an isolated, approved database.**
+- Unresolved blockers: orphaned `reserved` entries after completion outages (idempotent replay returns an error), bounded retention of response payloads / quota records, and effective schema `CREATE` ACL verification. These are **release blockers**, not mere informational observations.
+- Maintain the stacked PR base on `feat/copilot-agent-hierarchy` until the agent-profiles PR #133 and its manual security gates have been addressed; updating `main` directly must not activate this code. No production migration/backfill/cutover is authorized by this audit.
+
 ## Residual risks and release tasks
 
 - If `complete_compare_quota` is unavailable after provider work has completed, the reservation can remain `reserved`; the current bounded change does not add a durable retry queue, reconciliation worker, or automatic release. The route may therefore return an error after provider work, and a retry with the same idempotency key cannot safely repeat the provider call. Add and test a forward-only reconciliation path before production cutover.
