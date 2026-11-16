@@ -4,7 +4,7 @@ description: Engineering coordinator for bounded architecture security and devel
 target: github-copilot
 tools: [read, search, agent]
 user-invocable: true
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # Coordinator — native Copilot delegation, no execution
