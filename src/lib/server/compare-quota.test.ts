@@ -67,7 +67,7 @@ describe("reserveCompareQuota", () => {
   it("maps quota rejection to 429 metadata", async () => {
     const { client } = createClient({
       data: [{
-        reservation_id: "res-1",
+        reservation_id: null,
         outcome: "quota_exceeded",
         retry_after_seconds: 37,
       }],
@@ -118,6 +118,26 @@ describe("reserveCompareQuota", () => {
 
     await expect(reserveCompareQuota({ identity, fingerprint: "same", idempotencyKey: "old-key" }))
       .rejects.toBeInstanceOf(CompareResultExpiredError);
+  });
+
+  it("maps a NULL-ID authority_error to 503 rather than opening provider access", async () => {
+    const { client } = createClient({
+      data: [{ reservation_id: null, outcome: "authority_error" }],
+      error: null,
+    });
+    getClientMock.mockReturnValue(client);
+    await expect(reserveCompareQuota({ identity, fingerprint: "same" }))
+      .rejects.toBeInstanceOf(CompareQuotaAuthorityError);
+  });
+
+  it("requires a reservation ID before accepting a quota reservation", async () => {
+    const { client } = createClient({
+      data: [{ reservation_id: null, outcome: "accepted" }],
+      error: null,
+    });
+    getClientMock.mockReturnValue(client);
+    await expect(reserveCompareQuota({ identity, fingerprint: "same" }))
+      .rejects.toBeInstanceOf(CompareQuotaAuthorityError);
   });
 
   it("fails closed on unrecognized RPC outcomes", async () => {
