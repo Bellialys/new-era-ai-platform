@@ -156,6 +156,57 @@ describe("discovery prioritization and safety", () => {
     expect(targets.active.map(({ id }) => id)).toEqual([firstFailure.id, older[0].id, older[1].id]);
   });
 
+  it("rechecks retired LFM first and quarantines it after a second NOT_LISTED", () => {
+    // Snapshot of live Supabase model state observed 2026-11-16.
+    // Synthetic test only: never mutate the real model or its UUID.
+    const lfm = {
+      ...row("liquid/lfm-2.5-2.6b:free", true, {
+        auto_health: {
+          state: "healthy",
+          managed: true,
+          checked_at: "2026-11-14T09:18:47.588Z",
+          last_status: "NOT_LISTED",
+          failure_streak: 1,
+          success_streak: 0,
+        },
+      }, "2026-11-14T09:18:52.710503Z"),
+      id: "9c2a26c0-9536-4672-acfd-aa9c5f0d39c7",
+    };
+    const olderHealthy = [
+      row("cohere/north-mini-code:free"),
+      row("dots-studio/dots-3-note-preview:free"),
+      row("nvidia/nemotron-3.5-lightning:free"),
+    ];
+    const nextCron = new Date("2026-11-17T03:17:00.000Z");
+
+    expect(shouldProbe(lfm, nextCron)).toBe(true);
+    const selected = selectHealthTargets([...olderHealthy, lfm], [], nextCron);
+    expect(selected.active[0]?.id).toBe(lfm.id);
+    expect(selected.active[0]?.model_key).toBe("liquid/lfm-2.5-2.6b:free");
+
+    // Only a second confirmed hard failure may retire the same model.
+    const afterSecondMiss = transitionHealth(lfm, "NOT_LISTED", nextCron.toISOString());
+    expect(afterSecondMiss).toMatchObject({
+      is_active: false,
+      is_public: false,
+      raw_metadata: {
+        verification_retest_required: true,
+        auto_health: {
+          state: "quarantined",
+          managed: true,
+          failure_streak: 2,
+          last_status: "NOT_LISTED",
+        },
+      },
+    });
+    // Provider-wide soft failures must not act as the second hard failure.
+    expect(transitionHealth(lfm, "RATE_LIMIT", nextCron.toISOString())).toMatchObject({
+      is_active: true,
+      is_public: true,
+      raw_metadata: { auto_health: { failure_streak: 1 } },
+    });
+  });
+
   it("probes pending discovery instead of inserting duplicates", () => {
     const pending = row("google/pending:free", false, {
       auto_health: { discovered: true, managed: true, state: "pending" },
