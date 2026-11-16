@@ -93,6 +93,12 @@ The previously missing `20261109095503_lab05_saved_prompts.sql` was copied uncha
 - Image Arena;
 - AI Team Mode активирован в production alpha за feature flags; стабильным пользовательским этапом станет только после мониторинга и оставшихся release checks.
 
+## Saved Prompts — Lab05 MVP (16.11.2026)
+
+Реализован изолированный пользовательский CRUD для сохранённых текстовых промптов: страница `/saved-prompts` и маршруты `GET/POST /api/saved-prompts`, `GET/PATCH/DELETE /api/saved-prompts/[id]`. Доступ только для вошедшего пользователя; каждое действие привязано к проверенному `user_id`, используется CSRF Origin guard и `Cache-Control: private, no-store`. Ограничены длины полей, частота обращений и список до 50 последних записей.
+
+Миграция `20261109095503_lab05_saved_prompts.sql` **уже применена в production** и находится в `main` после PR #148; эта функция не применяет её повторно. Двухпользовательская изоляция проверяется автоматическими тестами с изолированной фикстурой Supabase; настоящая проверка двух production-аккаунтов и viewport/a11y-аудит ещё требуются. Описания и результаты тестов: [PR #135](https://github.com/Bellialys/new-era-ai-platform/pull/135) и `docs/audits/2026-11-09-lab05-implementation.md`.
+
 ## Главная цель
 
 Создать продвинутую AI-платформу с режимами:
