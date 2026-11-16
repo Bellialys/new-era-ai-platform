@@ -15,7 +15,7 @@ export type LocalArenaModel = ArenaModel & {
   supportsCode: boolean;
 };
 
-// Curated public free OpenRouter text catalog, updated on 2026-11-09.
+// Curated free OpenRouter text fallback, reviewed on 2026-11-16.
 // First two have the most recent confirmed successful model_responses telemetry.
 // Other provider-listed entries must not be confused with successful live inference.
 // Order matters: the UI preselects the first two models.
@@ -64,33 +64,6 @@ export const ALLOWED_MODELS: LocalArenaModel[] = [
     supportsCode: false,
     badge: "Free Fast",
     description: "Бесплатная быстрая NVIDIA-модель с большим контекстом для agentic и general-сценариев.",
-  },
-  {
-    id: "nvidia/nemotron-3-super-120b-a12b:free",
-    name: "Nemotron 3 Super",
-    role: "Reasoning / experimental",
-    provider: "openrouter",
-    supportsCode: false,
-    badge: "Free Reasoning",
-    description: "Бесплатная reasoning-модель NVIDIA; доступность free endpoint может быть нестабильной, поэтому она не используется как default.",
-  },
-  {
-    id: "xingchen-agi/xing4.0-29b-a4b:free",
-    name: "Xing4.0 29B A4B",
-    role: "Engineering / agentic",
-    provider: "openrouter",
-    supportsCode: true,
-    badge: "Free Coding",
-    description: "Бесплатная инженерная модель XingChen для задач программирования, многошагового планирования и работы с инструментами.",
-  },
-  {
-    id: "liquid/lfm-2.5-2.6b:free",
-    name: "LFM 2.5 2.6B",
-    role: "Fast / extraction / RAG",
-    provider: "openrouter",
-    supportsCode: false,
-    badge: "Free Fast",
-    description: "Бесплатная компактная LiquidAI-модель для extraction, RAG и быстрых agent workflows.",
   },
   {
     id: "nvidia/nemotron-3-ultra-550b-a55b:free",
