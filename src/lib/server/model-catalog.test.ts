@@ -28,7 +28,6 @@ afterEach(() => {
 const EXPECTED_FALLBACK_CODE_MODEL_IDS = [
   "cohere/north-mini-code:free",
   "dots-studio/dots-3-note-preview:free",
-  "xingchen-agi/xing4.0-29b-a4b:free",
   "recursive/flint-v1.0:free",
 ] as const;
 
@@ -102,7 +101,7 @@ describe("model catalog (fallback mode)", () => {
   });
 
   it("rejects a fallback model without explicit code capability", async () => {
-    const generalModelId = "liquid/lfm-2.5-2.6b:free";
+    const generalModelId = "liquid/lfm-3-1.7b:free";
     await expect(resolveSelectedCodeModels([generalModelId])).rejects.toMatchObject({
       statusCode: 400,
       errorCode: "MODEL_NOT_CODE_CAPABLE",
