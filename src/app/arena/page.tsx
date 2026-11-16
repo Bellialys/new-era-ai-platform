@@ -13,10 +13,11 @@ export default function ArenaPage() {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
           Введите задачу, выберите модели и получайте реальные ответы от AI через OpenRouter.
         </p>
-        <div className="mt-3 flex gap-4 text-sm text-slate-400">
+        <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-400">
           <Link className="transition hover:text-white" href="/">На главную</Link>
           <Link className="transition hover:text-white" href="/code">Code Arena</Link>
           <Link className="transition hover:text-white" href="/history">История</Link>
+          <Link className="transition hover:text-white" href="/saved-prompts">Сохранённые запросы</Link>
         </div>
       </div>
 

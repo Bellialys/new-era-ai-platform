@@ -1,5 +1,16 @@
 # VS Code Copilot Agent Team — инженерная иерархия
 
+## Проверка 16.11.2026 — Local, не универсальный Copilot
+
+**Текущий harness:** четыре `.agent.md` профиля содержат `target: vscode` и `agents` (allowlist). В VS Code это **Local harness**; Microsoft объявила его устаревшим с удалением в **феврале 2027**. В новом Copilot harness `target: github-copilot`, но поле `agents` для ограничения локальных подагентов не поддерживается. **Не менять `target` простым поиском/заменой**: это не сохранит те же гарантии делегирования. [Custom agent file reference](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference), [Subagents](https://code.visualstudio.com/docs/agents/run/subagents).
+
+**Статический уровень:** CI проверяет, что Coordinator использует `read/search/agent/todos`, а список подагентов строго `Architect, Developer, Security`; Architect и Security не имеют `edit`/`execute`; Developer — единственный worker с ними и не может запускать своих подагентов. Файл `src/lib/server/agent-profile-safety.test.ts` **не исполняет** подагентов и не устанавливает реальный контроль прав VS Code/облачных сервисов.
+
+**Ручные gates — NOT RUN:** в VS Code открыть репозиторий с явным выбором **Local harness**, включить Manual permissions, выполнить приведённый ниже read-only Coordinator → Architect + Security тест, изучить историю реальных вызовов и проверить неизменность рабочего дерева. Отдельно в GitHub Settings → Branches/Rules проверить прямые push, force push, deletion, bypass, reviews и CI checks: API branch protection вернул **403 Resource not accessible by integration**, а список rulesets был **пустым**. Это не подтверждает достаточную защиту ветки.
+
+До фактических ручных проверок **не считать иерархию operational PASS**, даже при успешном GitHub CI. Для полноценного перехода на Copilot harness потребуется отдельная реализация с native task/subagent механизмом и повторной проверкой least-privilege. Статус PR #133 остаётся **DRAFT / READY FOR HUMAN TEST**, а не релизованной пользовательской функцией.
+
+
 ## Назначение и границы
 
 Эта конфигурация координирует **разработку репозитория** `New Era AI Platform` в VS Code. Она **не является** пользовательским продуктовым режимом AI Team Mode. Контроль качества и итоговая приёмка остаются за человеком — владельцем репозитория. ChatGPT помогает сформировать ТЗ и проверить пакет результатов; он не заменяет обязательное одобрение владельца на merge.

@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   getAvailableCodeModels,
   getAvailableModels,
+  getActiveFreeOpenRouterModelIds,
   resolveSelectedCodeModels,
   resolveSelectedModels,
 } from "./model-catalog";
@@ -15,10 +16,19 @@ vi.mock("./supabase", () => ({
 
 const mockedGetSupabaseServerClient = vi.mocked(getSupabaseServerClient);
 
+beforeEach(() => {
+  vi.stubEnv("ENABLE_MODEL_HEALTH_CRON", undefined);
+  vi.stubEnv("VERCEL_ENV", undefined);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 const EXPECTED_FALLBACK_CODE_MODEL_IDS = [
   "cohere/north-mini-code:free",
-  "poolside/laguna-s-2.1:free",
-  "poolside/laguna-xs-2.1:free",
+  "dots-studio/dots-3-note-preview:free",
+  "recursive/flint-v1.0:free",
 ] as const;
 
 const dbRows = [
@@ -91,7 +101,8 @@ describe("model catalog (fallback mode)", () => {
   });
 
   it("rejects a fallback model without explicit code capability", async () => {
-    await expect(resolveSelectedCodeModels([ALLOWED_MODELS[0].id])).rejects.toMatchObject({
+    const generalModelId = "liquid/lfm-3-1.7b:free";
+    await expect(resolveSelectedCodeModels([generalModelId])).rejects.toMatchObject({
       statusCode: 400,
       errorCode: "MODEL_NOT_CODE_CAPABLE",
     });
@@ -111,6 +122,41 @@ describe("model catalog (fallback mode)", () => {
       statusCode: 403,
     });
     await expect(resolveSelectedModels(["evil/model"])).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe("live free OpenRouter catalog", () => {
+  const guest = { kind: "guest", guestId: "guest-id", userId: null } as const;
+
+  it("queries only selectable OpenRouter rows labeled free and accepts only free variant keys", async () => {
+    const { client, query } = createMockSupabase({
+      data: [dbRows[0], { ...dbRows[1], model_key: "provider/paid-model" }],
+      error: null,
+    });
+    mockedGetSupabaseServerClient.mockReturnValue(client as unknown as ReturnType<typeof getSupabaseServerClient>);
+
+    expect([...await getActiveFreeOpenRouterModelIds(guest)]).toEqual([[dbRows[0].model_key, dbRows[0].id]]);
+    expect(query.eq).toHaveBeenCalledWith("is_active", true);
+    expect(query.eq).toHaveBeenCalledWith("is_public", true);
+    expect(query.eq).toHaveBeenCalledWith("provider", "openrouter");
+    expect(query.eq).toHaveBeenCalledWith("price_label", "free");
+    expect(query.in).toHaveBeenCalledWith("access_level", ["anonymous"]);
+  });
+
+  it("keeps an empty live catalog empty when cron is disabled", async () => {
+    const { client } = createMockSupabase({ data: [], error: null });
+    mockedGetSupabaseServerClient.mockReturnValue(client as unknown as ReturnType<typeof getSupabaseServerClient>);
+
+    expect((await getActiveFreeOpenRouterModelIds(guest)).size).toBe(0);
+  });
+
+  it("does not enable fallback models if the database cannot be read", async () => {
+    const { client } = createMockSupabase({ data: null, error: { code: "DB_ERROR" } });
+    mockedGetSupabaseServerClient.mockReturnValue(client as unknown as ReturnType<typeof getSupabaseServerClient>);
+
+    await expect(getActiveFreeOpenRouterModelIds(guest)).rejects.toMatchObject({
+      statusCode: 503, errorCode: "MODEL_CATALOG_UNAVAILABLE",
+    });
   });
 });
 
@@ -192,5 +238,74 @@ describe("model catalog (DB mode)", () => {
 
     expect(models).toHaveLength(ALLOWED_MODELS.length);
     expect(models[0].id).toBe(ALLOWED_MODELS[0].id);
+  });
+});
+
+describe.each([
+  { scenario: "Preview with cron enabled", deployment: "preview", node: "test", cron: "true" },
+  { scenario: "Vercel production with cron disabled", deployment: "production", node: "test", cron: "false" },
+  { scenario: "production without Vercel system variables", deployment: undefined, node: "production", cron: undefined },
+])("managed model catalog in $scenario", ({ deployment, node, cron }) => {
+  const catalogs = [
+    { name: "Prompt Arena", list: getAvailableModels, resolve: resolveSelectedModels },
+    { name: "Code Arena", list: getAvailableCodeModels, resolve: resolveSelectedCodeModels },
+  ];
+  const unavailable = {
+    statusCode: 503,
+    errorCode: "MODEL_CATALOG_UNAVAILABLE",
+  };
+
+  beforeEach(() => {
+    vi.stubEnv("VERCEL_ENV", deployment);
+    vi.stubEnv("NODE_ENV", node);
+    vi.stubEnv("ENABLE_MODEL_HEALTH_CRON", cron);
+    mockedGetSupabaseServerClient.mockReset();
+  });
+
+  it.each(catalogs)("$name fails closed when Supabase is unconfigured", async ({ list, resolve }) => {
+    mockedGetSupabaseServerClient.mockReturnValue(null);
+
+    await expect(list()).rejects.toMatchObject(unavailable);
+    await expect(resolve([ALLOWED_MODELS[0].id])).rejects.toMatchObject(unavailable);
+  });
+
+  it.each(catalogs)("$name fails closed when the configured catalog query fails", async ({ list, resolve }) => {
+    const { client } = createMockSupabase({
+      data: null,
+      error: { message: "Supabase unavailable" },
+    });
+    mockedGetSupabaseServerClient.mockReturnValue(
+      client as unknown as ReturnType<typeof getSupabaseServerClient>
+    );
+
+    await expect(list()).rejects.toMatchObject(unavailable);
+    await expect(resolve([dbRows[0].id])).rejects.toMatchObject(unavailable);
+  });
+
+  it.each(catalogs)("$name treats an empty catalog as authoritative", async ({ list, resolve }) => {
+    const { client } = createMockSupabase({ data: [], error: null });
+    mockedGetSupabaseServerClient.mockReturnValue(
+      client as unknown as ReturnType<typeof getSupabaseServerClient>
+    );
+
+    await expect(list()).resolves.toEqual([]);
+    await expect(resolve([dbRows[0].id])).rejects.toMatchObject({
+      statusCode: 403,
+      errorCode: "MODEL_NOT_ALLOWED",
+    });
+  });
+
+  it.each(catalogs)("$name reads the live catalog again after a rejected query", async ({ list }) => {
+    const { client, query } = createMockSupabase({
+      data: [{ ...dbRows[0], role_tags: ["coding"] }],
+      error: null,
+    });
+    mockedGetSupabaseServerClient.mockReturnValue(
+      client as unknown as ReturnType<typeof getSupabaseServerClient>
+    );
+    query.order.mockRejectedValueOnce(new Error("Supabase connection closed"));
+
+    await expect(list()).rejects.toMatchObject(unavailable);
+    await expect(list()).resolves.toEqual([expect.objectContaining({ id: dbRows[0].id })]);
   });
 });

@@ -16,13 +16,51 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
-## Unified Compare Quota Hardening - 2026-10-08
+## Unified Prompt Arena quota — DRAFT validation, 16.11.2026
 
-- Added a shared PostgreSQL reservation authority for `/api/compare` and `/api/stream-compare`.
-- Added atomic UTC day/minute buckets, trusted profile-derived plan limits, guest/free/pro/admin policy, and fail-closed `503` authority handling.
-- Added idempotency fingerprint/replay protection, cached terminal responses, `429 Retry-After`, and provider-call ordering before credential resolution.
-- Added forward-only migration `20261008090000_unified_compare_quota_hardening.sql` with RLS, grants/revokes, RPCs and non-resetting legacy `tasks` backfill support.
-- Production migration, backfill, flag changes and deployment are intentionally not performed by this branch.
+- Tested quota SQL on isolated PostgreSQL 17 through GitHub Actions (12 concurrent requests: 5 accepted, 7 rate-limited); full application CI/Preview passed on patched-main QA branch.
+- Fixed mode-scoped legacy backfill, nullable reservation IDs, client idempotency, bounded completion retries, orphan fencing and service-role retention RPC.
+- Restored valid PL/pgSQL dollar-quoting, added SQL/test check and future SQL CI gate (PR #157).
+- **NOT DEPLOYED:** PR #134 remains Draft and stacked behind PR #133. Production quota migration and pg_cron cleanup are prohibited until owner-reviewed Stage 3.2/security, isolated production-compatible staging, maintenance monitoring and budgeted canary.
+
+## Saved Prompts Lab05 — 2026-11-16
+
+- Added authenticated owner-scoped CRUD in `/saved-prompts` and five API methods (GET list/item, POST, PATCH, DELETE), with safe DTO mapping, same-origin writes, rate limiting and no-store responses.
+- Added two-account simulated ownership tests covering BOLA/IDOR, CSRF, read/update/delete isolation, and user-id spoofing. These do not replace live signed-in E2E.
+- Fixed misleading empty editor display on failed initial list loading; user can retry.
+- Migrated Lab05 branch onto current Next.js/security baseline. The SQL migration had already been applied to production and restored to main in PR #148; no repeat migration required.
+- Feature is introduced by [PR #135](https://github.com/Bellialys/new-era-ai-platform/pull/135). Live production CRUD with a logged-in account and cross-account manual check remain post-release acceptance gates.
+
+## Documentation and production alignment — 2026-11-16
+
+- Cross-checked GitHub `main` (`a9e795d`), successful CI [#43873426310](https://github.com/Bellialys/new-era-ai-platform/actions/runs/43873426310), successful Vercel production deployment, HTTP 200 for health/models/code-models, and Supabase live catalog (8 public free; 3 coding).
+- PR #145 merged: three withdrawn OpenRouter free model IDs removed from offline fallback (8 remain). Updated canonical docs and distinguished historical model snapshots from current production.
+- Confirmed security issue #136 closed after framework upgrade and blocking audit; Stage 7 still awaits LFM auto-quarantine, Stage 10 awaits two successive `scheduled/succeeded` journal rows. Current run journal is empty.
+- Found reproducibility gap: applied production migration `20261109095503_lab05_saved_prompts` is still only in draft PR #135, not in `main`. No DB migrations or secrets modified by this docs-only update.
+- Clarified release verification: `/api/health` currently exposes `{"status":"ok"}`; Supabase health must be separately checked, not inferred from a nonexistent nested response field.
+
+## Model health run reliability - 2026-11-16
+
+- Prioritize one active model with a confirmed first failure and defer repeated temporary failures for pending discoveries.
+- Reserve one run per UTC date in Supabase and record outcome, partial progress and model lifecycle counts.
+- Enforce the live Supabase catalog in production when scheduled checks are paused.
+
+## Dependency security updates - 2026-11-11
+
+- Updated Next.js and its ESLint config to `16.4.6`, the Vercel AWS OIDC credentials provider to `3.3.20`, and the affected transitive dependencies for issue #136.
+- Made high and critical dependency audit findings fail the required GitHub Actions validation job.
+
+## Free model catalog release preparation - 2026-11-13
+
+- Run the dependency audit and validation workflow on stacked pull requests as well as pull requests targeting `main`.
+- Test Code Arena's rejection of a known general-purpose model independently of fallback catalog ordering.
+- Keep Supabase authoritative while automated model health is enabled so a failed or empty catalog read cannot revive quarantined models.
+- Add column-level write permissions for the server-side model health job before enabling the production schedule.
+
+## Judge and AI Team catalog checks - 2026-11-16
+
+- Select Judge and AI Team models from eligible active free OpenRouter variants in Supabase. Judge uses its available backup if the primary fails or returns an invalid verdict.
+- Run the scheduled GitHub catalog verifier against public OpenRouter metadata without account credentials.
 
 ## Stage 3 operational and DB hardening - 2026-10-01
 

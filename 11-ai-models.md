@@ -1,5 +1,41 @@
 # 11 - AI Models
 
+## Обновление 16.11.2026 — локальный fallback
+
+Из аварийного списка `src/lib/server/models.ts` исключены 3 ID, больше не публикуемые OpenRouter: `liquid/lfm-2.5-2.6b:free`, `nvidia/nemotron-3-super-120b-a12b:free`, `xingchen-agi/xing4.0-29b-a4b:free`. Теперь резерв содержит **8** позиций; модельные regression-тесты и прямой Promptfoo baseline обновлены. Ниже сохранён исторический срез от 09.11.2026 (11 моделей), он **не** описывает актуальный fallback.
+
+Read-only проверка production Supabase от 16.11: **8** активных публичных бесплатных моделей, причём LFM 2.5 2.6B ещё активна; две другие исключённые модели уже отключены. Для этапа 7 LFM намеренно не выключается вручную: требуется проверить автоматическое скрытие cron и неизменность доступа по старому UUID. Этап 10 требует двух плановых запусков с `source=scheduled` и `status=succeeded` в разные последовательные даты.
+
+
+## Исторический срез каталога 09.11.2026 — v2.0.0-alpha.1 (не текущий production)
+
+**Сведения раздела относятся к 09.11.2026 и не заменяют operational-снимок от 16.11 выше.**
+На 09.11.2026 в production Supabase `public.models` числилось **11 active/public бесплатных text/chat моделей**. На 16.11 подтверждено 8 public free, 3 coding.
+На дату этого среза изменения каталогов готовились в ветке `feat/expand-free-model-catalog-20261109` (PR #138 поверх #137); оба PR позже объединены с `main`.
+
+| OpenRouter ID | Назначение / статус |
+|---|---|
+| `cohere/north-mini-code:free` | Coding; успешные ответы 09.11; теперь первый в селекторе |
+| `dots-studio/dots-3-note-preview:free` | Coding/reasoning; успешные ответы 09.11; второй в селекторе, предложение до 31.12.2026 |
+| `google/gemma-4-26b-a4b-it:free` | General; были RATE_LIMIT 09.11 |
+| `google/gemma-4-31b-it:free` | General/reasoning; были RATE_LIMIT в октябре |
+| `nvidia/nemotron-3.5-lightning:free` | Fast/agentic; успешный ответ в октябре |
+| `nvidia/nemotron-3-super-120b-a12b:free` | Reasoning/experimental; были и успешные ответы, и 404 |
+| `xingchen-agi/xing4.0-29b-a4b:free` | Coding/agentic; был RATE_LIMIT 09.11 |
+| `liquid/lfm-2.5-2.6b:free` | Fast/extraction; текущий runtime inference не проверен |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | Reasoning; **provider-listed, live inference not tested** |
+| `recursive/flint-v1.0:free` | Coding; **provider-listed, live inference not tested** |
+| `liquid/lfm-3-1.7b:free` | Compact; **provider-listed, live inference not tested** |
+
+Исторически на 09.11 `GET /api/code-models` выдавал 4 coding-модели — North, Dots, Xing, Flint. На 16.11 production выдаёт 3: North, Dots, Flint.
+Обе Poolside Laguna 2.1, чья бесплатная поддержка закончилась 31.10.2026, отключены, исторические записи сохранены.
+
+Миграции, применённые в production: `20261109104843_retire_laguna_refresh_free_coding` и `20261109174135_expand_verified_free_catalog_20261109`. Историческая SQL-проверка от 09.11: 11 active/public text, 4 coding, 0 active/public retired Laguna. Внешние модели не являются гарантированно работающими: провайдер может вернуть 429, 404, 402 или timeout. Для 11/11 real inference нужно запустить `npm run models:smoke:live -- --limit=11` с действующим OpenRouter key после настройки секрета без помещения его в репозиторий.
+
+**Исторические блокеры на 09.11:** draft PR #137, #138 и security issue #136. На 16.11 PR #137/#138 merged, issue #136 closed. Успешная Vercel Preview-сборка по-прежнему не заменяет CI security gate и проверку реальных ответов. Сведения сентября ниже сохранены только как хронология.
+
+---
+
 ## Назначение файла
 
 Этот файл описывает стратегию выбора и подключения AI-моделей в проекте **Новая эпоха**.
