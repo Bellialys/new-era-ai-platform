@@ -12,6 +12,10 @@
 - Production Supabase migration history includes `20261109095503_lab05_saved_prompts`; the SQL file is in draft PR #135, not yet on `main`. This is a **reproducibility gap**. Do not run applied migrations twice or merge draft Lab05 without E2E/auth/release validation.
 - Google Drive searches for `New Era AI`, `Новая эпоха`, and `new-era-ai-platform` yielded no matching project documents in the connected account. Therefore no Google Drive files were modified or claimed to be synchronized; unrelated similarly named materials were left untouched.
 
+## Later reconciliation (2026-11-16)
+
+The exact Lab05 SQL migration file was restored to `main` from draft PR #135; production's schema had already been verified and **no SQL was re-executed**. `20260929022500_stage34_atomic_openrouter_activation` exists only locally and must remain unapplied until the Stage 3.2 live activation gate is approved. The findings above reflect the state before reconciliation.
+
 ## Corrections in this documentation-only change
 
 - `PROJECT-CONTEXT.md`, `README.md`, `14-roadmap.md`, `15-changelog.md`: dated operational baseline and preservation of historical Stage 3 notes and version markers.

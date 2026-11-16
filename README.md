@@ -26,6 +26,10 @@
 
 Статус синхронизирован с `.project/state.json`; порядок будущих этапов описан в `14-roadmap.md`.
 
+## Database migration reconciliation — 16.11.2026
+
+The previously missing `20261109095503_lab05_saved_prompts.sql` was copied unchanged from draft PR #135 into `main`, after verifying remote `saved_prompts` schema, RLS and indexes. **No production migration was re-run**. The baseline below predates this fix. Separately, `20260929022500_stage34_atomic_openrouter_activation.sql` is intentionally absent from remote migrations and remains an unapproved production Stage 3.2 activation gate.
+
 ## Production snapshot — 16.11.2026
 
 - GitHub `main`: `a9e795d2b895901eb0ac27a05fcd15d0f166dcbc`, PR #145 merged; [CI #43873426310](https://github.com/Bellialys/new-era-ai-platform/actions/runs/43873426310) succeeded, Vercel production deployment succeeded; `/api/health`, `/api/models`, `/api/code-models` returned HTTP 200.

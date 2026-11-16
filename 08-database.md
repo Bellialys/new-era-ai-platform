@@ -20,6 +20,10 @@ v2.0.0-alpha.1
 # Applied migrations through 20261116104715_model_health_runs; exception: remotely applied 20261109095503_lab05_saved_prompts exists in draft PR #135, not main
 ```
 
+## Lab05 migration file reconciliation — 16.11.2026
+
+The exact `20261109095503_lab05_saved_prompts.sql` from draft PR #135 is now tracked in `main` to match the already-applied production history. Read-only DB checks confirmed the table columns, RLS policies, index and service-role grants. No reapplication. The historical verification section below describes the state before this repository-only fix. `20260929022500_stage34_atomic_openrouter_activation.sql` in repo remains unapplied to production for controlled AWS/KMS rollout; do **not** automatically apply all migrations.
+
 ## Production verification — 16.11.2026
 
 - Supabase project `jbeecpbcsnowcaygteoj` was healthy; remote migrations include `20261116104715_model_health_runs` and `20261109095503_lab05_saved_prompts`. The latter exists only in draft PR #135, and is not included in current `main`. Do **not** mark repo ↔ remote migration history as identical or reapply the already executed migration.
