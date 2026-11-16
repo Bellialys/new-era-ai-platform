@@ -28,6 +28,11 @@ v2.0.0-alpha.1 - AI Team Mode
 - Keep Supabase authoritative while automated model health is enabled so a failed or empty catalog read cannot revive quarantined models.
 - Add column-level write permissions for the server-side model health job before enabling the production schedule.
 
+## Judge and AI Team catalog checks - 2026-11-16
+
+- Select Judge and AI Team models from eligible active free OpenRouter variants in Supabase. Judge uses its available backup if the primary fails or returns an invalid verdict.
+- Run the scheduled GitHub catalog verifier against public OpenRouter metadata without account credentials.
+
 ## Stage 3 operational and DB hardening - 2026-10-01
 
 - PR #113 introduced an experimental repository-level Vercel Ignored Build Step for docs/state-only changes; live diagnostics later proved it cannot solve issue #100's deployment-count/build-rate quota. Vercel executes `ignoreCommand`, Node is available, first-branch `VERCEL_GIT_PREVIOUS_SHA` is empty, `HEAD^1` is unavailable in the shallow first-deployment clone, and ignored deployments are still created/counted. The experiment was retired and #100 remains open for a true pre-deployment/path-gated solution.

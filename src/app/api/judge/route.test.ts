@@ -10,6 +10,7 @@ const {
   checkRateLimitMock,
   fetchOpenRouterMock,
   resolveRuntimeCredentialMock,
+  getLiveModelsMock,
   supabaseMock,
 } = vi.hoisted(() => {
   // All Supabase builder methods return `this` so the fluent chain works.
@@ -36,6 +37,7 @@ const {
     checkRateLimitMock: vi.fn(),
     fetchOpenRouterMock: vi.fn(),
     resolveRuntimeCredentialMock: vi.fn(),
+    getLiveModelsMock: vi.fn(),
     supabaseMock: mock,
   };
 });
@@ -48,12 +50,14 @@ vi.mock("@/lib/server", async (importOriginal) => {
     checkRateLimit: checkRateLimitMock,
     fetchOpenRouterResponse: fetchOpenRouterMock,
     resolveOpenRouterRuntimeCredential: resolveRuntimeCredentialMock,
+    getActiveFreeOpenRouterModelIds: getLiveModelsMock,
     getSupabaseServerClient: vi.fn().mockReturnValue(supabaseMock),
     logApiRequest: vi.fn(),
   };
 });
 
 import { POST } from "./route";
+import { ApiError } from "@/lib/server/utils";
 import {
   JUDGE_FALLBACK_MODEL_ID,
   JUDGE_PRIMARY_MODEL_ID,
@@ -99,6 +103,9 @@ beforeEach(() => {
   checkRateLimitMock.mockReset();
   fetchOpenRouterMock.mockReset();
   resolveRuntimeCredentialMock.mockReset();
+  getLiveModelsMock.mockReset().mockResolvedValue(new Map([
+    [JUDGE_PRIMARY_MODEL_ID, "judge-primary-id"], [JUDGE_FALLBACK_MODEL_ID, "judge-fallback-id"],
+  ]));
 
   // Reset builder mocks — restore chain behavior after each test.
   supabaseMock.from.mockReset().mockReturnValue(supabaseMock);
@@ -161,7 +168,6 @@ describe("POST /api/judge — provider recovery routing", () => {
     const res = await POST(makeRequest(VALID_BODY));
 
     expect(res.status).toBe(200);
-    expect(JUDGE_PRIMARY_MODEL_ID).toBe("google/gemma-4-31b-it:free");
     expect(fetchOpenRouterMock).toHaveBeenCalledWith(
       expect.any(String),
       JUDGE_PRIMARY_MODEL_ID,
@@ -177,7 +183,6 @@ describe("POST /api/judge — provider recovery routing", () => {
     const res = await POST(makeRequest(VALID_BODY));
 
     expect(res.status).toBe(200);
-    expect(JUDGE_FALLBACK_MODEL_ID).toBe("google/gemma-4-26b-a4b-it:free");
     expect(fetchOpenRouterMock).toHaveBeenNthCalledWith(
       1,
       expect.any(String),
@@ -190,6 +195,52 @@ describe("POST /api/judge — provider recovery routing", () => {
       JUDGE_FALLBACK_MODEL_ID,
       expect.objectContaining({ systemPrompt: expect.any(String) })
     );
+  });
+
+  it("uses the fallback directly when the primary is hidden", async () => {
+    getLiveModelsMock.mockResolvedValue(new Map([[JUDGE_FALLBACK_MODEL_ID, "judge-fallback-id"]]));
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(200);
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(1);
+    expect(fetchOpenRouterMock.mock.calls[0]?.[1]).toBe(JUDGE_FALLBACK_MODEL_ID);
+  });
+
+  it("tries the fallback when the primary fails to score every response", async () => {
+    fetchOpenRouterMock.mockResolvedValueOnce({
+      text: JSON.stringify({ winner: "A", reasoning: "Incomplete scoring.", scores: { A: 9 } }),
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const result = await res.json();
+
+    expect(fetchOpenRouterMock.mock.calls.map((call) => call[1]))
+      .toEqual([JUDGE_PRIMARY_MODEL_ID, JUDGE_FALLBACK_MODEL_ID]);
+    expect(res.status).toBe(200);
+    expect(result.verdict.scores).toEqual({ m1: 9, m2: 7 });
+  });
+
+  it("returns a controlled error if neither candidate is available", async () => {
+    getLiveModelsMock.mockResolvedValue(new Map([["google/gemma-4-31b-it:free", "other-model-id"]]));
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ errorCode: "JUDGE_MODEL_UNAVAILABLE" });
+    expect(resolveRuntimeCredentialMock).not.toHaveBeenCalled();
+    expect(fetchOpenRouterMock).not.toHaveBeenCalled();
+  });
+
+  it("does not retry with the same account after a credentials or credits failure", async () => {
+    fetchOpenRouterMock.mockRejectedValueOnce(
+      new ApiError(402, "INSUFFICIENT_CREDITS", "Insufficient credits.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(402);
+    expect(fetchOpenRouterMock).toHaveBeenCalledTimes(1);
   });
 });
 

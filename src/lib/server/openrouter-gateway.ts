@@ -29,12 +29,12 @@ export interface OpenRouterGatewayRequest {
   systemPrompt?: string;
   credential: OpenRouterGatewayCredentialContext;
   telemetry?: OpenRouterUsageTelemetryContext;
+  signal?: AbortSignal;
 }
 
 export interface OpenRouterGatewayStreamRequest
   extends OpenRouterGatewayRequest {
   onToken: (token: string) => void | Promise<void>;
-  signal?: AbortSignal;
 }
 
 export interface OpenRouterImageGatewayConsumeResult<T> {
@@ -163,8 +163,8 @@ export async function executeOpenRouterText(
       credential.apiKey,
       request.prompt,
       request.modelId,
-      request.systemPrompt
-        ? { systemPrompt: request.systemPrompt }
+      request.systemPrompt || request.signal
+        ? { systemPrompt: request.systemPrompt, signal: request.signal }
         : undefined
     );
 

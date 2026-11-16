@@ -8,6 +8,7 @@ import {
   isJsonObject,
   ApiError,
   resolveOpenRouterRuntimeCredential,
+  getActiveFreeOpenRouterModelIds,
 } from "@/lib/server";
 import {
   runTeamMode,
@@ -140,12 +141,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // modelId is optional — accepted only when it matches the allowlist; otherwise the
-    // server default is used. This prevents callers from forcing arbitrary OpenRouter keys.
     const requestedModelId = typeof b.modelId === "string" ? b.modelId.trim() : "";
-    const modelId = TEAM_ALLOWED_MODEL_IDS.has(requestedModelId)
-      ? requestedModelId
-      : TEAM_DEFAULT_MODEL_ID;
+    const liveModels = await getActiveFreeOpenRouterModelIds(identity);
+    const available = [...TEAM_ALLOWED_MODEL_IDS].filter((id) => liveModels.has(id));
+    const requested = available.find((id) => id === requestedModelId || liveModels.get(id) === requestedModelId);
+    const modelId = requested ?? available.find((id) => id === TEAM_DEFAULT_MODEL_ID) ?? available[0];
+    if (!modelId) {
+      throw new ApiError(
+        503, "TEAM_MODEL_UNAVAILABLE", "Сейчас нет доступной бесплатной модели для AI Team. Попробуйте позже."
+      );
+    }
     const gatewayCredential =
       await resolveOpenRouterRuntimeCredential(identity);
 

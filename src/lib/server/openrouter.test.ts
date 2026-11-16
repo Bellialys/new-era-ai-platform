@@ -166,6 +166,21 @@ describe("OpenRouter provider usage contract", () => {
       usage: { include: true },
     });
   });
+  it("propagates a caller deadline through the text gateway to OpenRouter fetch", async () => {
+    const deadline = new AbortController();
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      deadline.abort();
+      expect(init.signal?.aborted).toBe(true);
+      throw init.signal?.reason;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchOpenRouterResponse("hello", "requested/model", { signal: deadline.signal })
+    ).rejects.toMatchObject({ errorCode: "TIMEOUT", statusCode: 504 });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("rejects control characters before constructing Authorization headers", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

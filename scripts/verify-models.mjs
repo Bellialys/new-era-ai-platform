@@ -46,7 +46,7 @@ export const EXIT_CODES = Object.freeze({
 });
 
 export function parseArgs(argv) {
-  const flags = { help: false, version: false, json: false, unknown: [] };
+  const flags = { help: false, version: false, json: false, publicCatalog: false, unknown: [] };
 
   for (const arg of argv) {
     switch (arg) {
@@ -61,6 +61,9 @@ export function parseArgs(argv) {
       case "--json":
         flags.json = true;
         break;
+      case "--public-catalog":
+        flags.publicCatalog = true;
+        break;
       default:
         flags.unknown.push(arg);
     }
@@ -73,15 +76,16 @@ function helpText() {
   return `Usage: node scripts/verify-models.mjs [options]
 
 Verifies the local text catalog, Team default, Judge primary/fallback, and
-Image catalog against the authenticated OpenRouter discovery APIs.
+Image catalog against OpenRouter discovery APIs.
 
 Options:
+  --public-catalog  Read public metadata without sending an API key
   --json         Output a deterministic JSON result
   --help, -h     Show this help
   --version, -v  Show version
 
 Environment variables (read from .env.local):
-  OPENROUTER_API_KEY          Required
+  OPENROUTER_API_KEY          Required for authenticated discovery
   MODELS_FILE_PATH            Optional models.ts path override
   TEAM_MODE_FILE_PATH         Optional team-mode.ts path override
   ARENA_CONSTANTS_FILE_PATH   Optional constants.ts path override
@@ -354,14 +358,14 @@ export async function fetchJsonWithRetry(
     try {
       const response = await fetchImpl(url, {
         headers: {
-          authorization: `Bearer ${apiKey}`,
+          ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
           accept: "application/json",
         },
         signal: controller.signal,
       });
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
+        if (apiKey && (response.status === 401 || response.status === 403)) {
           throw new Error(
             `OpenRouter auth failed (HTTP ${response.status}). Check OPENROUTER_API_KEY.`,
           );
@@ -676,16 +680,16 @@ export async function runCli(
     return EXIT_CODES.RUNTIME_ERROR;
   }
 
-  if (loadEnvironment && env === process.env) {
+  if (!flags.publicCatalog && loadEnvironment && env === process.env) {
     const isVercel = Boolean(env.VERCEL || env.VERCEL_ENV);
     const isProduction = env.NODE_ENV === "production" || isVercel;
     const silentLogger = { info: () => {}, error: () => {}, warn: () => {} };
     loadEnvConfig(ROOT, !isProduction, silentLogger);
   }
 
-  const apiKey = env.OPENROUTER_API_KEY?.trim();
-  if (!apiKey) {
-    const message = "OPENROUTER_API_KEY is not set. Add it to .env.local or repository secrets.";
+  const apiKey = flags.publicCatalog ? undefined : env.OPENROUTER_API_KEY?.trim();
+  if (!flags.publicCatalog && !apiKey) {
+    const message = "OPENROUTER_API_KEY is not set. Configure the local environment or use --public-catalog.";
     if (flags.json) stdout(JSON.stringify(runtimeErrorResult(message)));
     else stderr(message);
     return EXIT_CODES.RUNTIME_ERROR;
