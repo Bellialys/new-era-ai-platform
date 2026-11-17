@@ -402,6 +402,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         modelIds: selectedModelIds,
         modeSlug: modeValidation.value ?? MODE_SLUG_PROMPT_ARENA,
         blind: false,
+        transport: shouldStream ? "compare-sse" : "compare-json",
       }),
     });
 
