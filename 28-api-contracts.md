@@ -59,7 +59,7 @@ Frontend вызывает только backend route handlers.
 
 Для Prompt Arena используется общий PostgreSQL reservation namespace `prompt-arena-compare`. Один принятый запрос с 2-5 моделями расходует одну logical comparison unit. Daily limits: guest `5`, free `20`, pro `100`, admin `9999`; reset происходит в `00:00 UTC`. Daily и minute checks выполняются одной атомарной service-role-only RPC-транзакцией. При недоступности quota authority production возвращает `503 QUOTA_AUTHORITY_UNAVAILABLE` и не вызывает provider.
 
-`Idempotency-Key` — необязательный заголовок длиной до 128 символов. Повтор с тем же ключом и fingerprint возвращает сохранённый terminal response без нового reservation/provider call; другой fingerprint получает `409 IDEMPOTENCY_KEY_REUSED`.
+`Idempotency-Key` — необязательный заголовок: только 1–128 ASCII-букв, цифр, `-` и `_` (UI отправляет UUID v4). Пустой, содержащий пробелы/запятую или слишком длинный явно переданный ключ возвращает `400 INVALID_IDEMPOTENCY_KEY` **без обращения к OpenRouter**; отсутствие заголовка сохраняет совместимость, но не обеспечивает дедупликацию повторной HTTP-попытки. Повтор с тем же ключом и fingerprint возвращает сохранённый terminal response без нового reservation/provider call; другой fingerprint получает `409 IDEMPOTENCY_KEY_REUSED`. Fingerprint учитывает режим транспорта: `/api/compare` JSON, `/api/compare` SSE и `/api/stream-compare` SSE не могут повторно использовать одно и то же сохранённое представление ответа.
 
 Ответ при превышении:
 
