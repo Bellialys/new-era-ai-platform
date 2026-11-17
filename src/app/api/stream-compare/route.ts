@@ -267,6 +267,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         modelIds: selectedModelIds,
         modeSlug: modeValidation.value ?? MODE_SLUG_PROMPT_ARENA,
         blind: isBlind,
+        transport: "stream-compare-sse",
       }),
     });
   } catch (error) {
