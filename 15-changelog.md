@@ -16,6 +16,12 @@ v2.0.0-alpha.1 - AI Team Mode
 # текущая alpha-ветка: AI Team Mode за feature flag; state/docs/tests синхронизированы
 ```
 
+## Unified Prompt Arena quota — additional Draft hardening, 17.11.2026
+
+- Tightened explicit `Idempotency-Key` validation: malformed/rejected keys now produce `400 INVALID_IDEMPOTENCY_KEY` instead of an implicit new key that could dispatch duplicate provider calls.
+- Added the response transport discriminator to SHA-256 request fingerprint, so a JSON result cannot be accidentally replayed as SSE (or vice versa) with the same owner/key; regression tests cover all three transport modes and malformed keys.
+- Changes committed **only to Draft PR #134**. Production and main unchanged. Existing release gates in issues #158/#160 remain mandatory; SQL production migration, cron activation and merge are still prohibited without controlled approval.
+
 ## Unified Prompt Arena quota — DRAFT validation, 16.11.2026
 
 - Tested quota SQL on isolated PostgreSQL 17 through GitHub Actions (12 concurrent requests: 5 accepted, 7 rate-limited); full application CI/Preview passed on patched-main QA branch.
