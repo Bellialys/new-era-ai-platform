@@ -76,9 +76,17 @@ function getSubject(identity: Exclude<RequestIdentity, { kind: "none" }>): {
 }
 
 function normalizeIdempotencyKey(key: string | null | undefined): string {
-  const value = key?.trim();
-  if (value && value.length <= 128) return value;
-  return crypto.randomUUID();
+  // Legacy requests may omit the header, but an explicitly supplied malformed
+  // key must never silently become a fresh key and cause duplicate inference.
+  if (key == null) return crypto.randomUUID();
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(key)) {
+    throw new ApiError(
+      400,
+      "INVALID_IDEMPOTENCY_KEY",
+      "Idempotency-Key must contain 1-128 ASCII letters, digits, underscores or hyphens."
+    );
+  }
+  return key;
 }
 
 function parseReservation(data: unknown): RpcReservationRow | null {
@@ -197,8 +205,8 @@ export async function completeCompareQuota(input: {
 export function getCompareIdempotencyKey(request: {
   headers: { get(name: string): string | null };
 }): string | null {
-  const value = request.headers.get("Idempotency-Key")?.trim();
-  return value && value.length <= 128 ? value : null;
+  const value = request.headers.get("Idempotency-Key");
+  return value === null ? null : normalizeIdempotencyKey(value);
 }
 
 export function createCompareFingerprint(input: {
@@ -206,8 +214,10 @@ export function createCompareFingerprint(input: {
   modelIds: string[];
   modeSlug: string;
   blind: boolean;
+  transport: "compare-json" | "compare-sse" | "stream-compare-sse";
 }): string {
   const canonicalRequest = JSON.stringify({
+    transport: input.transport,
     modeSlug: input.modeSlug,
     prompt: input.prompt,
     modelIds: input.modelIds,
