@@ -68,3 +68,11 @@ Unit and route regression tests cover identity/plan matrix through RPC parameter
 - Production read-only check confirmed `CREATE` on schema `public` is false for `anon`, `authenticated`, and `service_role`. Repeat the check on isolated test target after applying the migration; the SQL does not change existing schema ACL.
 
 These are release-gated residual risks, not production verification claims. The isolated PostgreSQL 17 test and blocking app CI now pass, but the production rollout, installation and operational success of pg_cron, schema parity, model cost/replay policy and approval remain outstanding. No production migration or backfill was applied; only read-only production checks and a rejected paid branch-creation attempt occurred. Keep PR #134 Draft until these release gates are satisfied.
+
+## Addendum — 2026-11-17: explicit key and response-format isolation
+
+- The parser now rejects an explicit malformed `Idempotency-Key` with `400 INVALID_IDEMPOTENCY_KEY`; a missing key alone triggers server UUID generation for legacy compatibility. Previously a malformed key was silently replaced, allowing a retry to start a new paid inference instead of being recognized as a duplicate.
+- The canonical SHA-256 fingerprint includes transport type (`compare-json`, `compare-sse`, `stream-compare-sse`) in addition to prompt/model/mode/blind inputs. This prevents returning a stored JSON response as an SSE event (or the reverse) when the same owner and key are reused across routes.
+- Added Vitest invariants for three response transports, malformed explicit headers, missing keys and no RPC call on invalid keys.
+- **Outstanding design limitation:** persistence of `tasks` and `model_responses` is still separate from the quota completion RPC. A crash or partial save failure may leave an inconsistent history while quota stays charged. Do not claim transactional exactly-once task persistence or guaranteed provider billing exactly-once until an additional atomic persistence design and integration test are approved. See Issue #168.
+- This is Draft-only hardening; does not modify production migration, the live database, or release restrictions in Issue #160.
