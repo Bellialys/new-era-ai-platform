@@ -8,6 +8,7 @@ import {
   CompareQuotaAuthorityError,
   completeCompareQuota,
   createCompareFingerprint,
+  getCompareIdempotencyKey,
   getCompareRetryAfterSeconds,
   reserveCompareQuota,
 } from "./compare-quota";
@@ -54,6 +55,7 @@ describe("reserveCompareQuota", () => {
         modelIds: ["m1", "m2"],
         modeSlug: "prompt-arena",
         blind: false,
+        transport: "compare-json",
       }),
     });
 
@@ -263,5 +265,49 @@ describe("Compare quota migration — legacy backfill scope", () => {
       /from public\.tasks\s+where created_at >= v_day_bucket[\s\S]*?and mode_slug = 'prompt-arena'[\s\S]*?group by 1/
     );
     expect(backfill).not.toMatch(/mode_slug\s+in\s*\([^)]*'ai-team-mode'/);
+  });
+});
+
+
+// Same logical owner/key across JSON and SSE endpoints must not replay an
+// incompatible response body: a mismatching transport changes the fingerprint.
+describe("compare idempotency transport and header contract", () => {
+  const base = {
+    prompt: "Compare two responses",
+    modelIds: ["m1", "m2"],
+    modeSlug: "prompt-arena",
+    blind: false,
+  };
+
+  it("isolates JSON, dual-route SSE and dedicated SSE payloads", () => {
+    const json = createCompareFingerprint({ ...base, transport: "compare-json" });
+    const compareSse = createCompareFingerprint({ ...base, transport: "compare-sse" });
+    const dedicatedSse = createCompareFingerprint({ ...base, transport: "stream-compare-sse" });
+    expect(new Set([json, compareSse, dedicatedSse]).size).toBe(3);
+  });
+
+  it("rejects malformed explicit headers rather than silently generating a new key", () => {
+    for (const bad of ["", "   ", "abc def", "a,b", "x".repeat(129)]) {
+      expect(() => getCompareIdempotencyKey({ headers: { get: () => bad } }))
+        .toThrow(expect.objectContaining({ statusCode: 400, errorCode: "INVALID_IDEMPOTENCY_KEY" }));
+    }
+  });
+
+  it("permits legacy missing header and the client UUID form", () => {
+    expect(getCompareIdempotencyKey({ headers: { get: () => null } })).toBe(null);
+    expect(getCompareIdempotencyKey({
+      headers: { get: () => "a0b1c2d3-1234-4abc-8abc-1234567890ab" },
+    })).toBe("a0b1c2d3-1234-4abc-8abc-1234567890ab");
+  });
+
+  it("blocks an invalid explicit key before contacting the quota RPC", async () => {
+    const { client, rpc } = createClient({ data: null, error: null });
+    getClientMock.mockReturnValue(client);
+    await expect(reserveCompareQuota({
+      identity,
+      idempotencyKey: "bad key",
+      fingerprint: "fingerprint",
+    })).rejects.toMatchObject({ statusCode: 400, errorCode: "INVALID_IDEMPOTENCY_KEY" });
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
