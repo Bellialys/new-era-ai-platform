@@ -19,6 +19,7 @@ import { AccessGate } from "./access-gate";
 import { UsageIndicator } from "./usage-indicator";
 import { GuestSessionCard } from "./guest-session-card";
 import { useArenaIdentity } from "./use-arena-identity";
+import { nextCompareIdempotencyTicket, type CompareIdempotencyTicket } from "@/lib/arena/compare-idempotency";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -241,6 +242,9 @@ export function PromptArena() {
   const [sessionWins, setSessionWins] = useState<Record<string, number>>({});
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Reuse the same key after a network/stream failure for identical inputs.
+  // Clear it only after a completed response or an intentional input change.
+  const pendingCompareTicketRef = useRef<CompareIdempotencyTicket | null>(null);
 
   // Abort pending requests on unmount
   useEffect(() => {
@@ -395,7 +399,7 @@ export function PromptArena() {
     }
   }
 
-  async function readCompareStream(response: Response, requestId: number) {
+  async function readCompareStream(response: Response, requestId: number): Promise<boolean> {
     if (!response.body) {
       throw new Error("Streaming response body is empty.");
     }
@@ -403,11 +407,12 @@ export function PromptArena() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let completed = false;
 
     while (true) {
       if (requestIdRef.current !== requestId) {
         await reader.cancel();
-        return;
+        return false;
       }
 
       const { done, value } = await reader.read();
@@ -425,11 +430,14 @@ export function PromptArena() {
         if (fatalError) {
           throw new Error(fatalError);
         }
+        if (streamEvent.event === "complete") completed = true;
       }
     }
+    return completed;
   }
 
   function clearStaleResults() {
+    pendingCompareTicketRef.current = null;
     requestIdRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -481,6 +489,15 @@ export function PromptArena() {
       return;
     }
 
+    // A retry of the same logical submission keeps its idempotency key.
+    // An explicit change of prompt/models/blind mode allocates a fresh key.
+    const ticket = nextCompareIdempotencyTicket(pendingCompareTicketRef.current, {
+      prompt: prompt.trim(),
+      modelIds: selectedModelIds,
+      blind: blindMode,
+    });
+    pendingCompareTicketRef.current = ticket;
+
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     abortControllerRef.current?.abort();
@@ -500,7 +517,7 @@ export function PromptArena() {
       try {
         const response = await fetch("/api/stream-compare", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Idempotency-Key": ticket.key },
           body: JSON.stringify({
             prompt: prompt.trim(),
             modelIds: selectedModelIds,
@@ -524,7 +541,12 @@ export function PromptArena() {
 
         const contentType = response.headers.get("content-type") ?? "";
         if (contentType.includes("text/event-stream")) {
-          await readCompareStream(response, requestId);
+          const completed = await readCompareStream(response, requestId);
+          if (requestIdRef.current !== requestId) return;
+          if (!completed) {
+            throw new Error("Поток завершился без итогового ответа. Повторите запрос.");
+          }
+          pendingCompareTicketRef.current = null;
           return;
         }
 
@@ -538,6 +560,7 @@ export function PromptArena() {
 
         setTaskId(data.taskId ?? null);
         setResponses(buildResponseViews(data.responses));
+        pendingCompareTicketRef.current = null;
         if (!data.taskId) {
           setVoteStatus("error");
           setVoteMessage("Winner voting недоступен: сравнение не сохранено в Supabase.");
