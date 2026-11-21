@@ -29,7 +29,7 @@ v2.0.0-alpha.1 - AI Team Mode
 - Cross-checked GitHub `main` (`a9e795d`), successful CI [#43873426310](https://github.com/Bellialys/new-era-ai-platform/actions/runs/43873426310), successful Vercel production deployment, HTTP 200 for health/models/code-models, and Supabase live catalog (8 public free; 3 coding).
 - PR #145 merged: three withdrawn OpenRouter free model IDs removed from offline fallback (8 remain). Updated canonical docs and distinguished historical model snapshots from current production.
 - Confirmed security issue #136 closed after framework upgrade and blocking audit; Stage 7 still awaits LFM auto-quarantine, Stage 10 awaits two successive `scheduled/succeeded` journal rows. Current run journal is empty.
-- Found reproducibility gap: applied production migration `20261109095503_lab05_saved_prompts` is still only in draft PR #135, not in `main`. No DB migrations or secrets modified by this docs-only update.
+- Historical 2026-11-16 finding: the applied production migration `20261109095503_lab05_saved_prompts` was missing from `main`. It was reconciled by PR #148 and feature PR #135 was merged; no migration was re-applied.
 - Clarified release verification: `/api/health` currently exposes `{"status":"ok"}`; Supabase health must be separately checked, not inferred from a nonexistent nested response field.
 
 ## Model health run reliability - 2026-11-16
