@@ -192,10 +192,10 @@ SLA покрывает только внутренние ошибки платф
 
 ## Связанные документы
 
-- [`01-idea.md`](./01-idea.md) — исторический MVP-замысел (v0.1)
-- [`14-roadmap.md`](./14-roadmap.md) — канонический порядок версий
-- [`07-architecture.md`](./07-architecture.md) — техническая архитектура
+- [`01-idea.md`](../../01-idea.md) — исторический MVP-замысел (v0.1)
+- [`14-roadmap.md`](../../14-roadmap.md) — канонический порядок версий
+- [`07-architecture.md`](../../07-architecture.md) — техническая архитектура
 - [`docs/adr/`](../adr/) — Architecture Decision Records
 - [`SECURITY.md`](../../SECURITY.md) — безопасность и responsible disclosure
-- [`12-security-and-env.md`](./12-security-and-env.md) — правила работы с секретами
-- [`25-production-excellence.md`](./25-production-excellence.md) — production стандарты
+- [`12-security-and-env.md`](../../12-security-and-env.md) — правила работы с секретами
+- [`25-production-excellence.md`](../../25-production-excellence.md) — production стандарты
