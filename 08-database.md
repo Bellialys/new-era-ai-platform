@@ -17,7 +17,7 @@ v2.0.0-alpha.1
 # tasks.judge_verdict хранит JSON-вердикт POST /api/judge
 # public.audit_log хранит admin/governance audit events и не открыт anon/authenticated напрямую
 # tasks.is_blind migration is applied in production as 20260704025200_tasks_is_blind.sql
-# Applied migrations through 20261116104715_model_health_runs; exception: remotely applied 20261109095503_lab05_saved_prompts exists in draft PR #135, not main
+# Applied migrations through 20261116104715_model_health_runs; 20261109095503_lab05_saved_prompts is reconciled in main and was already applied remotely
 ```
 
 ## Lab05 migration file reconciliation — 16.11.2026
@@ -26,7 +26,7 @@ The exact `20261109095503_lab05_saved_prompts.sql` from draft PR #135 is now tra
 
 ## Production verification — 16.11.2026
 
-- Supabase project `jbeecpbcsnowcaygteoj` was healthy; remote migrations include `20261116104715_model_health_runs` and `20261109095503_lab05_saved_prompts`. The latter exists only in draft PR #135, and is not included in current `main`. Do **not** mark repo ↔ remote migration history as identical or reapply the already executed migration.
+- Historical Supabase snapshot 2026-11-16: remote migrations included `20261116104715_model_health_runs` and `20261109095503_lab05_saved_prompts`; at that snapshot the SQL file was missing from `main`. PR #148 subsequently restored the exact file to `main`, and PR #135 merged. Do **not** reapply the already executed migration.
 - The live catalog contains **8** active/public free OpenRouter models, **3** coding. LFM 2.5 2.6B is still active; its first `NOT_LISTED` incident is recorded, but Stage 7 automatic quarantine is not confirmed.
 - `public.model_health_runs` exists with zero entries as of the check. Stage 10 requires two daily `scheduled / succeeded` entries. A lack of rows is **not** a passed health check.
 - Security Advisor reports `auth_leaked_password_protection` disabled (issue #108; plan-dependent), and INFO `rls_enabled_no_policy` on `model_health_runs`. RLS enabled without policies intentionally denies general client access; verify service-role access rather than creating broad public policies.

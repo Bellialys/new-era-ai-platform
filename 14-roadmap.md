@@ -31,7 +31,7 @@
 - Production API `/api/health`, `/api/models`, `/api/code-models`: HTTP 200; live Supabase показывает 8 free/public моделей, 3 coding. LFM 2.5 2.6B ещё активна: этап 7 ждёт подтверждения автоматического скрытия и проверки старого UUID.
 - Daily Vercel cron: `03:17 UTC`; журнал `public.model_health_runs` 16.11 пуст. Этап 10 не закрывать до записей `scheduled/succeeded` в две последовательные даты (17–18 ноября).
 - Security issue #136 закрыта; Next.js patch и блокирующий high/critical audit внедрены. `#108` (leaked password protection) и `#100` (Vercel build quotas) остаются открытыми.
-- DB drift: migration `20261109095503_lab05_saved_prompts` применена в Supabase, но находится только в draft PR #135; файл ещё отсутствует в `main`. Нужна контролируемая миграционная синхронизация, не повторное исполнение SQL.
+- DB reconciliation: migration `20261109095503_lab05_saved_prompts` уже применена в Supabase и также присутствует в текущем `main` после PR #148; feature PR #135 merged. Повторно применять SQL не нужно.
 - `.project/state.json`: `V201-16` активна; Stage 3.2 live gate следует проверять отдельно, статус не изменён этим аудитом.
 
 ```text
