@@ -259,7 +259,7 @@ describe("POST /api/code-run — external runner", () => {
     expect(body.errorCode).toBe("PISTON_ERROR");
   });
 
-  it("returns 500 INTERNAL_ERROR when fetch rejects (network failure or timeout)", async () => {
+  it("returns 500 INTERNAL_ERROR when fetch rejects with a network error", async () => {
     fetchMock.mockRejectedValue(new Error("network down"));
 
     const res = await POST(makeRequest(VALID_BODY));
@@ -267,6 +267,18 @@ describe("POST /api/code-run — external runner", () => {
 
     expect(res.status).toBe(500);
     expect(body.errorCode).toBe("INTERNAL_ERROR");
+  });
+
+  it("returns 504 TIMEOUT when the external runner exceeds its deadline", async () => {
+    const timeoutError = new Error("The operation was aborted due to timeout");
+    timeoutError.name = "TimeoutError";
+    fetchMock.mockRejectedValue(timeoutError);
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const body = await res.json() as { errorCode?: string };
+
+    expect(res.status).toBe(504);
+    expect(body.errorCode).toBe("TIMEOUT");
   });
 
   it("returns 500 INTERNAL_ERROR when the runner response is malformed JSON", async () => {

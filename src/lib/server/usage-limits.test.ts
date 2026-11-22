@@ -26,12 +26,27 @@ type ProfileRow = { role: string; plan: string } | null;
  *   profiles -> select().eq().single() resolves to { data }
  */
 function createSupabase(
-  { taskCount = 0, profile = null }: { taskCount?: number; profile?: ProfileRow } = {}
+  {
+    taskCount = 0,
+    taskCountIsNull = false,
+    taskError = null,
+    profile = null,
+  }: {
+    taskCount?: number;
+    taskCountIsNull?: boolean;
+    taskError?: { message: string } | null;
+    profile?: ProfileRow;
+  } = {}
 ) {
   const tasksQuery = {
     select: vi.fn(() => tasksQuery),
     gte: vi.fn(() => tasksQuery),
-    eq: vi.fn(() => Promise.resolve({ count: taskCount })),
+    eq: vi.fn(() =>
+      Promise.resolve({
+        count: taskCountIsNull ? null : taskCount,
+        error: taskError,
+      })
+    ),
   };
   const profilesQuery = {
     select: vi.fn(() => profilesQuery),
@@ -124,9 +139,11 @@ describe("getUserPlan", () => {
 });
 
 describe("getDailyUsage", () => {
-  it("returns 0 when Supabase is unavailable", async () => {
+  it("fails closed when Supabase is unavailable", async () => {
     mockedGetClient.mockReturnValue(null);
-    expect(await getDailyUsage(USER_ID, GUEST_ID)).toBe(0);
+    await expect(getDailyUsage(USER_ID, GUEST_ID)).rejects.toMatchObject({
+      statusCode: 503,
+    });
   });
 
   it("returns 0 when no identity is supplied", async () => {
@@ -147,6 +164,24 @@ describe("getDailyUsage", () => {
     mockedGetClient.mockReturnValue(asClient(client));
     expect(await getDailyUsage(null, GUEST_ID)).toBe(2);
     expect(tasksQuery.eq).toHaveBeenCalledWith("anonymous_session_id", GUEST_ID);
+  });
+
+  it("fails closed when the tasks count query returns an error", async () => {
+    const { client } = createSupabase({ taskError: { message: "database unavailable" } });
+    mockedGetClient.mockReturnValue(asClient(client));
+
+    await expect(getDailyUsage(USER_ID, null)).rejects.toMatchObject({
+      statusCode: 503,
+    });
+  });
+
+  it("fails closed when Supabase returns a null count", async () => {
+    const { client } = createSupabase({ taskCountIsNull: true });
+    mockedGetClient.mockReturnValue(asClient(client));
+
+    await expect(getDailyUsage(USER_ID, null)).rejects.toMatchObject({
+      statusCode: 503,
+    });
   });
 });
 
@@ -171,10 +206,10 @@ describe("checkDailyLimit", () => {
     });
   });
 
-  it("keeps a finite limit in degraded mode (no unlimited access)", async () => {
+  it("fails closed when quota verification is unavailable", async () => {
     mockedGetClient.mockReturnValue(null);
-    const result = await checkDailyLimit(USER_ID, null);
-    expect(result.limit).toBe(DAILY_LIMITS.free);
-    expect(Number.isFinite(result.limit)).toBe(true);
+    await expect(checkDailyLimit(USER_ID, null)).rejects.toMatchObject({
+      statusCode: 503,
+    });
   });
 });

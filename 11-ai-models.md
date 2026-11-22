@@ -2,7 +2,7 @@
 
 ## Обновление 16.11.2026 — локальный fallback
 
-Из аварийного списка `src/lib/server/models.ts` исключены 3 ID, больше не публикуемые OpenRouter: `liquid/lfm-2.5-2.6b:free`, `nvidia/nemotron-3-super-120b-a12b:free`, `xingchen-agi/xing4.0-29b-a4b:free`. Теперь резерв содержит **8** позиций; модельные regression-тесты и прямой Promptfoo baseline обновлены. Ниже сохранён исторический срез от 09.11.2026 (11 моделей), он **не** описывает актуальный fallback.
+Из аварийного списка `src/lib/server/models.ts` исключены 3 withdrawn ID, больше не публикуемые OpenRouter. Теперь резерв содержит **8** позиций; модельные regression-тесты и прямой Promptfoo baseline обновлены. Ниже сохранён исторический срез от 09.11.2026 (11 моделей), он **не** описывает актуальный fallback.
 
 Read-only проверка production Supabase от 16.11: **8** активных публичных бесплатных моделей, причём LFM 2.5 2.6B ещё активна; две другие исключённые модели уже отключены. Для этапа 7 LFM намеренно не выключается вручную: требуется проверить автоматическое скрытие cron и неизменность доступа по старому UUID. Этап 10 требует двух плановых запусков с `source=scheduled` и `status=succeeded` в разные последовательные даты.
 
@@ -20,9 +20,6 @@ Read-only проверка production Supabase от 16.11: **8** активны�
 | `google/gemma-4-26b-a4b-it:free` | General; были RATE_LIMIT 09.11 |
 | `google/gemma-4-31b-it:free` | General/reasoning; были RATE_LIMIT в октябре |
 | `nvidia/nemotron-3.5-lightning:free` | Fast/agentic; успешный ответ в октябре |
-| `nvidia/nemotron-3-super-120b-a12b:free` | Reasoning/experimental; были и успешные ответы, и 404 |
-| `xingchen-agi/xing4.0-29b-a4b:free` | Coding/agentic; был RATE_LIMIT 09.11 |
-| `liquid/lfm-2.5-2.6b:free` | Fast/extraction; текущий runtime inference не проверен |
 | `nvidia/nemotron-3-ultra-550b-a55b:free` | Reasoning; **provider-listed, live inference not tested** |
 | `recursive/flint-v1.0:free` | Coding; **provider-listed, live inference not tested** |
 | `liquid/lfm-3-1.7b:free` | Compact; **provider-listed, live inference not tested** |
@@ -84,11 +81,9 @@ Recovery-каталог повторно проверен 2026-09-17 и соде
 | `google/gemma-4-26b-a4b-it:free` | Gemma 4 26B A4B | Основная general-модель; Team default; Judge fallback |
 | `google/gemma-4-31b-it:free` | Gemma 4 31B | Сильная general/reasoning-модель; Judge primary |
 | `nvidia/nemotron-3.5-lightning:free` | Nemotron 3.5 Lightning | Быстрая agentic/general-модель |
-| `nvidia/nemotron-3-super-120b-a12b:free` | Nemotron 3 Super | Reasoning/agentic; optional/experimental |
 | `cohere/north-mini-code:free` | North Mini Code | Coding/agentic |
 | `poolside/laguna-s-2.1:free` | Laguna S 2.1 | Coding/agentic |
 | `poolside/laguna-xs-2.1:free` | Laguna XS 2.1 | Быстрая coding/agentic |
-| `liquid/lfm-2.5-2.6b:free` | LFM 2.5 2.6B | Fast/extraction/RAG |
 
 В fallback-режиме `supportsCode = true` только у North Mini Code, Laguna S 2.1 и Laguna XS 2.1; тот же набор закреплён `coding` role tags в recovery migration, поэтому `/api/code-models` не расходится между DB и local catalog.
 

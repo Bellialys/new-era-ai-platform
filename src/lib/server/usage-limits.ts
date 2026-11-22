@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "./supabase";
+import { ApiError } from "./utils";
 
 export const DAILY_LIMITS = {
   anonymous: 5,
@@ -9,12 +10,22 @@ export const DAILY_LIMITS = {
 
 export type UserPlan = keyof typeof DAILY_LIMITS;
 
+function quotaUnavailable(): ApiError {
+  return new ApiError(
+    503,
+    "INTERNAL_ERROR",
+    "Usage limit verification is temporarily unavailable."
+  );
+}
+
 export async function getDailyUsage(
   userId: string | null,
   guestId: string | null
 ): Promise<number> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return 0;
+  if (!supabase) {
+    throw quotaUnavailable();
+  }
 
   const todayUtc = new Date();
   todayUtc.setUTCHours(0, 0, 0, 0);
@@ -32,8 +43,12 @@ export async function getDailyUsage(
     return 0;
   }
 
-  const { count } = await query;
-  return count ?? 0;
+  const { count, error } = await query;
+  if (error || count === null) {
+    throw quotaUnavailable();
+  }
+
+  return count;
 }
 
 export async function getUserLimit(

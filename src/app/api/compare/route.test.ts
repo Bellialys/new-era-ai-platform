@@ -12,6 +12,7 @@ const {
   fetchMultipleResponsesMock,
   savePromptArenaRunMock,
   resolveRuntimeCredentialMock,
+  checkDailyLimitMock,
 } = vi.hoisted(() => ({
   resolveIdentityMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
@@ -19,6 +20,7 @@ const {
   fetchMultipleResponsesMock: vi.fn(),
   savePromptArenaRunMock: vi.fn(),
   resolveRuntimeCredentialMock: vi.fn(),
+  checkDailyLimitMock: vi.fn(),
 }));
 
 vi.mock("@/lib/server", async (importOriginal) => {
@@ -31,6 +33,7 @@ vi.mock("@/lib/server", async (importOriginal) => {
     fetchMultipleResponses: fetchMultipleResponsesMock,
     savePromptArenaRun: savePromptArenaRunMock,
     resolveOpenRouterRuntimeCredential: resolveRuntimeCredentialMock,
+    checkDailyLimit: checkDailyLimitMock,
     applyGuestCookie: vi.fn(),
     logApiRequest: vi.fn(),
   };
@@ -42,6 +45,7 @@ import {
   COMPARE_RATE_LIMIT_WINDOW_MS,
   PROMPT_MIN_LENGTH,
 } from "@/lib/arena/constants";
+import { ApiError } from "@/lib/server";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -88,6 +92,7 @@ beforeEach(() => {
   fetchMultipleResponsesMock.mockReset();
   savePromptArenaRunMock.mockReset();
   resolveRuntimeCredentialMock.mockReset();
+  checkDailyLimitMock.mockReset();
 
   // Defaults: authenticated user, not rate-limited
   resolveIdentityMock.mockResolvedValue({ kind: "user", userId: USER_ID, guestId: null });
@@ -97,6 +102,7 @@ beforeEach(() => {
     credentialId: null,
     apiKey: "test-openrouter-key",
   });
+  checkDailyLimitMock.mockResolvedValue({ allowed: true, used: 0, limit: 20 });
 
   // Default model resolution and response for success path
   resolveSelectedModelsMock.mockResolvedValue([
@@ -143,6 +149,41 @@ describe("POST /api/compare — auth guard", () => {
 // ---------------------------------------------------------------------------
 
 describe("POST /api/compare — rate limiting", () => {
+  it("returns 429 when the daily quota is exhausted", async () => {
+    checkDailyLimitMock.mockResolvedValue({ allowed: false, used: 20, limit: 20 });
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(429);
+    expect((await res.json() as { errorCode?: string }).errorCode).toBe("DAILY_LIMIT_EXCEEDED");
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the daily quota cannot be verified", async () => {
+    checkDailyLimitMock.mockRejectedValue(
+      new Error("quota database unavailable")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(500);
+    expect((await res.json() as { errorCode?: string }).errorCode).toBe("INTERNAL_ERROR");
+    expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when quota verification is unavailable", async () => {
+    checkDailyLimitMock.mockRejectedValue(
+      new ApiError(503, "INTERNAL_ERROR", "Usage limit verification is temporarily unavailable.")
+    );
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(503);
+    expect((await res.json() as { errorCode?: string }).errorCode).toBe("INTERNAL_ERROR");
+    expect(fetchMultipleResponsesMock).not.toHaveBeenCalled();
+  });
+
   it("returns 429 RATE_LIMIT when the rate limit is exceeded", async () => {
     checkRateLimitMock.mockResolvedValue(RATE_LIMITED);
 
