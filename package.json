@@ -51,7 +51,7 @@
     "precommit": "lint-staged"
   },
   "dependencies": {
-    "@aws-sdk/client-kms": "3.1141.0",
+    "@aws-sdk/client-kms": "3.1173.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
     "@vercel/oidc-aws-credentials-provider": "3.3.20",
